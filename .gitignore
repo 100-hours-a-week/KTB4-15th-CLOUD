@@ -1,0 +1,24 @@
+# secrets
+.env
+.env.*.local
+
+# OS
+.DS_Store
+
+# Next.js
+nextjs/node_modules/
+nextjs/.next/
+nextjs/next-env.d.ts
+
+# Spring (spring/.gitignore가 더 세부적으로도 커버함)
+spring/.gradle/
+spring/build/
+
+# FastAPI
+fastapi/**/__pycache__/
+fastapi/**/*.pyc
+fastapi/.pytest_cache/
+fastapi/.ruff_cache/
+
+# 로컬 에이전트/툴 상태
+.claude/

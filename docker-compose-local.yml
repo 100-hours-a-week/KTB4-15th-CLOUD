@@ -1,0 +1,16 @@
+services:
+  nginx:
+    logging:
+      driver: json-file
+  nextjs:
+    logging:
+      driver: json-file
+  spring:
+    logging:
+      driver: json-file
+  fastapi:
+    logging:
+      driver: json-file
+  postgresql:
+    logging:
+      driver: json-file

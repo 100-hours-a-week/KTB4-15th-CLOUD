@@ -1,0 +1,261 @@
+networks:
+  app-network:
+    driver: bridge
+  db-network:
+    driver: bridge
+
+volumes:
+  postgresql-data:
+  certbot-certs:
+  certbot-challenge:
+
+services:
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: lookddak-nginx
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    networks:
+      - app-network
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      # nginx.conf는 마운트하지 않음: 기본 이미지의 nginx.conf가 이미 include /etc/nginx/conf.d/*.conf; 를 포함하고 있어 conf.d만으로 충분
+      - certbot-certs:/etc/nginx/ssl:ro
+      - certbot-challenge:/var/www/certbot:ro
+    environment:
+      TZ: KST-9
+    depends_on:
+      nextjs:
+        condition: service_healthy
+      spring:
+        condition: service_healthy
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ap-northeast-2
+        awslogs-group: /lookddak/nginx
+        awslogs-stream-prefix: gateway
+        awslogs-create-group: "true"
+    stop_grace_period: 15s
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+
+
+  nextjs:
+    image: ${ECR_REGISTRY}/lookddak-nextjs:${NEXTJS_IMAGE_TAG}
+    # 로컬에 image가 없으면(ECR pull 실패 시) 아래 build로 대체 빌드됨.
+    # 운영에서는 CI가 미리 push하므로 build 블록은 로컬 개발 편의용.
+    build:
+      context: ./nextjs
+      dockerfile: Dockerfile
+    container_name: lookddak-nextjs
+    restart: always
+    expose:
+      - "3000"
+    networks:
+      - app-network
+    depends_on:
+      spring:
+        condition: service_healthy
+
+    environment:
+      # V8은 컨테이너 memory limit을 인식 못하고 호스트 전체 메모리 기준으로 힙을 잡으려 해서 명시적으로 Old Space 상한을 걸어둠 (컨테이너 limit 512M의 약 75%)
+      NODE_OPTIONS: "--max-old-space-size=384"
+      NODE_ENV: production
+      TZ: KST-9
+
+    healthcheck:
+      # node:*-slim 이미지엔 wget/curl이 기본 없어서, 추가 패키지 설치 없이 Node.js 내장 http 모듈로 헬스체크를 대체함
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ap-northeast-2
+        awslogs-group: /lookddak/nextjs
+        awslogs-stream-prefix: frontend
+        awslogs-create-group: "true"
+    stop_grace_period: 30s
+
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
+
+  spring:
+    image: ${ECR_REGISTRY}/lookddak-spring:${SPRING_IMAGE_TAG}
+    build:
+      context: ./spring
+      dockerfile: Dockerfile
+    container_name: lookddak-spring
+    restart: always
+    expose:
+      - "8080"
+    networks:
+      - app-network
+    depends_on:
+      fastapi:
+        condition: service_healthy
+    environment:
+      AWS_REGION: ap-northeast-2
+      SPRING_PROFILES_ACTIVE: prod
+      # -XX:+UseContainerSupport: JVM이 cgroup(컨테이너 limit)을 인식하게 함 (없으면 호스트 전체 메모리 기준으로 힙을 계산해 컨테이너 OOMKilled 유발)
+      # -XX:MaxRAMPercentage=75.0: 힙 최대치를 limit의 75%로. 고정 MB(-Xmx) 대신 비율로 잡아 나중에 limit이 바뀌어도 이 값을 안 고쳐도 됨
+      # -XX:MaxMetaspaceSize=192m: 메타스페이스는 RAM 비율 옵션이 없어 절대값으로 상한 지정. 없으면 클래스 로딩 많은 Spring 특성상 무제한으로 늘어날 수 있음
+      # -Dnetworkaddress.cache.ttl=10: JVM은 InetAddress 레벨에서 DNS 조회 결과를 자체 캐싱하는데,
+      # 이 이미지엔 명시적 설정이 없어 JDK 내장 기본값(보통 30초)을 따른다. fastapi 등 다른 컨테이너를
+      # 재배포해서 IP가 바뀌면 그 캐시 창 동안은 옛날 IP로 연결을 시도하다 실패할 수 있어 짧게 고정한다.
+      JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=75.0 -XX:InitialRAMPercentage=25.0 -XX:MaxMetaspaceSize=192m -XX:+UseContainerSupport -Dnetworkaddress.cache.ttl=10"
+      TZ: KST-9
+
+    healthcheck:
+      # eclipse-temurin:*-jre-noble 이미지엔 wget/curl이 기본 없어서, 추가 패키지 설치 없이
+      # bash 내장 /dev/tcp로 헬스체크를 대체함 (nextjs/fastapi와 동일한 이유).
+      # CMD-SHELL은 /bin/sh(dash)를 쓰는데 dash엔 /dev/tcp가 없어 bash를 명시로 지정한다.
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/localhost/8080 && printf 'GET /actuator/health HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n' >&3 && grep -q '\"status\":\"UP\"' <&3"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ap-northeast-2
+        awslogs-group: /lookddak/spring
+        awslogs-stream-prefix: backend
+        awslogs-create-group: "true"
+    stop_grace_period: 30s
+
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+
+  fastapi:
+    image: ${ECR_REGISTRY}/lookddak-fastapi:${FASTAPI_IMAGE_TAG}
+    build:
+      context: ./fastapi
+      dockerfile: Dockerfile
+    container_name: lookddak-fastapi
+    restart: always
+    expose:
+      - "8000"
+    networks:
+      - app-network
+      - db-network
+    depends_on:
+      postgresql:
+        condition: service_healthy
+
+    environment:
+      # 워커 프로세스 수. Python은 JVM/Node 같은 힙 상한 옵션이 없어서, 워커 수 자체를 제한하는 게 메모리 통제의 핵심 (워커가 늘면 메모리도 그만큼 곱절로 증가)
+      WEB_CONCURRENCY: "1"
+      # glibc malloc이 멀티스레드 환경에서 락 경합을 줄이려 아레나를 계속 늘리는데, 그 과정에서 파편화로 실사용량보다 훨씬 큰 RSS를 점유하게 됨 (컨테이너 OOMKilled의 흔한 원인).
+      # 아레나 수를 2개로 제한해 이를 방지
+      MALLOC_ARENA_MAX: "2"
+      # uvicorn 기본값은 무제한 대기라, 오래 걸리는 요청 하나 때문에 종료가 계속 지연되다 stop_grace_period(40s)에 걸려 강제 킬 당할 수 있어 명시적으로 짧게 지정.
+      # 반드시 stop_grace_period보다 작아야 함 (SIGKILL 전에 정상 종료를 마칠 시간 확보)
+      UVICORN_TIMEOUT_GRACEFUL_SHUTDOWN: "30"
+      TZ: KST-9
+
+      POSTGRES_HOST: postgresql
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgresql:5432/${POSTGRES_DB}
+
+    healthcheck:
+      # Python 내장 urllib.request로 헬스체크를 대체함
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ap-northeast-2
+        awslogs-group: /lookddak/fastapi
+        awslogs-stream-prefix: backend
+        awslogs-create-group: "true"
+    stop_grace_period: 40s
+
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
+  postgresql:
+    image: postgres:16-alpine
+    container_name: lookddak-postgresql
+    restart: always
+    expose:
+      - "5432"
+    networks:
+      - db-network
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      PGDATA: /var/lib/postgresql/data/pgdata
+      TZ: KST-9
+
+    # 컨테이너 limit(1G) 기준: shared_buffers는 전체의 ~25%, effective_cache_size는 실제 할당이 아니라 쿼리 플래너 힌트값, work_mem은 커넥션당 소모라 낮게 유지
+    command: >
+      postgres
+      -c shared_buffers=256MB
+      -c effective_cache_size=768MB
+      -c maintenance_work_mem=64MB
+      -c work_mem=8MB
+
+    volumes:
+      - postgresql-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ap-northeast-2
+        awslogs-group: /lookddak/postgresql
+        awslogs-stream-prefix: db
+        awslogs-create-group: "true"
+    stop_grace_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          memory: 512M
+
+  certbot:
+    image: certbot/certbot:v5.8.0
+    container_name: certbot
+    # profiles 지정: docker compose up 시 자동 실행되지 않음.
+    # 인증서 발급/갱신은 상시 필요한 게 아니라 명시적으로 호출할 때만 필요함
+    profiles: ["ssl"]
+    volumes:
+      # nginx와 같은 볼륨을 공유해야 발급된 인증서를 nginx가 읽고,
+      # HTTP-01 challenge 검증 요청도 nginx가 응답 가능
+      - certbot-certs:/etc/letsencrypt:rw
+      - certbot-challenge:/var/www/certbot:rw
