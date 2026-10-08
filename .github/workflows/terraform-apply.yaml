@@ -2,7 +2,7 @@ name: terraform-apply
 
 on:
   push:
-    branches: [main,feature/cd]
+    branches: [main]
   workflow_dispatch:
 
 permissions:
