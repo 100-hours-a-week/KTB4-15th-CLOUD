@@ -22,8 +22,3 @@ output "db_security_group_id" {
   description = "RDS 보안그룹 ID"
   value       = aws_security_group.db.id
 }
-
-output "crawler_security_group_id" {
-  description = "크롤러 보안그룹 ID"
-  value       = aws_security_group.crawler.id
-}
