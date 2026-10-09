@@ -167,10 +167,9 @@ merge하면 `terraform-apply` workflow가 실행되어 인프라에 반영됩니
 
 아래 리소스는 Terraform 실행 전제 조건이므로 콘솔에서 직접 관리합니다. Terraform 코드에 추가하지 마세요.
 
-| 리소스 | 이름 |
-|---|---|
-| State S3 버킷 | `lookddak-terraform-state-686496667254` |
-| GitHub OIDC Provider | `token.actions.githubusercontent.com` |
-| Plan Role (PR, 읽기 전용) | `gha-terraform-plan` |
-| Apply Role (main, Admin) | `gha-terraform-apply` |
-
+| 리소스 | 이름 | 사용처 |
+|---|---|---|
+| State S3 버킷 | `lookddak-terraform-state-686496667254` | Terraform state 저장 (버전 관리 활성화) |
+| GitHub OIDC Provider | `token.actions.githubusercontent.com` | GitHub Actions → AWS 인증 |
+| Plan Role | `gha-terraform-plan-role` | PR 워크플로 (`terraform-pr`) |
+| Apply Role | `gha-terraform-apply-role` | main 워크플로 (`terraform-apply`) |
