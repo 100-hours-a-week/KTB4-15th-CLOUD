@@ -31,32 +31,6 @@ locals {
     ]
   })
 
-  ecr_lifecycle_policy_keep_10 = jsonencode({
-    rules = [
-      {
-        rulePriority = 1
-        description  = "Expire untagged images older than 1 day"
-        selection = {
-          tagStatus   = "untagged"
-          countType   = "sinceImagePushed"
-          countUnit   = "days"
-          countNumber = 1
-        }
-        action = { type = "expire" }
-      },
-      {
-        rulePriority = 2
-        description  = "Keep the most recent 10 tagged images"
-        selection = {
-          tagStatus      = "tagged"
-          tagPatternList = ["*"]
-          countType      = "imageCountMoreThan"
-          countNumber    = 10
-        }
-        action = { type = "expire" }
-      },
-    ]
-  })
 }
 
 # ---------------------------------------------------------------
@@ -135,30 +109,4 @@ resource "aws_ecr_repository" "fastapi" {
 resource "aws_ecr_lifecycle_policy" "fastapi" {
   repository = aws_ecr_repository.fastapi.name
   policy     = local.ecr_lifecycle_policy_keep_35
-}
-
-# ---------------------------------------------------------------
-# Crawler (미사용: 이미지 0개, import 후 정리 PR에서 삭제 예정)
-# ---------------------------------------------------------------
-resource "aws_ecr_repository" "crawler" {
-  name                 = "lookddak-crawler"
-  image_tag_mutability = "IMMUTABLE"
-
-  image_scanning_configuration {
-    scan_on_push = true
-  }
-
-  encryption_configuration {
-    encryption_type = "AES256"
-  }
-
-  tags = {
-    Environment = "prod"
-    Service     = "crawler"
-  }
-}
-
-resource "aws_ecr_lifecycle_policy" "crawler" {
-  repository = aws_ecr_repository.crawler.name
-  policy     = local.ecr_lifecycle_policy_keep_10
 }
