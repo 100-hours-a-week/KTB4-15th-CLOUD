@@ -14,3 +14,11 @@ module "prod_v1_iam" {
 
   ecr_repository_arns = module.shared_core.ecr_repository_arns
 }
+
+module "prod_s3" {
+  source = "./prod/s3"
+}
+
+module "dev_s3" {
+  source = "./dev/s3"
+}
