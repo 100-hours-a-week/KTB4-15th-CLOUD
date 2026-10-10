@@ -15,6 +15,14 @@ module "prod_v1_iam" {
   ecr_repository_arns = module.shared_core.ecr_repository_arns
 }
 
+module "prod_v1_compute" {
+  source = "./prod/v1/compute"
+
+  subnet_id                 = module.shared_core.public_subnet_ids[0]
+  security_group_id         = module.shared_core.app_security_group_id
+  iam_instance_profile_name = module.prod_v1_iam.ec2_instance_profile_name
+}
+
 module "prod_s3" {
   source = "./prod/s3"
 }
