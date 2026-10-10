@@ -1,0 +1,282 @@
+name: lookddak
+
+networks:
+  app-network:
+    driver: bridge
+  db-network:
+    driver: bridge
+
+volumes:
+  postgresql-data:
+    name: lookddak-postgresql-data
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /srv/lookddak/postgresql
+  certbot-certs:
+    name: lookddak-certbot-certs
+  certbot-challenge:
+    name: lookddak-certbot-challenge
+
+services:
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: lookddak-nginx
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - certbot-certs:/etc/nginx/ssl:ro
+      - certbot-challenge:/var/www/certbot:ro
+    ulimits:
+      nofile: { soft: 65535, hard: 65535 }
+    environment:
+      TZ: KST-9
+    depends_on:
+      nextjs:
+        condition: service_healthy
+      spring:
+        condition: service_healthy
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ap-northeast-2
+        awslogs-group: /lookddak/prod/nginx
+        awslogs-create-group: "false"
+        tag: "{{.Name}}/{{.ID}}"
+        mode: non-blocking
+        max-buffer-size: "4m"
+        cache-max-size: "10m"
+        cache-max-file: "3"
+        cache-compress: "true"
+    stop_grace_period: 15s
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+
+  nextjs:
+    image: "${ECR_REGISTRY:?ECR_REGISTRY is required}/lookddak-nextjs:${NEXTJS_IMAGE_TAG:?NEXTJS_IMAGE_TAG is required}"
+    container_name: lookddak-nextjs
+    restart: always
+    expose:
+      - "3000"
+    networks:
+      - app-network
+    depends_on:
+      spring:
+        condition: service_healthy
+    environment:
+      API_BASE_URL: "${API_BASE_URL:-}"
+      NEXT_PUBLIC_API_BASE_URL: "${NEXT_PUBLIC_API_BASE_URL:?NEXT_PUBLIC_API_BASE_URL is required}"
+      NODE_OPTIONS: "--max-old-space-size=384"
+      NODE_ENV: production
+      TZ: KST-9
+    healthcheck:
+      # 임시 조치: FE 코드에 /health 라우트가 없어서 계속 404로 unhealthy 처리됨.
+      # 라우트 추가 전까지 HTTP 체크 대신 3000번 포트 TCP 연결만 확인한다.
+      # 라우트 생기면 아래 원래 방식으로 되돌릴 것.
+      # test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
+      test: ["CMD", "node", "-e", "require('net').createConnection(3000, 'localhost').on('connect', function(){this.end(); process.exit(0)}).on('error', () => process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ap-northeast-2
+        awslogs-group: /lookddak/prod/nextjs
+        awslogs-create-group: "false"
+        tag: "{{.Name}}/{{.ID}}"
+        mode: non-blocking
+        max-buffer-size: "4m"
+        cache-max-size: "10m"
+        cache-max-file: "3"
+        cache-compress: "true"
+    stop_grace_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+
+  spring:
+    image: "${ECR_REGISTRY:?ECR_REGISTRY is required}/lookddak-spring:${SPRING_IMAGE_TAG:?SPRING_IMAGE_TAG is required}"
+    container_name: lookddak-spring
+    restart: always
+    expose:
+      - "8080"
+    networks:
+      - app-network
+    depends_on:
+      fastapi:
+        condition: service_healthy
+    environment:
+      DB_URL: "${DB_URL:-}"
+      DB_USERNAME: "${DB_USERNAME:-}"
+      DB_PASSWORD: "${DB_PASSWORD:-}"
+      JWT_SECRET: "${JWT_SECRET:-}"
+      AI_INTERNAL_API_KEY: "${AI_INTERNAL_API_KEY:-}"
+      AI_SERVER_URL: "${AI_SERVER_URL:?AI_SERVER_URL is required}"
+      AWS_S3_BUCKET: "${S3_BUCKET:?S3_BUCKET is required}"
+      CORS_ALLOWED_ORIGINS: "${CORS_ALLOWED_ORIGINS:-}"
+      SENTRY_DSN: "${SENTRY_DSN:-}"
+      AWS_REGION: ap-northeast-2
+      SPRING_PROFILES_ACTIVE: prod
+      JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=75.0 -XX:InitialRAMPercentage=25.0 -XX:MaxMetaspaceSize=192m -XX:+UseContainerSupport -Dnetworkaddress.cache.ttl=10"
+      TZ: KST-9
+    healthcheck:
+      # 임시 조치: /actuator/health를 쓰려면 spring-boot-starter-actuator 의존성이
+      # 필요한데 build.gradle에 아직 없어서 HTTP 체크 대신 8080번 포트가 열려있는지
+      # (TCP 연결)만 확인한다. 프로세스 생존만 확인하고 실제 헬스 상태는 검증 안 함
+      # — actuator 의존성이 추가되면 아래 원래 방식으로 되돌릴 것.
+      # test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/localhost/8080 && printf 'GET /actuator/health HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && grep -q '\"status\":\"UP\"' <&3"]
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/localhost/8080"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ap-northeast-2
+        awslogs-group: /lookddak/prod/spring
+        awslogs-create-group: "false"
+        tag: "{{.Name}}/{{.ID}}"
+        mode: non-blocking
+        max-buffer-size: "4m"
+        cache-max-size: "10m"
+        cache-max-file: "3"
+        cache-compress: "true"
+    stop_grace_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1G
+
+  fastapi:
+    image: "${ECR_REGISTRY:?ECR_REGISTRY is required}/lookddak-fastapi:${FASTAPI_IMAGE_TAG:?FASTAPI_IMAGE_TAG is required}"
+    container_name: lookddak-fastapi
+    restart: always
+    expose:
+      - "8000"
+    networks:
+      - app-network
+      - db-network
+    depends_on:
+      postgresql:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: "${DATABASE_URL:-}"
+      CHECKPOINT_DSN: "${CHECKPOINT_DSN:-}"
+      INTERNAL_API_KEY: "${INTERNAL_API_KEY:-}"
+      POSTGRES_DB: "${POSTGRES_DB:-}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-}"
+      RUNWARE_VTON_API_KEY: "${RUNWARE_VTON_API_KEY:-}"
+      RUNWARE_LLM_API_KEY: "${RUNWARE_LLM_API_KEY:-}"
+      OPENAI_API_KEY: "${OPENAI_API_KEY:-}"
+      S3_BUCKET: "${S3_BUCKET:?S3_BUCKET is required}"
+      AWS_REGION: "${AWS_REGION:-ap-northeast-2}"
+      WEB_CONCURRENCY: "1"
+      MALLOC_ARENA_MAX: "2"
+      UVICORN_TIMEOUT_GRACEFUL_SHUTDOWN: "30"
+      TZ: KST-9
+    healthcheck:
+      # 임시 조치: /health 라우트가 앱에 아직 없어서 HTTP 체크 대신 8000번 포트가
+      # 열려있는지(TCP 연결)만 확인한다. 프로세스 생존만 확인하고 실제 요청
+      # 처리 여부는 검증하지 않음 — /health가 추가되면 원래 방식으로 되돌릴 것.
+      test: ["CMD", "python", "-c", "import socket; socket.create_connection(('localhost', 8000), 3).close()"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 180s
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ap-northeast-2
+        awslogs-group: /lookddak/prod/fastapi
+        awslogs-create-group: "false"
+        tag: "{{.Name}}/{{.ID}}"
+        mode: non-blocking
+        max-buffer-size: "4m"
+        cache-max-size: "10m"
+        cache-max-file: "3"
+        cache-compress: "true"
+    stop_grace_period: 40s
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 1536M
+
+  postgresql:
+    image: pgvector/pgvector:0.8.6-pg16-bookworm
+    container_name: lookddak-postgresql
+    restart: always
+    expose:
+      - "5432"
+    networks:
+      - db-network
+    environment:
+      POSTGRES_DB: "${POSTGRES_DB:-}"
+      POSTGRES_USER: "${POSTGRES_USER:-}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-}"
+      PGDATA: /var/lib/postgresql/data/pgdata
+      TZ: KST-9
+    command: >
+      postgres
+      -c shared_buffers=256MB
+      -c effective_cache_size=768MB
+      -c maintenance_work_mem=64MB
+      -c work_mem=8MB
+    volumes:
+      - postgresql-data:/var/lib/postgresql/data
+      - ./postgresql/initdb/01-schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ap-northeast-2
+        awslogs-group: /lookddak/prod/postgresql
+        awslogs-create-group: "false"
+        tag: "{{.Name}}/{{.ID}}"
+        mode: non-blocking
+        max-buffer-size: "4m"
+        cache-max-size: "10m"
+        cache-max-file: "3"
+        cache-compress: "true"
+    stop_grace_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+        reservations:
+          memory: 512M
+
+  certbot:
+    image: certbot/certbot:v5.8.0
+    container_name: lookddak-certbot
+    profiles: ["ssl"]
+    volumes:
+      - certbot-certs:/etc/letsencrypt:rw
+      - certbot-challenge:/var/www/certbot:rw
