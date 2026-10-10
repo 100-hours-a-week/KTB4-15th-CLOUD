@@ -1,54 +1,6 @@
 # V1 IAM resources imported from the existing AWS configuration.
 # Keep this file aligned with the current configuration during the baseline import.
 
-resource "aws_iam_role_policy" "ai_deploy" {
-  name = "ai-cd-deploy-rolePolicy"
-  policy = jsonencode({
-    Statement = [{
-      Action   = "ecr:DescribeImages"
-      Effect   = "Allow"
-      Resource = var.ecr_repository_arns.fastapi
-      Sid      = "EcrDescribe"
-      }, {
-      Action   = "ssm:SendCommand"
-      Effect   = "Allow"
-      Resource = ["arn:aws:ssm:ap-northeast-2::document/AWS-RunShellScript", "arn:aws:ec2:ap-northeast-2:686496667254:instance/i-0b4d0ff11e09efb6a"]
-      Sid      = "SsmSend"
-      }, {
-      Action   = "ssm:GetCommandInvocation"
-      Effect   = "Allow"
-      Resource = "*"
-      Sid      = "SsmGetResult"
-    }]
-    Version = "2012-10-17"
-  })
-  role = aws_iam_role.ai_deploy.name
-}
-
-resource "aws_iam_role_policy" "be_deploy" {
-  name = "be-cd-deploy-rolePolicy"
-  policy = jsonencode({
-    Statement = [{
-      Action   = "ecr:DescribeImages"
-      Effect   = "Allow"
-      Resource = var.ecr_repository_arns.spring
-      Sid      = "EcrDescribe"
-      }, {
-      Action   = "ssm:SendCommand"
-      Effect   = "Allow"
-      Resource = ["arn:aws:ssm:ap-northeast-2::document/AWS-RunShellScript", "arn:aws:ec2:ap-northeast-2:686496667254:instance/i-0b4d0ff11e09efb6a"]
-      Sid      = "SsmSend"
-      }, {
-      Action   = "ssm:GetCommandInvocation"
-      Effect   = "Allow"
-      Resource = "*"
-      Sid      = "SsmGetResult"
-    }]
-    Version = "2012-10-17"
-  })
-  role = aws_iam_role.be_deploy.name
-}
-
 resource "aws_iam_role_policy_attachment" "eventbridge_aws_health" {
   policy_arn = aws_iam_policy.eventbridge_aws_health.arn
   role       = aws_iam_role.eventbridge_aws_health.name
@@ -385,30 +337,6 @@ resource "aws_iam_role_policy_attachment" "discord_alert_logs" {
 resource "aws_iam_role_policy_attachment" "ec2_s3_images_rw" {
   policy_arn = aws_iam_policy.ec2_s3_images_rw.arn
   role       = aws_iam_role.ec2.name
-}
-
-resource "aws_iam_role_policy" "fe_deploy" {
-  name = "fe-cd-deploy-rolePolicy"
-  policy = jsonencode({
-    Statement = [{
-      Action   = "ecr:DescribeImages"
-      Effect   = "Allow"
-      Resource = var.ecr_repository_arns.nextjs
-      Sid      = "EcrDescribe"
-      }, {
-      Action   = "ssm:SendCommand"
-      Effect   = "Allow"
-      Resource = ["arn:aws:ssm:ap-northeast-2::document/AWS-RunShellScript", "arn:aws:ec2:ap-northeast-2:686496667254:instance/i-0b4d0ff11e09efb6a"]
-      Sid      = "SsmSend"
-      }, {
-      Action   = "ssm:GetCommandInvocation"
-      Effect   = "Allow"
-      Resource = "*"
-      Sid      = "SsmGetResult"
-    }]
-    Version = "2012-10-17"
-  })
-  role = aws_iam_role.fe_deploy.name
 }
 
 resource "aws_iam_policy" "ec2_s3_images_rw" {

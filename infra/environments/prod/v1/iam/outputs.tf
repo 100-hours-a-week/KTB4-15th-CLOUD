@@ -18,3 +18,12 @@ output "discord_alert_role_arn" {
   description = "Discord 알림 Lambda 실행 Role ARN"
   value       = aws_iam_role.discord_alert.arn
 }
+
+output "deploy_role_names" {
+  description = "Names of the V1 application deployment roles"
+  value = {
+    fe = aws_iam_role.fe_deploy.name
+    be = aws_iam_role.be_deploy.name
+    ai = aws_iam_role.ai_deploy.name
+  }
+}
