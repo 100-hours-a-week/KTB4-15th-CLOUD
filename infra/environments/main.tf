@@ -9,6 +9,12 @@ module "prod_v1_database" {
   db_security_group_id = module.shared_core.db_security_group_id
 }
 
+module "prod_v1_iam" {
+  source = "./prod/v1/iam"
+
+  ecr_repository_arns = module.shared_core.ecr_repository_arns
+}
+
 module "prod_s3" {
   source = "./prod/s3"
 }
