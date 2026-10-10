@@ -30,6 +30,13 @@ module "prod_v1_edge" {
   app_public_ip = module.prod_v1_compute.public_ip
 }
 
+module "prod_v1_monitoring" {
+  source = "./prod/v1/monitoring"
+
+  eventbridge_role_arns  = module.prod_v1_iam.eventbridge_role_arns
+  discord_alert_role_arn = module.prod_v1_iam.discord_alert_role_arn
+}
+
 module "prod_s3" {
   source = "./prod/s3"
 }
