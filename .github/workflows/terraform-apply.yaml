@@ -3,6 +3,9 @@ name: terraform-apply
 on:
   push:
     branches: [main]
+    paths:
+      - "infra/**"
+      - ".github/workflows/terraform-*.yaml"
   workflow_dispatch:
 
 permissions:
