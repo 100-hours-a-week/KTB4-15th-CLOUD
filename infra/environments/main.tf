@@ -23,6 +23,14 @@ module "prod_v1_compute" {
   iam_instance_profile_name = module.prod_v1_iam.ec2_instance_profile_name
 }
 
+module "prod_v1_cicd_deploy_policy" {
+  source = "./prod/v1/cicd-deploy-policy"
+
+  deploy_role_names   = module.prod_v1_iam.deploy_role_names
+  ecr_repository_arns = module.shared_core.ecr_repository_arns
+  ec2_instance_arn    = module.prod_v1_compute.instance_arn
+}
+
 module "prod_v1_edge" {
   source = "./prod/v1/edge"
 
