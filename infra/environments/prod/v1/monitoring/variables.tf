@@ -8,8 +8,3 @@ variable "eventbridge_role_arns" {
     rds_events         = string
   })
 }
-
-variable "discord_alert_role_arn" {
-  description = "Discord 알림 Lambda 실행 Role ARN"
-  type        = string
-}

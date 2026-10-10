@@ -27,5 +27,3 @@ override.tf.json
 .idea/
 .vscode/
 
-# Terraform이 생성하는 Lambda 배포용 zip
-.build/

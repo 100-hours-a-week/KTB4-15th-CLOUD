@@ -181,16 +181,3 @@ import {
   to = module.prod_v1_monitoring.aws_sns_topic.alert_pipeline
   id = "arn:aws:sns:ap-northeast-2:686496667254:lookddak-alert-pipeline"
 }
-
-# ---------------------------------------------------------------
-# Lambda (id: 함수 이름 / 이벤트 소스 매핑 UUID)
-# ---------------------------------------------------------------
-import {
-  to = module.prod_v1_monitoring.aws_lambda_function.discord_alert
-  id = "lookddak-discord-alert"
-}
-
-import {
-  to = module.prod_v1_monitoring.aws_lambda_event_source_mapping.alert_queue
-  id = "243729cd-50ee-4651-a36a-8d8f81f47ae1"
-}

@@ -2,21 +2,27 @@
 # V1 EC2 애플리케이션 로그 그룹 (CloudWatch Agent가 수집)
 # ---------------------------------------------------------------
 locals {
-  app_log_groups = toset([
-    "/lookddak/prod/nginx",
-    "/lookddak/prod/spring",
-    "/lookddak/prod/fastapi",
-    "/lookddak/prod/nextjs",
-    "/lookddak/prod/postgresql",
-    "/lookddak/prod/status",
-  ])
+  # 로그 그룹 이름 => Service 태그 값
+  app_log_groups = {
+    "/lookddak/prod/nginx"      = "nginx"
+    "/lookddak/prod/spring"     = "spring"
+    "/lookddak/prod/fastapi"    = "fastapi"
+    "/lookddak/prod/nextjs"     = "nextjs"
+    "/lookddak/prod/postgresql" = "postgresql"
+    "/lookddak/prod/status"     = "status"
+  }
 }
 
 resource "aws_cloudwatch_log_group" "app" {
   for_each = local.app_log_groups
 
-  name              = each.value
+  name              = each.key
   retention_in_days = 30
+
+  tags = {
+    Environment = "prod"
+    Service     = each.value
+  }
 }
 
 # 배포 스크립트 로그 (보존 기간 무제한)

@@ -41,8 +41,7 @@ module "prod_v1_edge" {
 module "prod_v1_monitoring" {
   source = "./prod/v1/monitoring"
 
-  eventbridge_role_arns  = module.prod_v1_iam.eventbridge_role_arns
-  discord_alert_role_arn = module.prod_v1_iam.discord_alert_role_arn
+  eventbridge_role_arns = module.prod_v1_iam.eventbridge_role_arns
 }
 
 module "prod_s3" {
