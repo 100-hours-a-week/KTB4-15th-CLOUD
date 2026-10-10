@@ -515,6 +515,22 @@ resource "aws_iam_role_policy" "discord_alert_status_logs_read" {
   role = aws_iam_role.discord_alert.name
 }
 
+# Discord 알림 Lambda가 Parameter Store에서 Webhook URL(SecureString)을 읽는 권한
+# - 복호화 키는 AWS 관리형 키(alias/aws/ssm)라 kms:Decrypt는 키 정책에서 허용됨
+resource "aws_iam_role_policy" "discord_alert_ssm_read" {
+  name = "lookddak-discord-alert-ssm-read"
+  policy = jsonencode({
+    Statement = [{
+      Sid      = "ReadDiscordWebhookParameters"
+      Action   = "ssm:GetParameter"
+      Effect   = "Allow"
+      Resource = "arn:aws:ssm:ap-northeast-2:686496667254:parameter/lookddak/prod/discord/*"
+    }]
+    Version = "2012-10-17"
+  })
+  role = aws_iam_role.discord_alert.name
+}
+
 resource "aws_iam_policy" "eventbridge_docker_events" {
   lifecycle {
     ignore_changes = [tags, tags_all]
