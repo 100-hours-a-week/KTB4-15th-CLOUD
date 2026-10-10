@@ -27,3 +27,9 @@ override.tf.json
 .idea/
 .vscode/
 
+# Terraform이 생성하는 Lambda 배포용 zip
+.build/
+
+# Python 바이트코드 캐시
+__pycache__/
+*.pyc
