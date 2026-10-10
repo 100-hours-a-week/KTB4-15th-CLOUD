@@ -9,6 +9,19 @@ module "prod_v1_database" {
   db_security_group_id = module.shared_core.db_security_group_id
 }
 
+module "prod_parameter_store" {
+  source = "./prod/parameter-store"
+
+  rds_admin_username = module.prod_v1_database.mysql_master_username
+  rds_database       = module.prod_v1_database.mysql_database_name
+  rds_host           = module.prod_v1_database.mysql_address
+  rds_port           = module.prod_v1_database.mysql_port
+}
+
+module "prod_v1_parameter_store" {
+  source = "./prod/v1/parameter-store"
+}
+
 module "prod_v1_iam" {
   source = "./prod/v1/iam"
 
