@@ -3,6 +3,9 @@ name: terraform-pr
 on:
   pull_request:
     branches: [main]
+    paths:
+      - "infra/**"
+      - ".github/workflows/terraform-*.yaml"
 
 permissions:
   id-token: write        # OIDC

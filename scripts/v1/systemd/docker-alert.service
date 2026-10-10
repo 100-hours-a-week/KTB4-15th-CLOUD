@@ -1,0 +1,12 @@
+[Unit]
+Description=Lookddak container alert to Discord
+After=docker.service
+Requires=docker.service
+
+[Service]
+ExecStart=/opt/lookddak/scripts/docker-alert.sh
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
