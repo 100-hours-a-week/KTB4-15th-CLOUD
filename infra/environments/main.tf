@@ -8,3 +8,11 @@ module "prod_v1_database" {
   db_subnet_ids        = module.shared_core.db_subnet_ids
   db_security_group_id = module.shared_core.db_security_group_id
 }
+
+module "prod_s3" {
+  source = "./prod/s3"
+}
+
+module "dev_s3" {
+  source = "./dev/s3"
+}
