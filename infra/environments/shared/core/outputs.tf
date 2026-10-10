@@ -22,3 +22,12 @@ output "db_security_group_id" {
   description = "RDS 보안그룹 ID"
   value       = aws_security_group.db.id
 }
+
+output "ecr_repository_arns" {
+  description = "ARNs of the shared application ECR repositories"
+  value = {
+    nextjs  = aws_ecr_repository.nextjs.arn
+    spring  = aws_ecr_repository.spring.arn
+    fastapi = aws_ecr_repository.fastapi.arn
+  }
+}
