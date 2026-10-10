@@ -23,6 +23,13 @@ module "prod_v1_compute" {
   iam_instance_profile_name = module.prod_v1_iam.ec2_instance_profile_name
 }
 
+module "prod_v1_edge" {
+  source = "./prod/v1/edge"
+
+  zone_id       = module.shared_core.route53_zone_id
+  app_public_ip = module.prod_v1_compute.public_ip
+}
+
 module "prod_s3" {
   source = "./prod/s3"
 }
