@@ -1,7 +1,7 @@
 # ---------------------------------------------------------------
-# V2 dev security group shells
-# - Detailed ingress/egress rules are managed in the next security group issue.
-# - Keeping the groups here lets later modules depend on stable IDs.
+# V2 dev security groups
+# - Rules are managed separately in security-group-rules.tf.
+# - Keeping the groups and rules separate makes service relationships easier to review.
 # ---------------------------------------------------------------
 locals {
   security_groups = {

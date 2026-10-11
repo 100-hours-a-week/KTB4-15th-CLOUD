@@ -6,6 +6,7 @@
 module "dev_v2_network" {
   source = "./dev/v2/network"
 
-  vpc_id                    = module.dev_v1_network.vpc_id
-  existing_public_subnet_id = module.dev_v1_network.public_subnet_ids[0]
+  vpc_id                      = module.dev_v1_network.vpc_id
+  existing_public_subnet_id   = module.dev_v1_network.public_subnet_ids[0]
+  dev_mysql_security_group_id = module.dev_v1_network.db_security_group_id
 }
