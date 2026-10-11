@@ -119,6 +119,20 @@ variable "master_username" {
   default     = null
 }
 
+variable "master_password_wo" {
+  description = "마스터 비밀번호 (write-only: plan·state에 저장되지 않음, 새로 만들 때만 지정)"
+  type        = string
+  default     = null
+  sensitive   = true
+  ephemeral   = true
+}
+
+variable "master_password_wo_version" {
+  description = "master_password_wo 적용 버전 (값을 바꿔야 비밀번호가 다시 적용됨)"
+  type        = number
+  default     = null
+}
+
 variable "manage_master_user_password" {
   description = "마스터 비밀번호를 RDS가 Secrets Manager로 관리 (새로 만들 때만 지정, 값이 state에 남지 않음)"
   type        = bool
