@@ -17,6 +17,9 @@ EC2는 Terraform으로 관리하지만, **서버 안의 파일은 Terraform 관�
 | `scripts/load-parameters.sh` | `/opt/lookddak/scripts/load-parameters.sh` | Parameter Store 조회 함수 (bootstrap·deploy에서 source) |
 | `scripts/container-metric.sh` | `/opt/lookddak/scripts/container-metric.sh` | 컨테이너·호스트 상태를 CloudWatch Logs(`/lookddak/prod/status`)로 전송 |
 | `scripts/docker-alert.sh` | `/opt/lookddak/scripts/docker-alert.sh` | 컨테이너 상태 변화를 EventBridge로 전송 |
+| `scripts/load-parameters-dev.sh` | dev 서버 `/opt/lookddak/scripts/load-parameters.sh` | dev 서버용 Parameter Store 조회 (`/lookddak/dev/*`) |
+| `docker-compose.dev.yaml` | `/opt/lookddak/docker-compose.dev.yaml` | dev 서버 전용 덮어쓰기 (로깅, Nginx 설정) |
+| `nginx/conf.d.dev/default.conf` | `/opt/lookddak/nginx/conf.d.dev/default.conf` | dev 서버 Nginx 설정 |
 | `systemd/docker-alert.service` | `/etc/systemd/system/docker-alert.service` | `docker-alert.sh` 상시 실행 (systemd) |
 
 ## 자동 실행 설정
@@ -28,6 +31,28 @@ EC2는 Terraform으로 관리하지만, **서버 안의 파일은 Terraform 관�
 
 > `container-metric.sh` 상단 주석의 `/usr/local/bin/container-metrics.sh`는 이전 경로입니다. 실제로는 위 crontab처럼 `/opt/lookddak/scripts/`의 파일을 실행합니다.
 
+
+## prod / dev 구분
+
+같은 파일을 prod 서버(`lookddak.com`)와 dev 서버(`dev.lookddak.com`)에서 함께 사용하고, dev에만 필요한 차이는 dev 전용 파일로 둡니다.
+
+| dev 전용 파일 | dev 서버 배치 경로 | prod와 다른 점 |
+|---|---|---|
+| `scripts/load-parameters-dev.sh` | `/opt/lookddak/scripts/load-parameters.sh` (**이 이름으로 복사**) | Parameter Store 경로가 `/lookddak/dev/...` |
+| `docker-compose.dev.yaml` | `/opt/lookddak/docker-compose.dev.yaml` | 아래 덮어쓰기 내용 |
+| `nginx/conf.d.dev/default.conf` | `/opt/lookddak/nginx/conf.d.dev/default.conf` | 도메인 `dev.lookddak.com`, www 리다이렉트 없음 |
+
+- `load-parameters-dev.sh`를 `load-parameters.sh` 이름으로 복사하므로 `bootstrap.sh`, `deploy.sh`는 prod와 같은 파일을 그대로 사용합니다.
+- dev 서버 `.env`에 `COMPOSE_FILE=docker-compose.yaml:docker-compose.dev.yaml`을 넣으면 docker compose가 두 파일을 합쳐서 사용합니다.
+
+`docker-compose.dev.yaml`이 바꾸는 것
+
+| 항목 | prod | dev |
+|---|---|---|
+| 컨테이너 로그 | CloudWatch Logs (`/lookddak/prod/*`) | 서버 로컬 json-file (`docker logs`로 확인, 10MB × 3개 보관) |
+| Nginx 설정 | `nginx/conf.d` | `nginx/conf.d.dev` |
+
+dev 서버에는 모니터링(`container-metric.sh` cron, `docker-alert.sh` systemd)을 설치하지 않습니다.
 
 ## 서버 반영
 
