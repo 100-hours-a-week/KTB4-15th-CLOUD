@@ -5,13 +5,7 @@ output "ec2_instance_profile_name" {
 
 output "eventbridge_role_arns" {
   description = "EventBridge → SQS 전송용 IAM Role ARN (규칙 키별)"
-  value = {
-    alarm_state_change = aws_iam_role.eventbridge_alarm_state_change.arn
-    aws_health         = aws_iam_role.eventbridge_aws_health.arn
-    docker_events      = aws_iam_role.eventbridge_docker_events.arn
-    ec2_state_change   = aws_iam_role.eventbridge_ec2_state_change.arn
-    rds_events         = aws_iam_role.eventbridge_rds_events.arn
-  }
+  value       = { for k, r in aws_iam_role.eventbridge : k => r.arn }
 }
 
 output "discord_alert_role_arn" {
