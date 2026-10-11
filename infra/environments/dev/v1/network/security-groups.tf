@@ -1,13 +1,12 @@
 # ---------------------------------------------------------------
 # V1 dev 서버 보안 그룹
-# - VPC는 prod와 공유(shared/core)하고, 보안 그룹은 dev 전용으로 분리한다.
-# - dev app ↔ dev db만 서로 허용하므로 prod RDS에는 접근할 수 없다.
+# - dev VPC(vpc.tf)에 만들며, dev app ↔ dev db만 서로 허용한다.
 # - 보안 그룹끼리 서로 참조하므로 규칙은 별도 리소스로 관리한다.
 # ---------------------------------------------------------------
 resource "aws_security_group" "app" {
   name        = "lookddak-dev-app-sg"
   description = "LookDDak dev EC2 application security group"
-  vpc_id      = var.vpc_id
+  vpc_id      = aws_vpc.main.id
 
   tags = {
     Name        = "lookddak-dev-app-sg"
@@ -19,7 +18,7 @@ resource "aws_security_group" "app" {
 resource "aws_security_group" "db" {
   name        = "lookddak-dev-db-sg"
   description = "LookDDak dev RDS MySQL security group"
-  vpc_id      = var.vpc_id
+  vpc_id      = aws_vpc.main.id
 
   tags = {
     Name        = "lookddak-dev-db-sg"
