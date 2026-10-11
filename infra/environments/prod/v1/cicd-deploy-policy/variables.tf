@@ -16,7 +16,7 @@ variable "ecr_repository_arns" {
   })
 }
 
-variable "ec2_instance_arn" {
-  description = "ARN of the V1 application EC2 instance targeted by SSM deployments"
-  type        = string
+variable "ec2_instance_arns" {
+  description = "SSM Run Command로 배포할 EC2 인스턴스 ARN 목록 (prod, dev)"
+  type        = list(string)
 }
