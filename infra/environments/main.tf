@@ -65,3 +65,27 @@ module "prod_s3" {
 module "dev_s3" {
   source = "./dev/s3"
 }
+
+# ---------------------------------------------------------------
+# V1 dev (dev 전용 VPC)
+# ---------------------------------------------------------------
+module "dev_v1_network" {
+  source = "./dev/v1/network"
+}
+
+module "dev_v1_database" {
+  source = "./dev/v1/database"
+
+  db_subnet_ids        = module.dev_v1_network.db_subnet_ids
+  db_security_group_id = module.dev_v1_network.db_security_group_id
+  master_username      = module.prod_v1_database.mysql_master_username
+}
+
+module "dev_parameter_store" {
+  source = "./dev/parameter-store"
+
+  rds_admin_username = module.dev_v1_database.mysql_master_username
+  rds_database       = module.dev_v1_database.mysql_database_name
+  rds_host           = module.dev_v1_database.mysql_address
+  rds_port           = module.dev_v1_database.mysql_port
+}
