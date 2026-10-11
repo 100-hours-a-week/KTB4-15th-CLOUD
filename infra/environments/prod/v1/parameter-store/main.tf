@@ -10,10 +10,6 @@ resource "aws_ssm_parameter" "postgresql_database" {
     Environment = "prod"
     Service     = "postgresql"
   }
-
-  lifecycle {
-    ignore_changes = [tags, tags_all]
-  }
 }
 
 resource "aws_ssm_parameter" "postgresql_username" {
@@ -27,9 +23,5 @@ resource "aws_ssm_parameter" "postgresql_username" {
   tags = {
     Environment = "prod"
     Service     = "postgresql"
-  }
-
-  lifecycle {
-    ignore_changes = [tags, tags_all]
   }
 }

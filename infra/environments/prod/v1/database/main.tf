@@ -7,10 +7,6 @@ resource "aws_db_subnet_group" "mysql" {
     Name        = "lookddak-prod-db-subnet-group"
     Environment = "prod"
   }
-
-  lifecycle {
-    ignore_changes = [tags, tags_all]
-  }
 }
 
 resource "aws_db_parameter_group" "mysql" {
@@ -63,10 +59,6 @@ resource "aws_db_parameter_group" "mysql" {
   tags = {
     Environment = "prod"
     Service     = "mysql"
-  }
-
-  lifecycle {
-    ignore_changes = [tags, tags_all]
   }
 }
 
@@ -124,6 +116,6 @@ resource "aws_db_instance" "mysql" {
 
   lifecycle {
     prevent_destroy = true
-    ignore_changes  = [apply_immediately, tags, tags_all]
+    ignore_changes  = [apply_immediately]
   }
 }

@@ -4,10 +4,6 @@
 # ---------------------------------------------------------------
 
 resource "aws_iam_role" "discord_alert" {
-  lifecycle {
-    ignore_changes = [tags, tags_all]
-  }
-
   assume_role_policy = jsonencode({
     Statement = [{
       Action = "sts:AssumeRole"
@@ -24,10 +20,6 @@ resource "aws_iam_role" "discord_alert" {
 }
 
 resource "aws_iam_policy" "discord_alert_logs" {
-  lifecycle {
-    ignore_changes = [tags, tags_all]
-  }
-
   name = "AWSLambdaBasicExecutionRole-95b4d8dc-ae9a-4906-bfae-0a3702a265cf"
   path = "/service-role/"
   policy = jsonencode({

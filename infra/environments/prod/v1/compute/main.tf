@@ -61,7 +61,7 @@ resource "aws_instance" "app_v1" {
     tags = {
       Backup      = "daily"
       Environment = "prod"
-      ManagedBy   = "aws-cli"
+      ManagedBy   = "terraform"
       Name        = "lookddak-app-v1-root"
       Project     = "lookddak"
       Role        = "app"
@@ -71,19 +71,12 @@ resource "aws_instance" "app_v1" {
   tags = {
     Backup      = "daily"
     Environment = "prod"
-    ManagedBy   = "aws-cli"
     Name        = "lookddak-app-v1"
     Role        = "app"
   }
 
   lifecycle {
     prevent_destroy = true
-    ignore_changes = [
-      tags,
-      tags_all,
-      root_block_device[0].tags,
-      root_block_device[0].tags_all,
-    ]
   }
 }
 
@@ -94,14 +87,12 @@ resource "aws_eip" "app_v1" {
 
   tags = {
     Environment = "prod"
-    ManagedBy   = "aws-cli"
     Name        = "lookddak-app-v1-eip"
     Role        = "app"
   }
 
   lifecycle {
     prevent_destroy = true
-    ignore_changes  = [tags, tags_all]
   }
 }
 

@@ -38,10 +38,6 @@ resource "aws_iam_role" "eventbridge" {
     Version = "2012-10-17"
   })
   tags = {}
-
-  lifecycle {
-    ignore_changes = [tags, tags_all]
-  }
 }
 
 resource "aws_iam_policy" "eventbridge" {
@@ -58,10 +54,6 @@ resource "aws_iam_policy" "eventbridge" {
     Version = "2012-10-17"
   })
   tags = {}
-
-  lifecycle {
-    ignore_changes = [tags, tags_all]
-  }
 }
 
 resource "aws_iam_role_policy_attachment" "eventbridge" {
