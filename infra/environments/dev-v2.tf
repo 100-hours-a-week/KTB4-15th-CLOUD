@@ -10,3 +10,13 @@ module "dev_v2_network" {
   existing_public_subnet_id   = module.dev_v1_network.public_subnet_ids[0]
   dev_mysql_security_group_id = module.dev_v1_network.db_security_group_id
 }
+
+module "dev_v2_ecs_cluster" {
+  source = "./dev/v2/ecs-cluster"
+}
+
+module "dev_v2_iam" {
+  source = "./dev/v2/iam"
+
+  ecs_cluster_arn = module.dev_v2_ecs_cluster.cluster_arn
+}
