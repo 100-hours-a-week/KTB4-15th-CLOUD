@@ -1,0 +1,49 @@
+# dev 서버 전용 덮어쓰기 파일 (prod docker-compose.yaml 위에 겹쳐 사용)
+# - 사용: dev 서버 .env에 COMPOSE_FILE=docker-compose.yaml:docker-compose.dev.yaml
+#   (docker compose가 .env의 COMPOSE_FILE을 읽어 두 파일을 합친다)
+# - V1 dev에는 CloudWatch 로그 그룹이 없으므로 로깅을 서버 로컬(json-file)로 바꾼다.
+#   (!override: prod의 awslogs 옵션과 합쳐지지 않고 통째로 교체, Docker Compose 2.24 이상)
+# - Nginx 설정은 dev 도메인용 conf.d.dev를 마운트한다. (같은 컨테이너 경로라 prod 마운트를 대체)
+
+services:
+  nginx:
+    volumes:
+      - ./nginx/conf.d.dev:/etc/nginx/conf.d:ro
+    logging: !override
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+        tag: "{{.Name}}/{{.ID}}"
+
+  nextjs:
+    logging: !override
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+        tag: "{{.Name}}/{{.ID}}"
+
+  spring:
+    logging: !override
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+        tag: "{{.Name}}/{{.ID}}"
+
+  fastapi:
+    logging: !override
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+        tag: "{{.Name}}/{{.ID}}"
+
+  postgresql:
+    logging: !override
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+        tag: "{{.Name}}/{{.ID}}"
