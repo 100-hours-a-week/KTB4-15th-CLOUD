@@ -1,29 +1,6 @@
 # V1 IAM resources imported from the existing AWS configuration.
 # Keep this file aligned with the current configuration during the baseline import.
 
-resource "aws_iam_role_policy_attachment" "eventbridge_aws_health" {
-  policy_arn = aws_iam_policy.eventbridge_aws_health.arn
-  role       = aws_iam_role.eventbridge_aws_health.name
-}
-
-resource "aws_iam_policy" "eventbridge_alarm_state_change" {
-  lifecycle {
-    ignore_changes = [tags, tags_all]
-  }
-
-  name = "Amazon_EventBridge_Invoke_Sqs_1504746143"
-  path = "/service-role/"
-  policy = jsonencode({
-    Statement = [{
-      Action   = ["sqs:SendMessage"]
-      Effect   = "Allow"
-      Resource = ["arn:aws:sqs:${local.region}:${local.account_id}:lookddak-alert-queue"]
-    }]
-    Version = "2012-10-17"
-  })
-  tags = {}
-}
-
 resource "aws_iam_policy" "ec2_cloudwatch_logs_write" {
   lifecycle {
     ignore_changes = [tags, tags_all]
@@ -49,33 +26,6 @@ resource "aws_iam_policy" "ec2_cloudwatch_logs_write" {
 resource "aws_iam_role_policy_attachment" "ec2_parameters_read" {
   policy_arn = aws_iam_policy.ec2_parameters_read.arn
   role       = aws_iam_role.ec2.name
-}
-
-resource "aws_iam_role" "eventbridge_docker_events" {
-  lifecycle {
-    ignore_changes = [tags, tags_all]
-  }
-
-  assume_role_policy = jsonencode({
-    Statement = [{
-      Action = "sts:AssumeRole"
-      Condition = {
-        StringEquals = {
-          "aws:SourceAccount" = "${local.account_id}"
-          "aws:SourceArn"     = "arn:aws:events:${local.region}:${local.account_id}:rule/lookddak-docker-events"
-        }
-      }
-      Effect = "Allow"
-      Principal = {
-        Service = "events.amazonaws.com"
-      }
-      Sid = "TrustEventBridgeService"
-    }]
-    Version = "2012-10-17"
-  })
-  name = "Amazon_EventBridge_Invoke_Sqs_2071571937"
-  path = "/service-role/"
-  tags = {}
 }
 
 resource "aws_iam_policy" "ec2_ssm_core" {
@@ -111,41 +61,9 @@ resource "aws_iam_policy" "ec2_ssm_core" {
   }
 }
 
-resource "aws_iam_role_policy_attachment" "eventbridge_rds_events" {
-  policy_arn = aws_iam_policy.eventbridge_rds_events.arn
-  role       = aws_iam_role.eventbridge_rds_events.name
-}
-
 resource "aws_iam_role_policy_attachment" "discord_alert_sqs" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaSQSQueueExecutionRole"
   role       = aws_iam_role.discord_alert.name
-}
-
-resource "aws_iam_role" "eventbridge_alarm_state_change" {
-  lifecycle {
-    ignore_changes = [tags, tags_all]
-  }
-
-  assume_role_policy = jsonencode({
-    Statement = [{
-      Action = "sts:AssumeRole"
-      Condition = {
-        StringEquals = {
-          "aws:SourceAccount" = "${local.account_id}"
-          "aws:SourceArn"     = "arn:aws:events:${local.region}:${local.account_id}:rule/lookddak-alarm-state-change"
-        }
-      }
-      Effect = "Allow"
-      Principal = {
-        Service = "events.amazonaws.com"
-      }
-      Sid = "TrustEventBridgeService"
-    }]
-    Version = "2012-10-17"
-  })
-  name = "Amazon_EventBridge_Invoke_Sqs_1504746143"
-  path = "/service-role/"
-  tags = {}
 }
 
 resource "aws_iam_role_policy" "ec2_eventbridge_write" {
@@ -159,33 +77,6 @@ resource "aws_iam_role_policy" "ec2_eventbridge_write" {
     Version = "2012-10-17"
   })
   role = aws_iam_role.ec2.name
-}
-
-resource "aws_iam_role" "eventbridge_aws_health" {
-  lifecycle {
-    ignore_changes = [tags, tags_all]
-  }
-
-  assume_role_policy = jsonencode({
-    Statement = [{
-      Action = "sts:AssumeRole"
-      Condition = {
-        StringEquals = {
-          "aws:SourceAccount" = "${local.account_id}"
-          "aws:SourceArn"     = "arn:aws:events:${local.region}:${local.account_id}:rule/lookddak-aws-health"
-        }
-      }
-      Effect = "Allow"
-      Principal = {
-        Service = "events.amazonaws.com"
-      }
-      Sid = "TrustEventBridgeService"
-    }]
-    Version = "2012-10-17"
-  })
-  name = "Amazon_EventBridge_Invoke_Sqs_1568336830"
-  path = "/service-role/"
-  tags = {}
 }
 
 resource "aws_iam_role" "ai_deploy" {
@@ -246,11 +137,6 @@ resource "aws_iam_role" "be_build" {
   }
 }
 
-resource "aws_iam_role_policy_attachment" "eventbridge_alarm_state_change" {
-  policy_arn = aws_iam_policy.eventbridge_alarm_state_change.arn
-  role       = aws_iam_role.eventbridge_alarm_state_change.name
-}
-
 resource "aws_iam_role_policy_attachment" "ec2_ecr_pull" {
   policy_arn = aws_iam_policy.ec2_ecr_pull.arn
   role       = aws_iam_role.ec2.name
@@ -273,24 +159,6 @@ resource "aws_iam_role_policy" "be_build" {
     Version = "2012-10-17"
   })
   role = aws_iam_role.be_build.name
-}
-
-resource "aws_iam_policy" "eventbridge_ec2_state_change" {
-  lifecycle {
-    ignore_changes = [tags, tags_all]
-  }
-
-  name = "Amazon_EventBridge_Invoke_Sqs_1541928649"
-  path = "/service-role/"
-  policy = jsonencode({
-    Statement = [{
-      Action   = ["sqs:SendMessage"]
-      Effect   = "Allow"
-      Resource = ["arn:aws:sqs:${local.region}:${local.account_id}:lookddak-alert-queue"]
-    }]
-    Version = "2012-10-17"
-  })
-  tags = {}
 }
 
 resource "aws_iam_role" "discord_alert" {
@@ -391,11 +259,6 @@ resource "aws_iam_role_policy_attachment" "ec2_ssm_core" {
   role       = aws_iam_role.ec2.name
 }
 
-resource "aws_iam_role_policy_attachment" "eventbridge_ec2_state_change" {
-  policy_arn = aws_iam_policy.eventbridge_ec2_state_change.arn
-  role       = aws_iam_role.eventbridge_ec2_state_change.name
-}
-
 resource "aws_iam_role" "be_deploy" {
   lifecycle {
     ignore_changes = [tags, tags_all]
@@ -421,51 +284,6 @@ resource "aws_iam_role" "be_deploy" {
   })
   name = "be-cd-deploy-role"
   path = "/"
-  tags = {}
-}
-
-resource "aws_iam_policy" "eventbridge_rds_events" {
-  lifecycle {
-    ignore_changes = [tags, tags_all]
-  }
-
-  name = "Amazon_EventBridge_Invoke_Sqs_533425366"
-  path = "/service-role/"
-  policy = jsonencode({
-    Statement = [{
-      Action   = ["sqs:SendMessage"]
-      Effect   = "Allow"
-      Resource = ["arn:aws:sqs:${local.region}:${local.account_id}:lookddak-alert-queue"]
-    }]
-    Version = "2012-10-17"
-  })
-  tags = {}
-}
-
-resource "aws_iam_role" "eventbridge_rds_events" {
-  lifecycle {
-    ignore_changes = [tags, tags_all]
-  }
-
-  assume_role_policy = jsonencode({
-    Statement = [{
-      Action = "sts:AssumeRole"
-      Condition = {
-        StringEquals = {
-          "aws:SourceAccount" = "${local.account_id}"
-          "aws:SourceArn"     = "arn:aws:events:${local.region}:${local.account_id}:rule/lookddak-rds-events"
-        }
-      }
-      Effect = "Allow"
-      Principal = {
-        Service = "events.amazonaws.com"
-      }
-      Sid = "TrustEventBridgeService"
-    }]
-    Version = "2012-10-17"
-  })
-  name = "Amazon_EventBridge_Invoke_Sqs_533425366"
-  path = "/service-role/"
   tags = {}
 }
 
@@ -529,24 +347,6 @@ resource "aws_iam_role_policy" "discord_alert_ssm_read" {
     Version = "2012-10-17"
   })
   role = aws_iam_role.discord_alert.name
-}
-
-resource "aws_iam_policy" "eventbridge_docker_events" {
-  lifecycle {
-    ignore_changes = [tags, tags_all]
-  }
-
-  name = "Amazon_EventBridge_Invoke_Sqs_2071571937"
-  path = "/service-role/"
-  policy = jsonencode({
-    Statement = [{
-      Action   = ["sqs:SendMessage"]
-      Effect   = "Allow"
-      Resource = ["arn:aws:sqs:${local.region}:${local.account_id}:lookddak-alert-queue"]
-    }]
-    Version = "2012-10-17"
-  })
-  tags = {}
 }
 
 resource "aws_iam_role_policy" "ec2_status_log_write" {
@@ -619,11 +419,6 @@ resource "aws_iam_policy" "ec2_ecr_pull" {
   }
 }
 
-resource "aws_iam_role_policy_attachment" "eventbridge_docker_events" {
-  policy_arn = aws_iam_policy.eventbridge_docker_events.arn
-  role       = aws_iam_role.eventbridge_docker_events.name
-}
-
 resource "aws_iam_role_policy" "fe_build" {
   name = "fe-cd-build-rolePolicy"
   policy = jsonencode({
@@ -646,51 +441,6 @@ resource "aws_iam_role_policy" "fe_build" {
     Version = "2012-10-17"
   })
   role = aws_iam_role.fe_build.name
-}
-
-resource "aws_iam_role" "eventbridge_ec2_state_change" {
-  lifecycle {
-    ignore_changes = [tags, tags_all]
-  }
-
-  assume_role_policy = jsonencode({
-    Statement = [{
-      Action = "sts:AssumeRole"
-      Condition = {
-        StringEquals = {
-          "aws:SourceAccount" = "${local.account_id}"
-          "aws:SourceArn"     = "arn:aws:events:${local.region}:${local.account_id}:rule/lookddak-ec2-state-change"
-        }
-      }
-      Effect = "Allow"
-      Principal = {
-        Service = "events.amazonaws.com"
-      }
-      Sid = "TrustEventBridgeService"
-    }]
-    Version = "2012-10-17"
-  })
-  name = "Amazon_EventBridge_Invoke_Sqs_1541928649"
-  path = "/service-role/"
-  tags = {}
-}
-
-resource "aws_iam_policy" "eventbridge_aws_health" {
-  lifecycle {
-    ignore_changes = [tags, tags_all]
-  }
-
-  name = "Amazon_EventBridge_Invoke_Sqs_1568336830"
-  path = "/service-role/"
-  policy = jsonencode({
-    Statement = [{
-      Action   = ["sqs:SendMessage"]
-      Effect   = "Allow"
-      Resource = ["arn:aws:sqs:${local.region}:${local.account_id}:lookddak-alert-queue"]
-    }]
-    Version = "2012-10-17"
-  })
-  tags = {}
 }
 
 resource "aws_iam_role" "fe_deploy" {
