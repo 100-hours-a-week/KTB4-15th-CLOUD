@@ -117,3 +117,7 @@ module "dev_v1_edge" {
   zone_id       = module.shared_core.route53_zone_id
   app_public_ip = module.dev_v1_compute.public_ip
 }
+
+module "dev_v1_parameter_store" {
+  source = "./dev/v1/parameter-store"
+}
