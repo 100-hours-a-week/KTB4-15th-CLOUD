@@ -1,5 +1,12 @@
 # V1 deployment policies connecting GitHub Actions roles to ECR and EC2.
 
+data "aws_region" "current" {}
+
+locals {
+  # SSM이 제공하는 AWS 관리형 문서라 ARN에 계정 ID가 없다.
+  run_shell_script_document_arn = "arn:aws:ssm:${data.aws_region.current.region}::document/AWS-RunShellScript"
+}
+
 resource "aws_iam_role_policy" "ai_deploy" {
   name = "ai-cd-deploy-rolePolicy"
   policy = jsonencode({
@@ -11,7 +18,7 @@ resource "aws_iam_role_policy" "ai_deploy" {
       }, {
       Action   = "ssm:SendCommand"
       Effect   = "Allow"
-      Resource = ["arn:aws:ssm:ap-northeast-2::document/AWS-RunShellScript", var.ec2_instance_arn]
+      Resource = [local.run_shell_script_document_arn, var.ec2_instance_arn]
       Sid      = "SsmSend"
       }, {
       Action   = "ssm:GetCommandInvocation"
@@ -35,7 +42,7 @@ resource "aws_iam_role_policy" "be_deploy" {
       }, {
       Action   = "ssm:SendCommand"
       Effect   = "Allow"
-      Resource = ["arn:aws:ssm:ap-northeast-2::document/AWS-RunShellScript", var.ec2_instance_arn]
+      Resource = [local.run_shell_script_document_arn, var.ec2_instance_arn]
       Sid      = "SsmSend"
       }, {
       Action   = "ssm:GetCommandInvocation"
@@ -59,7 +66,7 @@ resource "aws_iam_role_policy" "fe_deploy" {
       }, {
       Action   = "ssm:SendCommand"
       Effect   = "Allow"
-      Resource = ["arn:aws:ssm:ap-northeast-2::document/AWS-RunShellScript", var.ec2_instance_arn]
+      Resource = [local.run_shell_script_document_arn, var.ec2_instance_arn]
       Sid      = "SsmSend"
       }, {
       Action   = "ssm:GetCommandInvocation"

@@ -17,7 +17,7 @@ resource "aws_iam_policy" "eventbridge_alarm_state_change" {
     Statement = [{
       Action   = ["sqs:SendMessage"]
       Effect   = "Allow"
-      Resource = ["arn:aws:sqs:ap-northeast-2:686496667254:lookddak-alert-queue"]
+      Resource = ["arn:aws:sqs:${local.region}:${local.account_id}:lookddak-alert-queue"]
     }]
     Version = "2012-10-17"
   })
@@ -36,7 +36,7 @@ resource "aws_iam_policy" "ec2_cloudwatch_logs_write" {
     Statement = [{
       Action   = ["logs:CreateLogStream", "logs:PutLogEvents"]
       Effect   = "Allow"
-      Resource = ["arn:aws:logs:ap-northeast-2:686496667254:log-group:/lookddak/prod/nginx:log-stream:*", "arn:aws:logs:ap-northeast-2:686496667254:log-group:/lookddak/prod/nextjs:log-stream:*", "arn:aws:logs:ap-northeast-2:686496667254:log-group:/lookddak/prod/spring:log-stream:*", "arn:aws:logs:ap-northeast-2:686496667254:log-group:/lookddak/prod/fastapi:log-stream:*", "arn:aws:logs:ap-northeast-2:686496667254:log-group:/lookddak/prod/postgresql:log-stream:*"]
+      Resource = ["arn:aws:logs:${local.region}:${local.account_id}:log-group:/lookddak/prod/nginx:log-stream:*", "arn:aws:logs:${local.region}:${local.account_id}:log-group:/lookddak/prod/nextjs:log-stream:*", "arn:aws:logs:${local.region}:${local.account_id}:log-group:/lookddak/prod/spring:log-stream:*", "arn:aws:logs:${local.region}:${local.account_id}:log-group:/lookddak/prod/fastapi:log-stream:*", "arn:aws:logs:${local.region}:${local.account_id}:log-group:/lookddak/prod/postgresql:log-stream:*"]
       Sid      = "WriteLookDDakContainerLogs"
     }]
     Version = "2012-10-17"
@@ -61,8 +61,8 @@ resource "aws_iam_role" "eventbridge_docker_events" {
       Action = "sts:AssumeRole"
       Condition = {
         StringEquals = {
-          "aws:SourceAccount" = "686496667254"
-          "aws:SourceArn"     = "arn:aws:events:ap-northeast-2:686496667254:rule/lookddak-docker-events"
+          "aws:SourceAccount" = "${local.account_id}"
+          "aws:SourceArn"     = "arn:aws:events:${local.region}:${local.account_id}:rule/lookddak-docker-events"
         }
       }
       Effect = "Allow"
@@ -131,8 +131,8 @@ resource "aws_iam_role" "eventbridge_alarm_state_change" {
       Action = "sts:AssumeRole"
       Condition = {
         StringEquals = {
-          "aws:SourceAccount" = "686496667254"
-          "aws:SourceArn"     = "arn:aws:events:ap-northeast-2:686496667254:rule/lookddak-alarm-state-change"
+          "aws:SourceAccount" = "${local.account_id}"
+          "aws:SourceArn"     = "arn:aws:events:${local.region}:${local.account_id}:rule/lookddak-alarm-state-change"
         }
       }
       Effect = "Allow"
@@ -154,7 +154,7 @@ resource "aws_iam_role_policy" "ec2_eventbridge_write" {
     Statement = [{
       Action   = "events:PutEvents"
       Effect   = "Allow"
-      Resource = "arn:aws:events:ap-northeast-2:686496667254:event-bus/default"
+      Resource = "arn:aws:events:${local.region}:${local.account_id}:event-bus/default"
     }]
     Version = "2012-10-17"
   })
@@ -171,8 +171,8 @@ resource "aws_iam_role" "eventbridge_aws_health" {
       Action = "sts:AssumeRole"
       Condition = {
         StringEquals = {
-          "aws:SourceAccount" = "686496667254"
-          "aws:SourceArn"     = "arn:aws:events:ap-northeast-2:686496667254:rule/lookddak-aws-health"
+          "aws:SourceAccount" = "${local.account_id}"
+          "aws:SourceArn"     = "arn:aws:events:${local.region}:${local.account_id}:rule/lookddak-aws-health"
         }
       }
       Effect = "Allow"
@@ -204,7 +204,7 @@ resource "aws_iam_role" "ai_deploy" {
       }
       Effect = "Allow"
       Principal = {
-        Federated = "arn:aws:iam::686496667254:oidc-provider/token.actions.githubusercontent.com"
+        Federated = "arn:aws:iam::${local.account_id}:oidc-provider/token.actions.githubusercontent.com"
       }
     }]
     Version = "2012-10-17"
@@ -234,7 +234,7 @@ resource "aws_iam_role" "be_build" {
       }
       Effect = "Allow"
       Principal = {
-        Federated = "arn:aws:iam::686496667254:oidc-provider/token.actions.githubusercontent.com"
+        Federated = "arn:aws:iam::${local.account_id}:oidc-provider/token.actions.githubusercontent.com"
       }
     }]
     Version = "2012-10-17"
@@ -286,7 +286,7 @@ resource "aws_iam_policy" "eventbridge_ec2_state_change" {
     Statement = [{
       Action   = ["sqs:SendMessage"]
       Effect   = "Allow"
-      Resource = ["arn:aws:sqs:ap-northeast-2:686496667254:lookddak-alert-queue"]
+      Resource = ["arn:aws:sqs:${local.region}:${local.account_id}:lookddak-alert-queue"]
     }]
     Version = "2012-10-17"
   })
@@ -351,12 +351,12 @@ resource "aws_iam_policy" "ec2_s3_images_rw" {
     Statement = [{
       Action   = ["s3:GetBucketLocation", "s3:ListBucket"]
       Effect   = "Allow"
-      Resource = "arn:aws:s3:::lookddak-prod-images-686496667254-ap-northeast-2"
+      Resource = "arn:aws:s3:::lookddak-prod-images-${local.account_id}-${local.region}"
       Sid      = "ReadImageBucketMetadata"
       }, {
       Action   = ["s3:GetObject", "s3:PutObject", "s3:DeleteObject"]
       Effect   = "Allow"
-      Resource = "arn:aws:s3:::lookddak-prod-images-686496667254-ap-northeast-2/*"
+      Resource = "arn:aws:s3:::lookddak-prod-images-${local.account_id}-${local.region}/*"
       Sid      = "ReadWriteImageObjects"
     }]
     Version = "2012-10-17"
@@ -414,7 +414,7 @@ resource "aws_iam_role" "be_deploy" {
       }
       Effect = "Allow"
       Principal = {
-        Federated = "arn:aws:iam::686496667254:oidc-provider/token.actions.githubusercontent.com"
+        Federated = "arn:aws:iam::${local.account_id}:oidc-provider/token.actions.githubusercontent.com"
       }
     }]
     Version = "2012-10-17"
@@ -435,7 +435,7 @@ resource "aws_iam_policy" "eventbridge_rds_events" {
     Statement = [{
       Action   = ["sqs:SendMessage"]
       Effect   = "Allow"
-      Resource = ["arn:aws:sqs:ap-northeast-2:686496667254:lookddak-alert-queue"]
+      Resource = ["arn:aws:sqs:${local.region}:${local.account_id}:lookddak-alert-queue"]
     }]
     Version = "2012-10-17"
   })
@@ -452,8 +452,8 @@ resource "aws_iam_role" "eventbridge_rds_events" {
       Action = "sts:AssumeRole"
       Condition = {
         StringEquals = {
-          "aws:SourceAccount" = "686496667254"
-          "aws:SourceArn"     = "arn:aws:events:ap-northeast-2:686496667254:rule/lookddak-rds-events"
+          "aws:SourceAccount" = "${local.account_id}"
+          "aws:SourceArn"     = "arn:aws:events:${local.region}:${local.account_id}:rule/lookddak-rds-events"
         }
       }
       Effect = "Allow"
@@ -481,13 +481,13 @@ resource "aws_iam_policy" "ec2_parameters_read" {
     Statement = [{
       Action   = ["ssm:GetParameter", "ssm:GetParameters"]
       Effect   = "Allow"
-      Resource = "arn:aws:ssm:ap-northeast-2:686496667254:parameter/lookddak/prod/*"
+      Resource = "arn:aws:ssm:${local.region}:${local.account_id}:parameter/lookddak/prod/*"
       Sid      = "SsmGetLookddakParameters"
       }, {
       Action = "kms:Decrypt"
       Condition = {
         StringEquals = {
-          "kms:ViaService" = "ssm.ap-northeast-2.amazonaws.com"
+          "kms:ViaService" = "ssm.${local.region}.amazonaws.com"
         }
       }
       Effect   = "Allow"
@@ -508,7 +508,7 @@ resource "aws_iam_role_policy" "discord_alert_status_logs_read" {
     Statement = [{
       Action   = "logs:GetLogEvents"
       Effect   = "Allow"
-      Resource = "arn:aws:logs:ap-northeast-2:686496667254:log-group:/lookddak/prod/status:*"
+      Resource = "arn:aws:logs:${local.region}:${local.account_id}:log-group:/lookddak/prod/status:*"
     }]
     Version = "2012-10-17"
   })
@@ -524,7 +524,7 @@ resource "aws_iam_role_policy" "discord_alert_ssm_read" {
       Sid      = "ReadDiscordWebhookParameters"
       Action   = "ssm:GetParameter"
       Effect   = "Allow"
-      Resource = "arn:aws:ssm:ap-northeast-2:686496667254:parameter/lookddak/prod/discord/*"
+      Resource = "arn:aws:ssm:${local.region}:${local.account_id}:parameter/lookddak/prod/discord/*"
     }]
     Version = "2012-10-17"
   })
@@ -542,7 +542,7 @@ resource "aws_iam_policy" "eventbridge_docker_events" {
     Statement = [{
       Action   = ["sqs:SendMessage"]
       Effect   = "Allow"
-      Resource = ["arn:aws:sqs:ap-northeast-2:686496667254:lookddak-alert-queue"]
+      Resource = ["arn:aws:sqs:${local.region}:${local.account_id}:lookddak-alert-queue"]
     }]
     Version = "2012-10-17"
   })
@@ -555,7 +555,7 @@ resource "aws_iam_role_policy" "ec2_status_log_write" {
     Statement = [{
       Action   = "logs:PutLogEvents"
       Effect   = "Allow"
-      Resource = "arn:aws:logs:ap-northeast-2:686496667254:log-group:/lookddak/prod/status:*"
+      Resource = "arn:aws:logs:${local.region}:${local.account_id}:log-group:/lookddak/prod/status:*"
       Sid      = "ContainerStatusLogs"
     }]
     Version = "2012-10-17"
@@ -579,7 +579,7 @@ resource "aws_iam_role" "fe_build" {
       }
       Effect = "Allow"
       Principal = {
-        Federated = "arn:aws:iam::686496667254:oidc-provider/token.actions.githubusercontent.com"
+        Federated = "arn:aws:iam::${local.account_id}:oidc-provider/token.actions.githubusercontent.com"
       }
     }]
     Version = "2012-10-17"
@@ -640,7 +640,7 @@ resource "aws_iam_role_policy" "fe_build" {
       }, {
       Action   = "ssm:GetParameter"
       Effect   = "Allow"
-      Resource = "arn:aws:ssm:ap-northeast-2:686496667254:parameter/lookddak/prod/cicd/sentry/auth-token"
+      Resource = "arn:aws:ssm:${local.region}:${local.account_id}:parameter/lookddak/prod/cicd/sentry/auth-token"
       Sid      = "SsmReadSentryAuthToken"
     }]
     Version = "2012-10-17"
@@ -658,8 +658,8 @@ resource "aws_iam_role" "eventbridge_ec2_state_change" {
       Action = "sts:AssumeRole"
       Condition = {
         StringEquals = {
-          "aws:SourceAccount" = "686496667254"
-          "aws:SourceArn"     = "arn:aws:events:ap-northeast-2:686496667254:rule/lookddak-ec2-state-change"
+          "aws:SourceAccount" = "${local.account_id}"
+          "aws:SourceArn"     = "arn:aws:events:${local.region}:${local.account_id}:rule/lookddak-ec2-state-change"
         }
       }
       Effect = "Allow"
@@ -686,7 +686,7 @@ resource "aws_iam_policy" "eventbridge_aws_health" {
     Statement = [{
       Action   = ["sqs:SendMessage"]
       Effect   = "Allow"
-      Resource = ["arn:aws:sqs:ap-northeast-2:686496667254:lookddak-alert-queue"]
+      Resource = ["arn:aws:sqs:${local.region}:${local.account_id}:lookddak-alert-queue"]
     }]
     Version = "2012-10-17"
   })
@@ -709,7 +709,7 @@ resource "aws_iam_role" "fe_deploy" {
       }
       Effect = "Allow"
       Principal = {
-        Federated = "arn:aws:iam::686496667254:oidc-provider/token.actions.githubusercontent.com"
+        Federated = "arn:aws:iam::${local.account_id}:oidc-provider/token.actions.githubusercontent.com"
       }
     }]
     Version = "2012-10-17"
@@ -730,11 +730,11 @@ resource "aws_iam_policy" "discord_alert_logs" {
     Statement = [{
       Action   = "logs:CreateLogGroup"
       Effect   = "Allow"
-      Resource = "arn:aws:logs:ap-northeast-2:686496667254:*"
+      Resource = "arn:aws:logs:${local.region}:${local.account_id}:*"
       }, {
       Action   = ["logs:CreateLogStream", "logs:PutLogEvents"]
       Effect   = "Allow"
-      Resource = ["arn:aws:logs:ap-northeast-2:686496667254:log-group:/aws/lambda/lookddak-discord-alert:*"]
+      Resource = ["arn:aws:logs:${local.region}:${local.account_id}:log-group:/aws/lambda/lookddak-discord-alert:*"]
     }]
     Version = "2012-10-17"
   })
@@ -778,7 +778,7 @@ resource "aws_iam_role" "ai_build" {
       }
       Effect = "Allow"
       Principal = {
-        Federated = "arn:aws:iam::686496667254:oidc-provider/token.actions.githubusercontent.com"
+        Federated = "arn:aws:iam::${local.account_id}:oidc-provider/token.actions.githubusercontent.com"
       }
     }]
     Version = "2012-10-17"
