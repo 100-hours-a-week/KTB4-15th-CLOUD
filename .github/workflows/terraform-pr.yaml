@@ -1,11 +1,12 @@
 name: terraform-pr
 
+# 모든 PR에서 실행한다 (paths 필터 없음)
+# - 이 job을 main 브랜치 보호의 필수 체크로 지정하기 위함
+# - paths 필터가 있으면 인프라와 무관한 PR에서 workflow가 시작되지 않아
+#   필수 체크가 "Waiting for status to be reported"로 남아 merge할 수 없다
 on:
   pull_request:
     branches: [main]
-    paths:
-      - "infra/**"
-      - ".github/workflows/terraform-*.yaml"
 
 permissions:
   id-token: write        # OIDC
@@ -21,7 +22,9 @@ defaults:
     working-directory: infra/environments
 
 jobs:
-  lint:
+  # lint와 plan을 하나의 job에서 실행 (runner 부팅, checkout, init을 한 번만)
+  # job 이름(terraform)이 브랜치 보호의 필수 체크 이름이므로 바꾸지 않는다
+  terraform:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -30,13 +33,9 @@ jobs:
         with:
           terraform_version: ${{ vars.TF_VERSION }}
 
+      # AWS 권한이 필요 없는 검사를 먼저 실행해 빠르게 실패하게 한다
       - name: terraform fmt
         run: terraform fmt -check -recursive ..
-
-      - name: terraform validate
-        run: |
-          terraform init -backend=false -input=false
-          terraform validate -no-color
 
       - uses: terraform-linters/setup-tflint@v4
 
@@ -45,23 +44,16 @@ jobs:
           tflint --init
           tflint --format compact
 
-  plan:
-    needs: lint
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
       - uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ vars.AWS_PLAN_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
 
-      - uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: ${{ vars.TF_VERSION }}
-
       - name: terraform init
         run: terraform init -input=false
+
+      - name: terraform validate
+        run: terraform validate -no-color
 
       - name: terraform plan
         run: |
