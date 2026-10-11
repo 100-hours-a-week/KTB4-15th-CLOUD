@@ -2,11 +2,15 @@ module "shared_core" {
   source = "./shared/core"
 }
 
+module "prod_v1_network" {
+  source = "./prod/v1/network"
+}
+
 module "prod_v1_database" {
   source = "./prod/v1/database"
 
-  db_subnet_ids        = module.shared_core.db_subnet_ids
-  db_security_group_id = module.shared_core.db_security_group_id
+  db_subnet_ids        = module.prod_v1_network.db_subnet_ids
+  db_security_group_id = module.prod_v1_network.db_security_group_id
 }
 
 module "prod_parameter_store" {
@@ -31,8 +35,8 @@ module "prod_v1_iam" {
 module "prod_v1_compute" {
   source = "./prod/v1/compute"
 
-  subnet_id                 = module.shared_core.public_subnet_ids[0]
-  security_group_id         = module.shared_core.app_security_group_id
+  subnet_id                 = module.prod_v1_network.public_subnet_ids[0]
+  security_group_id         = module.prod_v1_network.app_security_group_id
   iam_instance_profile_name = module.prod_v1_iam.ec2_instance_profile_name
 }
 
