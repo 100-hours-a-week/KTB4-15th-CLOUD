@@ -4,10 +4,6 @@
 # ---------------------------------------------------------------
 
 resource "aws_iam_role" "ec2" {
-  lifecycle {
-    ignore_changes = [tags, tags_all]
-  }
-
   assume_role_policy = jsonencode({
     Statement = [{
       Action = "sts:AssumeRole"
@@ -25,10 +21,6 @@ resource "aws_iam_role" "ec2" {
 }
 
 resource "aws_iam_instance_profile" "ec2" {
-  lifecycle {
-    ignore_changes = [tags, tags_all]
-  }
-
   name = "ec2-ssm"
   path = "/"
   role = aws_iam_role.ec2.name
@@ -36,10 +28,6 @@ resource "aws_iam_instance_profile" "ec2" {
 }
 
 resource "aws_iam_policy" "ec2_cloudwatch_logs_write" {
-  lifecycle {
-    ignore_changes = [tags, tags_all]
-  }
-
   description = "Allow LookDDak EC2 Docker containers to write to production CloudWatch Logs groups"
   name        = "lookddak-prod-ec2-cloudwatch-logs-write"
   path        = "/"
@@ -58,10 +46,6 @@ resource "aws_iam_policy" "ec2_cloudwatch_logs_write" {
 }
 
 resource "aws_iam_policy" "ec2_ecr_pull" {
-  lifecycle {
-    ignore_changes = [tags, tags_all]
-  }
-
   description = "Pull LookDDak application images from the three EC2 ECR repositories"
   name        = "lookddak-prod-ec2-ecr-pull"
   path        = "/"
@@ -86,10 +70,6 @@ resource "aws_iam_policy" "ec2_ecr_pull" {
 }
 
 resource "aws_iam_policy" "ec2_parameters_read" {
-  lifecycle {
-    ignore_changes = [tags, tags_all]
-  }
-
   description = "Read only approved LookDDak production runtime parameters"
   name        = "lookddak-prod-ec2-parameters-read"
   path        = "/"
@@ -119,10 +99,6 @@ resource "aws_iam_policy" "ec2_parameters_read" {
 }
 
 resource "aws_iam_policy" "ec2_s3_images_rw" {
-  lifecycle {
-    ignore_changes = [tags, tags_all]
-  }
-
   description = "Read and write objects in the LookDDak production image bucket"
   name        = "lookddak-prod-ec2-s3-images-rw"
   path        = "/"
@@ -147,10 +123,6 @@ resource "aws_iam_policy" "ec2_s3_images_rw" {
 }
 
 resource "aws_iam_policy" "ec2_ssm_core" {
-  lifecycle {
-    ignore_changes = [tags, tags_all]
-  }
-
   description = "SSM managed-node and Session Manager access without broad Parameter Store reads"
   name        = "lookddak-prod-ec2-ssm-core"
   path        = "/"

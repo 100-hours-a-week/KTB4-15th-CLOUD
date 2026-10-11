@@ -11,10 +11,6 @@ resource "aws_ssm_parameter" "rds_admin_username" {
     Environment    = "prod"
     Service        = "rds"
   }
-
-  lifecycle {
-    ignore_changes = [tags, tags_all]
-  }
 }
 
 resource "aws_ssm_parameter" "rds_app_username" {
@@ -30,10 +26,6 @@ resource "aws_ssm_parameter" "rds_app_username" {
     Environment    = "prod"
     Service        = "rds"
   }
-
-  lifecycle {
-    ignore_changes = [tags, tags_all]
-  }
 }
 
 resource "aws_ssm_parameter" "rds_database" {
@@ -47,10 +39,6 @@ resource "aws_ssm_parameter" "rds_database" {
   tags = {
     Environment = "prod"
     Service     = "rds"
-  }
-
-  lifecycle {
-    ignore_changes = [tags, tags_all]
   }
 }
 
@@ -66,10 +54,6 @@ resource "aws_ssm_parameter" "rds_host" {
     Environment = "prod"
     Service     = "rds"
   }
-
-  lifecycle {
-    ignore_changes = [tags, tags_all]
-  }
 }
 
 resource "aws_ssm_parameter" "rds_port" {
@@ -83,9 +67,5 @@ resource "aws_ssm_parameter" "rds_port" {
   tags = {
     Environment = "prod"
     Service     = "rds"
-  }
-
-  lifecycle {
-    ignore_changes = [tags, tags_all]
   }
 }

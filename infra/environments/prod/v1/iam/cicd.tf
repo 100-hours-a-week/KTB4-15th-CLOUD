@@ -5,10 +5,6 @@
 # ---------------------------------------------------------------
 
 resource "aws_iam_role" "ai_build" {
-  lifecycle {
-    ignore_changes = [tags, tags_all]
-  }
-
   assume_role_policy = jsonencode({
     Statement = [{
       Action = "sts:AssumeRoleWithWebIdentity"
@@ -33,10 +29,6 @@ resource "aws_iam_role" "ai_build" {
 }
 
 resource "aws_iam_role" "ai_deploy" {
-  lifecycle {
-    ignore_changes = [tags, tags_all]
-  }
-
   assume_role_policy = jsonencode({
     Statement = [{
       Action = "sts:AssumeRoleWithWebIdentity"
@@ -61,10 +53,6 @@ resource "aws_iam_role" "ai_deploy" {
 }
 
 resource "aws_iam_role" "be_build" {
-  lifecycle {
-    ignore_changes = [tags, tags_all]
-  }
-
   assume_role_policy = jsonencode({
     Statement = [{
       Action = "sts:AssumeRoleWithWebIdentity"
@@ -91,10 +79,6 @@ resource "aws_iam_role" "be_build" {
 }
 
 resource "aws_iam_role" "be_deploy" {
-  lifecycle {
-    ignore_changes = [tags, tags_all]
-  }
-
   assume_role_policy = jsonencode({
     Statement = [{
       Action = "sts:AssumeRoleWithWebIdentity"
@@ -119,10 +103,6 @@ resource "aws_iam_role" "be_deploy" {
 }
 
 resource "aws_iam_role" "fe_build" {
-  lifecycle {
-    ignore_changes = [tags, tags_all]
-  }
-
   assume_role_policy = jsonencode({
     Statement = [{
       Action = "sts:AssumeRoleWithWebIdentity"
@@ -147,10 +127,6 @@ resource "aws_iam_role" "fe_build" {
 }
 
 resource "aws_iam_role" "fe_deploy" {
-  lifecycle {
-    ignore_changes = [tags, tags_all]
-  }
-
   assume_role_policy = jsonencode({
     Statement = [{
       Action = "sts:AssumeRoleWithWebIdentity"
