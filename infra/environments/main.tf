@@ -45,7 +45,10 @@ module "prod_v1_cicd_deploy_policy" {
 
   deploy_role_names   = module.prod_v1_iam.deploy_role_names
   ecr_repository_arns = module.shared_core.ecr_repository_arns
-  ec2_instance_arns   = [module.prod_v1_compute.instance_arn]
+  ec2_instance_arns = [
+    module.prod_v1_compute.instance_arn,
+    module.dev_v1_compute.instance_arn,
+  ]
 }
 
 module "prod_v1_edge" {
@@ -92,4 +95,25 @@ module "dev_parameter_store" {
   rds_database       = module.dev_v1_database.mysql_database_name
   rds_host           = module.dev_v1_database.mysql_address
   rds_port           = module.dev_v1_database.mysql_port
+}
+
+module "dev_v1_iam" {
+  source = "./dev/v1/iam"
+
+  ecr_repository_arns = module.shared_core.ecr_repository_arns
+}
+
+module "dev_v1_compute" {
+  source = "./dev/v1/compute"
+
+  subnet_id                 = module.dev_v1_network.public_subnet_ids[0]
+  security_group_id         = module.dev_v1_network.app_security_group_id
+  iam_instance_profile_name = module.dev_v1_iam.ec2_instance_profile_name
+}
+
+module "dev_v1_edge" {
+  source = "./dev/v1/edge"
+
+  zone_id       = module.shared_core.route53_zone_id
+  app_public_ip = module.dev_v1_compute.public_ip
 }
