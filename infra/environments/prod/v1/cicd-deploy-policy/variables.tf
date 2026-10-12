@@ -17,6 +17,6 @@ variable "ecr_repository_arns" {
 }
 
 variable "ec2_instance_arns" {
-  description = "SSM Run Command로 배포할 EC2 인스턴스 ARN 목록 (prod, dev)"
+  description = "SSM Run Command로 배포할 prod EC2 인스턴스 ARN 목록"
   type        = list(string)
 }

@@ -1,7 +1,7 @@
 # ---------------------------------------------------------------
 # 앱 레포(FE/BE/AI) GitHub Actions 배포 Role의 정책
 # - ECR 이미지 조회 + SSM Run Command로 EC2에서 deploy.sh 실행
-# - 배포 대상 EC2는 ec2_instance_arns 목록으로 받는다 (prod, 이후 dev 추가)
+# - 배포 대상 EC2는 ec2_instance_arns 목록으로 받는다 (prod만, dev는 dev/v1/cicd-deploy-policy)
 # ---------------------------------------------------------------
 data "aws_region" "current" {}
 
