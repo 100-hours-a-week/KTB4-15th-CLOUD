@@ -171,7 +171,7 @@ case "$SERVICE_KEY" in
   fe)
     COMPOSE_SERVICE="nextjs"
     TAG_VAR="NEXTJS_IMAGE_TAG"
-    ECR_REPO="lookddak-nextjs"
+    ECR_SERVICE="nextjs"
     PORT_CHECK_COMMAND=(
       node
       -e
@@ -182,7 +182,7 @@ case "$SERVICE_KEY" in
   be)
     COMPOSE_SERVICE="spring"
     TAG_VAR="SPRING_IMAGE_TAG"
-    ECR_REPO="lookddak-spring"
+    ECR_SERVICE="spring"
     PORT_CHECK_COMMAND=(
       bash
       -c
@@ -193,7 +193,7 @@ case "$SERVICE_KEY" in
   ai)
     COMPOSE_SERVICE="fastapi"
     TAG_VAR="FASTAPI_IMAGE_TAG"
-    ECR_REPO="lookddak-fastapi"
+    ECR_SERVICE="fastapi"
     PORT_CHECK_COMMAND=(
       python
       -c
@@ -269,6 +269,15 @@ docker compose config --quiet
 ECR_REGISTRY="$(env_get ECR_REGISTRY)"
 PREV_TAG="$(env_get "$TAG_VAR")"
 
+# 이미지 저장소 이름 접두사 (prod: lookddak-nextjs, dev: lookddak-dev-nextjs)
+# .env에 값이 없으면 prod 기본값(lookddak)을 사용한다. docker-compose.yaml과 같은 규칙
+ECR_REPOSITORY_PREFIX="$(env_get ECR_REPOSITORY_PREFIX)"
+ECR_REPOSITORY_PREFIX="${ECR_REPOSITORY_PREFIX:-lookddak}"
+
+if [[ ! "$ECR_REPOSITORY_PREFIX" =~ ^[a-z0-9-]+$ ]]; then
+  fail_config "ECR_REPOSITORY_PREFIX 값이 올바르지 않습니다: '$ECR_REPOSITORY_PREFIX'"
+fi
+
 [[ -n "$ECR_REGISTRY" ]] \
   || fail_config ".env의 ECR_REGISTRY 값이 비어 있습니다."
 
@@ -276,7 +285,7 @@ if [[ -n "$PREV_TAG" && ! "$PREV_TAG" =~ ^[0-9a-f]{7}$ ]]; then
   fail_config "${TAG_VAR} 값이 올바른 7자리 SHA가 아닙니다: '$PREV_TAG'"
 fi
 
-readonly IMAGE="${ECR_REGISTRY}/${ECR_REPO}"
+readonly IMAGE="${ECR_REGISTRY}/${ECR_REPOSITORY_PREFIX}-${ECR_SERVICE}"
 
 log "현재 태그=${PREV_TAG:-없음}, 요청 태그=${NEW_TAG}"
 
