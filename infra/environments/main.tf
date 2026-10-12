@@ -101,10 +101,15 @@ module "dev_parameter_store" {
   rds_port           = module.dev_v1_database.mysql_port
 }
 
+module "dev_v1_logging" {
+  source = "./dev/v1/logging"
+}
+
 module "dev_v1_iam" {
   source = "./dev/v1/iam"
 
   ecr_repository_arns = module.dev_ecr.ecr_repository_arns
+  log_group_arns      = module.dev_v1_logging.log_group_arns
 }
 
 module "dev_v1_compute" {
