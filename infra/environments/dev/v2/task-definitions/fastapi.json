@@ -1,0 +1,46 @@
+{
+  "family": "lookddak-dev-v2-fastapi",
+  "taskRoleArn": "arn:aws:iam::686496667254:role/lookddak-dev-v2-fastapi-task",
+  "executionRoleArn": "arn:aws:iam::686496667254:role/lookddak-dev-v2-task-execution",
+  "networkMode": "awsvpc",
+  "containerDefinitions": [
+    {
+      "name": "fastapi",
+      "image": "686496667254.dkr.ecr.ap-northeast-2.amazonaws.com/lookddak-dev-fastapi@sha256:REPLACED_BY_CI",
+      "essential": true,
+      "portMappings": [
+        {
+          "name": "fastapi-http",
+          "containerPort": 8000,
+          "hostPort": 8000,
+          "protocol": "tcp",
+          "appProtocol": "http"
+        }
+      ],
+      "privileged": false,
+      "readonlyRootFilesystem": false
+    }
+  ],
+  "requiresCompatibilities": [
+    "FARGATE"
+  ],
+  "cpu": "1024",
+  "memory": "2048",
+  "runtimePlatform": {
+    "operatingSystemFamily": "LINUX"
+  },
+  "tags": [
+    {
+      "key": "Environment",
+      "value": "dev"
+    },
+    {
+      "key": "Service",
+      "value": "fastapi"
+    },
+    {
+      "key": "Version",
+      "value": "v2"
+    }
+  ]
+}
