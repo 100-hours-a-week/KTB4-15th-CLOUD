@@ -44,6 +44,7 @@ EC2는 Terraform으로 관리하지만, **서버 안의 파일은 Terraform 관�
 
 - `load-parameters-dev.sh`를 `load-parameters.sh` 이름으로 복사하므로 `bootstrap.sh`, `deploy.sh`는 prod와 같은 파일을 그대로 사용합니다.
 - dev 서버 `.env`에 `COMPOSE_FILE=docker-compose.yaml:docker-compose.dev.yaml`을 넣으면 docker compose가 두 파일을 합쳐서 사용합니다.
+- dev 서버 `.env`에 `ECR_REPOSITORY_PREFIX=lookddak-dev`를 넣으면 이미지를 dev ECR(`lookddak-dev-nextjs` 등)에서 받습니다. 값이 없으면 prod 저장소(`lookddak-nextjs` 등)를 사용합니다. (`docker-compose.yaml`, `deploy.sh` 공통)
 
 `docker-compose.dev.yaml`이 바꾸는 것
 
