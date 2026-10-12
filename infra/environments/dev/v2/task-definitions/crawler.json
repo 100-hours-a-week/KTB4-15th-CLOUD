@@ -1,0 +1,38 @@
+{
+  "family": "lookddak-dev-v2-crawler",
+  "taskRoleArn": "arn:aws:iam::686496667254:role/lookddak-dev-v2-crawler-task",
+  "executionRoleArn": "arn:aws:iam::686496667254:role/lookddak-dev-v2-task-execution",
+  "networkMode": "awsvpc",
+  "containerDefinitions": [
+    {
+      "name": "crawler",
+      "image": "686496667254.dkr.ecr.ap-northeast-2.amazonaws.com/lookddak-dev-crawler@sha256:REPLACED_BY_CI",
+      "essential": true,
+      "privileged": false,
+      "readonlyRootFilesystem": false
+    }
+  ],
+  "requiresCompatibilities": [
+    "FARGATE"
+  ],
+  "cpu": "1024",
+  "memory": "2048",
+  "runtimePlatform": {
+    "cpuArchitecture": "X86_64",
+    "operatingSystemFamily": "LINUX"
+  },
+  "tags": [
+    {
+      "key": "Environment",
+      "value": "dev"
+    },
+    {
+      "key": "Service",
+      "value": "crawler"
+    },
+    {
+      "key": "Version",
+      "value": "v2"
+    }
+  ]
+}
