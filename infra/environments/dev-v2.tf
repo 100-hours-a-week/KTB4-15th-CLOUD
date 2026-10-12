@@ -11,6 +11,16 @@ module "dev_v2_network" {
   dev_mysql_security_group_id = module.dev_v1_network.db_security_group_id
 }
 
+module "dev_v2_alb" {
+  source = "./dev/v2/alb"
+
+  vpc_id                = module.dev_v1_network.vpc_id
+  public_subnet_ids     = module.dev_v2_network.alb_public_subnet_ids
+  alb_security_group_id = module.dev_v2_network.security_group_ids["alb"]
+  route53_zone_id       = module.shared_core.route53_zone_id
+  domain_name           = "dev.lookddak.com"
+}
+
 module "dev_v2_ecs_cluster" {
   source = "./dev/v2/ecs-cluster"
 }
