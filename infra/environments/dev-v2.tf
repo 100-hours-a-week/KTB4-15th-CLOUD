@@ -41,6 +41,15 @@ module "dev_v2_database" {
   admin_password_wo            = var.dev_v2_postgresql_admin_password_wo
 }
 
+module "dev_v2_crawler" {
+  source = "./dev/v2/crawler"
+
+  ecs_cluster_arn           = module.dev_v2_ecs_cluster.cluster_arn
+  scheduler_role_arn        = module.dev_v2_iam.crawler_scheduler_role_arn
+  private_app_subnet_ids    = module.dev_v2_network.private_app_subnet_ids
+  crawler_security_group_id = module.dev_v2_network.security_group_ids["crawler"]
+}
+
 # The default path reads the manually-created SecureString with an ephemeral
 # resource. The write-only input exists only so a full local plan can be run
 # before that SecureString is created; it must not be used for apply.

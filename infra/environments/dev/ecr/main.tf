@@ -6,7 +6,7 @@
 # - V1 dev(EC2)와 V2 dev(ECS)가 함께 사용한다.
 # ---------------------------------------------------------------
 locals {
-  services = toset(["nextjs", "spring", "fastapi"])
+  services = toset(["nextjs", "spring", "fastapi", "crawler"])
 
   # 1. 태그 없는 이미지는 push 후 1일이 지나면 삭제
   # 2. 태그 있는 이미지는 최신 10개만 유지 (prod는 35개)
