@@ -50,6 +50,15 @@ resource "aws_vpc_security_group_ingress_rule" "nextjs_from_alb" {
   referenced_security_group_id = aws_security_group.v2["alb"].id
 }
 
+resource "aws_vpc_security_group_egress_rule" "nextjs_to_spring" {
+  security_group_id            = aws_security_group.v2["nextjs"].id
+  description                  = "SSR API traffic to Spring through Service Connect"
+  ip_protocol                  = "tcp"
+  from_port                    = 8080
+  to_port                      = 8080
+  referenced_security_group_id = aws_security_group.v2["spring"].id
+}
+
 # ---------------------------------------------------------------
 # Spring
 # ALB -> Spring -> MySQL / FastAPI
@@ -61,6 +70,15 @@ resource "aws_vpc_security_group_ingress_rule" "spring_from_alb" {
   from_port                    = 8080
   to_port                      = 8080
   referenced_security_group_id = aws_security_group.v2["alb"].id
+}
+
+resource "aws_vpc_security_group_ingress_rule" "spring_from_nextjs" {
+  security_group_id            = aws_security_group.v2["spring"].id
+  description                  = "SSR API traffic from Next.js through Service Connect"
+  ip_protocol                  = "tcp"
+  from_port                    = 8080
+  to_port                      = 8080
+  referenced_security_group_id = aws_security_group.v2["nextjs"].id
 }
 
 resource "aws_vpc_security_group_egress_rule" "spring_to_mysql" {
