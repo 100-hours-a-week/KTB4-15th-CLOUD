@@ -1,8 +1,12 @@
 # ---------------------------------------------------------------
 # 앱 레포(FE/BE/AI) dev CD용 GitHub Actions OIDC Role
 # - prod Role(prod/v1/iam/cicd.tf)과 분리: develop 브랜치 코드가 prod 권한을 얻지 않게 한다.
-# - 신뢰 조건: 각 앱 레포의 develop 브랜치 push로 실행된 워크플로만 허용
-#   (job에 environment를 지정하면 sub 형식이 environment:... 로 바뀌어 Role을 받을 수 없다)
+# - 신뢰 조건: 각 앱 레포의 develop·hotfix/* 브랜치 또는 develop Environment에서 실행된 워크플로만 허용
+#   · develop: 평소 dev 배포
+#   · hotfix/*: main에서 분기한 hotfix를 운영 반영 전에 dev 서버에서 검증
+#   · environment:develop: job에 environment: develop을 지정한 경우
+#     (environment를 지정하면 sub에 브랜치 대신 environment 이름이 들어간다.
+#      이때 브랜치 제한은 GitHub Environment의 Deployment branches 설정으로 한다)
 # - build: dev ECR 이미지 push만
 # - deploy: Role만 여기서 관리하고, 정책은 dev/v1/cicd-deploy-policy에서 관리
 #   (정책에 dev EC2 ARN이 필요한데 dev EC2는 이 모듈의 인스턴스 프로파일이 있어야 만들어져 순환 참조가 생긴다)
@@ -30,7 +34,14 @@ locals {
         Condition = {
           StringEquals = {
             "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
-            "token.actions.githubusercontent.com:sub" = "repo:${local.github_org}/${s.repository}:ref:refs/heads/develop"
+          }
+          # hotfix/* 와일드카드를 쓰기 위해 StringLike로 비교한다.
+          StringLike = {
+            "token.actions.githubusercontent.com:sub" = [
+              "repo:${local.github_org}/${s.repository}:ref:refs/heads/develop",
+              "repo:${local.github_org}/${s.repository}:ref:refs/heads/hotfix/*",
+              "repo:${local.github_org}/${s.repository}:environment:develop",
+            ]
           }
         }
       }]
