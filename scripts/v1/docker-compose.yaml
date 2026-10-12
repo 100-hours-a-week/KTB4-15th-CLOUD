@@ -68,7 +68,7 @@ services:
           memory: 256M
 
   nextjs:
-    image: "${ECR_REGISTRY:?ECR_REGISTRY is required}/lookddak-nextjs:${NEXTJS_IMAGE_TAG:?NEXTJS_IMAGE_TAG is required}"
+    image: "${ECR_REGISTRY:?ECR_REGISTRY is required}/${ECR_REPOSITORY_PREFIX:-lookddak}-nextjs:${NEXTJS_IMAGE_TAG:?NEXTJS_IMAGE_TAG is required}"
     container_name: lookddak-nextjs
     restart: always
     expose:
@@ -114,7 +114,7 @@ services:
           memory: 512M
 
   spring:
-    image: "${ECR_REGISTRY:?ECR_REGISTRY is required}/lookddak-spring:${SPRING_IMAGE_TAG:?SPRING_IMAGE_TAG is required}"
+    image: "${ECR_REGISTRY:?ECR_REGISTRY is required}/${ECR_REPOSITORY_PREFIX:-lookddak}-spring:${SPRING_IMAGE_TAG:?SPRING_IMAGE_TAG is required}"
     container_name: lookddak-spring
     restart: always
     expose:
@@ -169,7 +169,7 @@ services:
           memory: 1G
 
   fastapi:
-    image: "${ECR_REGISTRY:?ECR_REGISTRY is required}/lookddak-fastapi:${FASTAPI_IMAGE_TAG:?FASTAPI_IMAGE_TAG is required}"
+    image: "${ECR_REGISTRY:?ECR_REGISTRY is required}/${ECR_REPOSITORY_PREFIX:-lookddak}-fastapi:${FASTAPI_IMAGE_TAG:?FASTAPI_IMAGE_TAG is required}"
     container_name: lookddak-fastapi
     restart: always
     expose:
