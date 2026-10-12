@@ -1,8 +1,8 @@
 # ---------------------------------------------------------------
 # V1 dev EC2 인스턴스 Role
 # - prod EC2 Role(ec2-ssm)과 같은 권한 구성, 대상은 dev 리소스로만 한정
-#   · SSM 접속, ECR pull, Parameter Store 읽기(/lookddak/dev/*), S3 dev 이미지 버킷 읽기·쓰기
-# - V1 dev에는 모니터링(로그 그룹·알림)을 두지 않으므로 CloudWatch Logs, EventBridge 권한은 넣지 않는다.
+#   · SSM 접속, ECR pull, Parameter Store 읽기(/lookddak/dev/*), S3 dev 이미지 버킷 읽기·쓰기, dev 로그 쓰기
+# - V1 dev는 로그 수집만 하고 알림은 두지 않으므로 CloudWatch Logs 쓰기 권한만 넣고 EventBridge 권한은 넣지 않는다.
 # ---------------------------------------------------------------
 resource "aws_iam_role" "ec2" {
   name        = "lookddak-dev-ec2"
@@ -138,12 +138,40 @@ resource "aws_iam_policy" "ec2_s3_images_rw" {
   }
 }
 
+# 컨테이너 로그(awslogs 드라이버)와 SSM Run Command 출력을 dev 로그 그룹에 쓴다.
+# 로그 그룹은 Terraform이 만들므로 CreateLogGroup 권한은 주지 않는다.
+resource "aws_iam_policy" "ec2_logs_write" {
+  name        = "lookddak-dev-ec2-logs-write"
+  description = "Write container and deploy logs to the LookDDak dev log groups"
+  policy = jsonencode({
+    Statement = [{
+      Action   = ["logs:CreateLogStream", "logs:PutLogEvents", "logs:DescribeLogStreams"]
+      Effect   = "Allow"
+      Resource = [for arn in var.log_group_arns : "${arn}:*"]
+      Sid      = "WriteLookDDakDevLogs"
+      }, {
+      # SSM Agent가 출력 저장 전 로그 그룹 존재 여부를 확인할 때 사용 (리소스 지정 불가)
+      Action   = "logs:DescribeLogGroups"
+      Effect   = "Allow"
+      Resource = "*"
+      Sid      = "DescribeLogGroups"
+    }]
+    Version = "2012-10-17"
+  })
+
+  tags = {
+    Component   = "ec2"
+    Environment = "dev"
+  }
+}
+
 locals {
   ec2_policy_arns = {
     ssm_core        = aws_iam_policy.ec2_ssm_core.arn
     ecr_pull        = aws_iam_policy.ec2_ecr_pull.arn
     parameters_read = aws_iam_policy.ec2_parameters_read.arn
     s3_images_rw    = aws_iam_policy.ec2_s3_images_rw.arn
+    logs_write      = aws_iam_policy.ec2_logs_write.arn
   }
 }
 
