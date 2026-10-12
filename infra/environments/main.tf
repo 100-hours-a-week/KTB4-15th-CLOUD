@@ -73,6 +73,10 @@ module "dev_s3" {
   source = "./dev/s3"
 }
 
+module "dev_ecr" {
+  source = "./dev/ecr"
+}
+
 # ---------------------------------------------------------------
 # V1 dev (dev 전용 VPC)
 # ---------------------------------------------------------------
@@ -100,7 +104,7 @@ module "dev_parameter_store" {
 module "dev_v1_iam" {
   source = "./dev/v1/iam"
 
-  ecr_repository_arns = module.shared_core.ecr_repository_arns
+  ecr_repository_arns = module.dev_ecr.ecr_repository_arns
 }
 
 module "dev_v1_compute" {

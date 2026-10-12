@@ -1,5 +1,5 @@
 variable "ecr_repository_arns" {
-  description = "ARNs of the shared application ECR repositories"
+  description = "ARNs of the dev application ECR repositories"
   type = object({
     nextjs  = string
     spring  = string
