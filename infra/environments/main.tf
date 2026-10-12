@@ -47,7 +47,6 @@ module "prod_v1_cicd_deploy_policy" {
   ecr_repository_arns = module.shared_core.ecr_repository_arns
   ec2_instance_arns = [
     module.prod_v1_compute.instance_arn,
-    module.dev_v1_compute.instance_arn,
   ]
 }
 
@@ -118,6 +117,14 @@ module "dev_v1_compute" {
   subnet_id                 = module.dev_v1_network.public_subnet_ids[0]
   security_group_id         = module.dev_v1_network.app_security_group_id
   iam_instance_profile_name = module.dev_v1_iam.ec2_instance_profile_name
+}
+
+module "dev_v1_cicd_deploy_policy" {
+  source = "./dev/v1/cicd-deploy-policy"
+
+  deploy_role_names   = module.dev_v1_iam.deploy_role_names
+  ecr_repository_arns = module.dev_ecr.ecr_repository_arns
+  ec2_instance_arn    = module.dev_v1_compute.instance_arn
 }
 
 module "dev_v1_edge" {
