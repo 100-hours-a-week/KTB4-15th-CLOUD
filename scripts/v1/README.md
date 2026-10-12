@@ -18,7 +18,7 @@ EC2는 Terraform으로 관리하지만, **서버 안의 파일은 Terraform 관�
 | `scripts/container-metric.sh` | `/opt/lookddak/scripts/container-metric.sh` | 컨테이너·호스트 상태를 CloudWatch Logs(`/lookddak/prod/status`)로 전송 |
 | `scripts/docker-alert.sh` | `/opt/lookddak/scripts/docker-alert.sh` | 컨테이너 상태 변화를 EventBridge로 전송 |
 | `scripts/load-parameters-dev.sh` | dev 서버 `/opt/lookddak/scripts/load-parameters.sh` | dev 서버용 Parameter Store 조회 (`/lookddak/dev/*`) |
-| `docker-compose.dev.yaml` | `/opt/lookddak/docker-compose.dev.yaml` | dev 서버 전용 덮어쓰기 (로깅, Nginx 설정) |
+| `docker-compose.dev.yaml` | `/opt/lookddak/docker-compose.dev.yaml` | dev 서버 전용 덮어쓰기 (로그 그룹, Nginx 설정) |
 | `nginx/conf.d.dev/default.conf` | `/opt/lookddak/nginx/conf.d.dev/default.conf` | dev 서버 Nginx 설정 |
 | `systemd/docker-alert.service` | `/etc/systemd/system/docker-alert.service` | `docker-alert.sh` 상시 실행 (systemd) |
 
@@ -49,10 +49,10 @@ EC2는 Terraform으로 관리하지만, **서버 안의 파일은 Terraform 관�
 
 | 항목 | prod | dev |
 |---|---|---|
-| 컨테이너 로그 | CloudWatch Logs (`/lookddak/prod/*`) | 서버 로컬 json-file (`docker logs`로 확인, 10MB × 3개 보관) |
+| 컨테이너 로그 그룹 | CloudWatch Logs `/lookddak/prod/*` | CloudWatch Logs `/lookddak/dev/*` |
 | Nginx 설정 | `nginx/conf.d` | `nginx/conf.d.dev` |
 
-dev 서버에는 모니터링(`container-metric.sh` cron, `docker-alert.sh` systemd)을 설치하지 않습니다.
+dev 서버는 로그 수집만 하고 알림은 두지 않습니다. 모니터링(`container-metric.sh` cron, `docker-alert.sh` systemd)을 설치하지 않습니다.
 
 ## 서버 반영
 
