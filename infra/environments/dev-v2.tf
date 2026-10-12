@@ -50,6 +50,18 @@ module "dev_v2_crawler" {
   crawler_security_group_id = module.dev_v2_network.security_group_ids["crawler"]
 }
 
+module "dev_v2_ecs_services" {
+  source = "./dev/v2/ecs-services"
+
+  create_services        = var.dev_v2_create_services
+  cluster_arn            = module.dev_v2_ecs_cluster.cluster_arn
+  cluster_name           = module.dev_v2_ecs_cluster.cluster_name
+  private_app_subnet_ids = module.dev_v2_network.private_app_subnet_ids
+  security_group_ids     = module.dev_v2_network.security_group_ids
+  target_group_arns      = module.dev_v2_alb.target_group_arns
+  task_definition_arns   = var.dev_v2_task_definition_arns
+}
+
 # The default path reads the manually-created SecureString with an ephemeral
 # resource. The write-only input exists only so a full local plan can be run
 # before that SecureString is created; it must not be used for apply.
@@ -65,4 +77,16 @@ variable "dev_v2_postgresql_admin_password_wo" {
   default     = null
   sensitive   = true
   ephemeral   = true
+}
+
+variable "dev_v2_create_services" {
+  description = "Create the V2 dev ECS services and their Auto Scaling resources"
+  type        = bool
+  default     = false
+}
+
+variable "dev_v2_task_definition_arns" {
+  description = "Initial registered V2 task definition revision ARNs keyed by nextjs, spring, and fastapi"
+  type        = map(string)
+  default     = {}
 }
