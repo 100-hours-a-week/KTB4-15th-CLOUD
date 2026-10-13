@@ -171,6 +171,74 @@ resource "aws_iam_role_policy_attachment" "ec2_s3_images_rw" {
   role       = aws_iam_role.ec2.name
 }
 
+# PostgreSQL 백업은 전용 버킷의 postgresql/ 경로에만 업로드할 수 있다.
+# 객체 삭제 권한은 포함하지 않는다.
+resource "aws_iam_policy" "ec2_s3_postgresql_backup_write" {
+  description = "Upload PostgreSQL backups from prod V1 EC2 to the dedicated S3 bucket"
+  name        = "lookddak-prod-v1-ec2-s3-postgresql-backup-write"
+  path        = "/"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "ReadBackupBucketMetadata"
+        Effect = "Allow"
+        Action = [
+          "s3:GetBucketLocation",
+          "s3:ListBucketMultipartUploads",
+        ]
+        Resource = var.postgresql_backup_bucket_arn
+      },
+      {
+        Sid      = "ListPostgresqlBackupPrefix"
+        Effect   = "Allow"
+        Action   = "s3:ListBucket"
+        Resource = var.postgresql_backup_bucket_arn
+        Condition = {
+          StringLike = {
+            "s3:prefix" = [
+              "postgresql",
+              "postgresql/*",
+            ]
+          }
+        }
+      },
+      {
+        Sid    = "WritePostgresqlBackupObjects"
+        Effect = "Allow"
+        Action = [
+          "s3:PutObject",
+          "s3:AbortMultipartUpload",
+          "s3:ListMultipartUploadParts",
+        ]
+        Resource = "${var.postgresql_backup_bucket_arn}/postgresql/*"
+      },
+      {
+        Sid    = "UsePostgresqlBackupKmsKey"
+        Effect = "Allow"
+        Action = [
+          "kms:Encrypt",
+          "kms:Decrypt",
+          "kms:GenerateDataKey",
+          "kms:DescribeKey",
+        ]
+        Resource = var.postgresql_backup_kms_key_arn
+      },
+    ]
+  })
+
+  tags = {
+    Component   = "ec2"
+    Environment = "prod"
+  }
+}
+
+resource "aws_iam_role_policy_attachment" "ec2_s3_postgresql_backup_write" {
+  policy_arn = aws_iam_policy.ec2_s3_postgresql_backup_write.arn
+  role       = aws_iam_role.ec2.name
+}
+
 resource "aws_iam_role_policy_attachment" "ec2_ssm_core" {
   policy_arn = aws_iam_policy.ec2_ssm_core.arn
   role       = aws_iam_role.ec2.name

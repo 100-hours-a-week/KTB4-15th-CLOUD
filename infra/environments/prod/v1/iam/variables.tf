@@ -6,3 +6,13 @@ variable "ecr_repository_arns" {
     fastapi = string
   })
 }
+
+variable "postgresql_backup_bucket_arn" {
+  description = "운영 PostgreSQL 백업 버킷 ARN"
+  type        = string
+}
+
+variable "postgresql_backup_kms_key_arn" {
+  description = "운영 PostgreSQL 백업 암호화 KMS 키 ARN"
+  type        = string
+}

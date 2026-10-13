@@ -65,3 +65,123 @@ resource "aws_s3_bucket_policy" "images" {
     ]
   })
 }
+
+# ---------------------------------------------------------------
+# PostgreSQL 백업 전용 버킷 (prod)
+# 서비스 이미지와 수명 주기 및 접근 주체가 달라 별도로 관리한다.
+# ---------------------------------------------------------------
+resource "aws_kms_key" "postgresql_backup" {
+  description             = "KMS key for lookddak prod PostgreSQL backups"
+  deletion_window_in_days = 30
+  enable_key_rotation     = true
+
+  lifecycle {
+    prevent_destroy = true
+  }
+
+  tags = {
+    Name        = "lookddak-prod-postgresql-backup"
+    Environment = "prod"
+    Purpose     = "postgresql-backup"
+  }
+}
+
+resource "aws_kms_alias" "postgresql_backup" {
+  name          = "alias/lookddak-prod-postgresql-backup"
+  target_key_id = aws_kms_key.postgresql_backup.key_id
+}
+
+resource "aws_s3_bucket" "postgresql_backup" {
+  bucket = "lookddak-prod-db-backup-686496667254-ap-northeast-2"
+
+  lifecycle {
+    prevent_destroy = true
+  }
+
+  tags = {
+    Name               = "lookddak-prod-db-backup"
+    Environment        = "prod"
+    Purpose            = "postgresql-backup"
+    DataClassification = "sensitive"
+  }
+}
+
+resource "aws_s3_bucket_public_access_block" "postgresql_backup" {
+  bucket = aws_s3_bucket.postgresql_backup.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+resource "aws_s3_bucket_ownership_controls" "postgresql_backup" {
+  bucket = aws_s3_bucket.postgresql_backup.id
+
+  rule {
+    object_ownership = "BucketOwnerEnforced"
+  }
+}
+
+resource "aws_s3_bucket_versioning" "postgresql_backup" {
+  bucket = aws_s3_bucket.postgresql_backup.id
+
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+resource "aws_s3_bucket_server_side_encryption_configuration" "postgresql_backup" {
+  bucket = aws_s3_bucket.postgresql_backup.id
+
+  rule {
+    bucket_key_enabled = true
+
+    apply_server_side_encryption_by_default {
+      kms_master_key_id = aws_kms_key.postgresql_backup.arn
+      sse_algorithm     = "aws:kms"
+    }
+  }
+}
+
+# 완료되지 않은 멀티파트 업로드만 정리한다.
+# 백업 파일의 보존 기간은 운영 정책 확정 후 별도로 추가한다.
+resource "aws_s3_bucket_lifecycle_configuration" "postgresql_backup" {
+  bucket = aws_s3_bucket.postgresql_backup.id
+
+  depends_on = [aws_s3_bucket_versioning.postgresql_backup]
+
+  rule {
+    id     = "abort-incomplete-multipart-upload"
+    status = "Enabled"
+
+    filter {}
+
+    abort_incomplete_multipart_upload {
+      days_after_initiation = 1
+    }
+  }
+}
+
+resource "aws_s3_bucket_policy" "postgresql_backup" {
+  bucket = aws_s3_bucket.postgresql_backup.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid       = "DenyInsecureTransport"
+        Effect    = "Deny"
+        Principal = "*"
+        Action    = "s3:*"
+        Resource = [
+          aws_s3_bucket.postgresql_backup.arn,
+          "${aws_s3_bucket.postgresql_backup.arn}/*",
+        ]
+        Condition = {
+          Bool = { "aws:SecureTransport" = "false" }
+        }
+      },
+    ]
+  })
+}
