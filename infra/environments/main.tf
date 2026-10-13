@@ -29,7 +29,9 @@ module "prod_v1_parameter_store" {
 module "prod_v1_iam" {
   source = "./prod/v1/iam"
 
-  ecr_repository_arns = module.shared_core.ecr_repository_arns
+  ecr_repository_arns           = module.shared_core.ecr_repository_arns
+  postgresql_backup_bucket_arn  = module.prod_s3.postgresql_backup_bucket_arn
+  postgresql_backup_kms_key_arn = module.prod_s3.postgresql_backup_kms_key_arn
 }
 
 module "prod_v1_compute" {
