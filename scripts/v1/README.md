@@ -59,9 +59,24 @@ EC2는 Terraform으로 관리하지만, **서버 안의 파일은 Terraform 관�
 | 컨테이너 로그 그룹 | CloudWatch Logs `/lookddak/prod/*` | CloudWatch Logs `/lookddak/dev/*` |
 | Nginx 설정 | `nginx/conf.d` | `nginx/conf.d.dev` |
 | FastAPI의 PostgreSQL 연결 | PostgreSQL 5432 직접 연결 | PgBouncer 6432 경유 (`pool_mode=transaction`) |
+| PostgreSQL 호스트 포트 | 공개하지 않음 | `${POSTGRES_BIND_IP}:5432` → 컨테이너 `5432` |
 | PgBouncer 서비스 | 없음 | `edoburu/pgbouncer:v1.26.0-p0` digest 고정 |
 
 dev 서버는 로그 수집만 하고 알림은 두지 않습니다. 모니터링(`container-metric.sh` cron, `docker-alert.sh` systemd)을 설치하지 않습니다.
+
+## Dev PostgreSQL 논리 복제 포트
+
+- Dev 오버레이의 `postgresql.ports`로 EC2 사설 IP의 5432를 PostgreSQL 컨테이너의 5432에 연결합니다.
+- Dev 서버 `/opt/lookddak/.env`에 `POSTGRES_BIND_IP`를 지정해야 합니다. 값이 없으면 Compose 검증이 실패합니다.
+- 현재 V1 Dev EC2의 사설 IP는 `10.30.1.15`입니다. EC2 주소가 바뀌면 이 값도 갱신합니다.
+
+```dotenv
+POSTGRES_BIND_IP=10.30.1.15
+```
+
+- AWS 보안그룹은 RDS PostgreSQL SG에서 오는 TCP 5432만 허용합니다. 호스트 포트 연결과 SG 허용은 둘 다 필요합니다.
+- 이미 실행 중인 PostgreSQL에 포트 매핑을 적용하려면 컨테이너를 재생성해야 합니다. 같은 데이터 볼륨을 유지하며 PgBouncer PAUSE → PostgreSQL만 재생성 → 정상 기동 확인 → RESUME 순서로 진행합니다.
+- PgBouncer 6432는 Docker 네트워크 내부에서만 사용합니다.
 
 ## Dev PgBouncer
 
@@ -70,7 +85,7 @@ dev 서버는 로그 수집만 하고 알림은 두지 않습니다. 모니터�
 - 관리 콘솔은 컨테이너 내부 Unix 소켓의 `pgbouncer_admin`만 허용합니다. TCP 관리 콘솔 접속은 HBA에서 거부합니다.
 - `pgbouncer/userlist.txt`에는 원본 PostgreSQL의 SCRAM 검증값이 들어가므로 Git에 넣지 않습니다. `prepare-pgbouncer.sh`가 평문 비밀번호를 출력하지 않고 서버에서 생성합니다.
 - `bootstrap.sh`는 PostgreSQL과 `langgraph` 스키마를 먼저 준비한 뒤 PgBouncer를 기동합니다. `deploy.sh ai ...`도 FastAPI 전환 전에 PgBouncer 헬스체크를 확인합니다.
-- 이 구성은 PostgreSQL 컨테이너 설정과 `wal_level`을 변경하거나 PostgreSQL을 재시작하지 않습니다.
+- PgBouncer 준비 스크립트는 PostgreSQL의 `wal_level`을 변경하거나 PostgreSQL을 재시작하지 않습니다.
 
 서버에서 수동으로 다시 준비할 때는 다음 순서로 실행합니다.
 
