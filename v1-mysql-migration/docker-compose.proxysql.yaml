@@ -1,0 +1,73 @@
+# ProxySQL 덮어쓰기 파일 (V1 MySQL 무중단 마이그레이션 전용, 다른 작업과 분리)
+# - 서버 배치: /opt/lookddak/v1-mysql-migration/docker-compose.proxysql.yaml
+# - 원본 docker-compose.yaml(+ dev는 docker-compose.dev.yaml) 위에 겹쳐 쓰는 파일이다.
+#   Spring은 원본 설정을 그대로 쓰고 아래 세 가지만 바뀐다.
+#     1) environment.DB_URL → proxysql:6033 (나머지 환경 변수는 원본 그대로)
+#     2) networks에 mysql-network 추가
+#     3) depends_on에 proxysql 추가
+# - 기동은 deploy-proxysql.sh <Spring 이미지 태그>로 한다. 스크립트가 .env의 COMPOSE_FILE 뒤에
+#   이 파일을 붙여 사용하며, .env는 바꾸지 않는다.
+# - 이후 deploy.sh be 배포에도 유지하려면 .env의 COMPOSE_FILE에 이 파일을 추가한다.
+#     dev:  COMPOSE_FILE=docker-compose.yaml:docker-compose.dev.yaml:v1-mysql-migration/docker-compose.proxysql.yaml
+#     prod: COMPOSE_FILE=docker-compose.yaml:v1-mysql-migration/docker-compose.proxysql.yaml
+# - proxysql.cnf는 저장소에 두지 않는다. 서버의 PROXYSQL_CNF_PATH
+#   (기본 /opt/lookddak/v1-mysql-migration/proxysql.cnf)에 직접 배치한다. (예시: proxysql.cnf.example)
+# - 로그는 CloudWatch가 아니라 로컬 json-file로 남긴다. 확인: docker logs lookddak-proxysql
+
+networks:
+  mysql-network:
+    driver: bridge
+
+services:
+  proxysql:
+    image: proxysql/proxysql:2.7.2
+    container_name: lookddak-proxysql
+    restart: always
+    # -f: 포그라운드 실행, -c: 설정 파일 지정
+    # datadir 볼륨을 두지 않아 재시작할 때마다 proxysql.cnf가 기준이 된다.
+    # (datadir에 proxysql.db가 남아 있으면 cnf를 무시하므로 일부러 휘발성으로 둔다)
+    command: ["proxysql", "-f", "--idle-threads", "-c", "/etc/proxysql.cnf"]
+    expose:
+      - "6033"
+    ports:
+      # admin 인터페이스는 EC2 내부에서만 접속 (mysql -h127.0.0.1 -P6032 -u radmin -p)
+      - "127.0.0.1:6032:6032"
+    networks:
+      - mysql-network
+    volumes:
+      - type: bind
+        source: "${PROXYSQL_CNF_PATH:-/opt/lookddak/v1-mysql-migration/proxysql.cnf}"
+        target: /etc/proxysql.cnf
+        read_only: true
+        bind:
+          # 파일이 없으면 디렉터리를 만들지 않고 기동을 실패시킨다.
+          create_host_path: false
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/6033"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    stop_grace_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 256M
+
+  spring:
+    networks:
+      - app-network
+      - mysql-network
+    depends_on:
+      proxysql:
+        condition: service_healthy
+    environment:
+      # load-parameters.sh가 만든 DB_URL(RDS 직접 연결)을 ProxySQL 주소로 덮어쓴다.
+      # 계정(DB_USERNAME, DB_PASSWORD)은 그대로 사용하므로 proxysql.cnf의 mysql_users와 같아야 한다.
+      DB_URL: "jdbc:mysql://proxysql:6033/${PROXYSQL_DB_NAME:-lookddak}?sslMode=REQUIRED&serverTimezone=UTC&characterEncoding=UTF-8"

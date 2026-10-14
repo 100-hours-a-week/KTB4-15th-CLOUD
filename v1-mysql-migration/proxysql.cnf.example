@@ -1,0 +1,46 @@
+# ProxySQL 설정 예시 (실제 파일은 저장소에 두지 않는다)
+# - 서버 배치 경로: /opt/lookddak/v1-mysql-migration/proxysql.cnf (권한 600, 컨테이너에서 읽을 수 있어야 함)
+# - <...> 값을 채워서 사용한다. 비밀번호가 들어가므로 커밋하지 않는다.
+# - datadir 볼륨이 없으므로 컨테이너를 재시작하면 이 파일 기준으로 다시 올라온다.
+#   admin에서 런타임으로 바꾼 값(예: 전환 후 백엔드 주소)은 이 파일에도 반영해야 유지된다.
+
+datadir="/var/lib/proxysql"
+
+admin_variables=
+{
+  # admin: 컨테이너 내부(localhost) 접속용
+  # radmin: EC2에서 127.0.0.1:6032 포트 매핑으로 접속하는 용도 (admin 계정은 원격 접속 불가)
+  admin_credentials="admin:<ADMIN_PASSWORD>;radmin:<ADMIN_PASSWORD>"
+  mysql_ifaces="0.0.0.0:6032"
+}
+
+mysql_variables=
+{
+  interfaces="0.0.0.0:6033"
+  server_version="8.4.11"
+  threads=2
+  max_connections=512
+
+  # Spring → ProxySQL 구간 TLS (JDBC sslMode=REQUIRED 대응, 첫 기동 시 자체 서명 인증서 생성)
+  have_ssl=true
+
+  # 전환 중 쓰기 대상이 없을 때 쿼리를 붙잡아 두는 최대 시간(ms)
+  connect_timeout_server_max=30000
+  default_query_timeout=60000
+
+  # 백엔드가 하나이고 전환을 수동으로 하므로 Monitor는 끈다.
+  # (켜 두면 RDS에 모니터 계정이 필요하고, 없으면 ping 실패로 백엔드가 SHUNNED될 수 있다)
+  monitor_enabled=false
+}
+
+mysql_servers=
+(
+  # use_ssl=1: ProxySQL → RDS 구간 TLS (require_secure_transport=1 대응)
+  { hostgroup_id=10, hostname="<RDS_ENDPOINT>", port=3306, use_ssl=1, max_connections=100 }
+)
+
+mysql_users=
+(
+  # Spring이 쓰는 앱 계정과 같아야 한다 (/lookddak/<env>/rds/app/*)
+  { username="<APP_USERNAME>", password="<APP_PASSWORD>", default_hostgroup=10, transaction_persistent=1 }
+)
