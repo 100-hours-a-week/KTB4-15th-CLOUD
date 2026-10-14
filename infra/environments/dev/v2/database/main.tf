@@ -90,15 +90,16 @@ module "postgresql" {
 # - Steps (see lookddak_infra/work/v1-mysql-migration/진행기록.md)
 #   1) apply as is -> read replica (brief I/O pause on the Single-AZ source at snapshot start)
 #      set binlog retention hours on the source before apply
-#   2) on V2 MySQL: rds_stop_replication -> record position (1) from SHOW REPLICA STATUS
+#   2) on V2 MySQL: rds_stop_replication -> record the replication start position
+#      (Relay_Source_Log_File, Exec_Source_Log_Pos from SHOW REPLICA STATUS)
 #   3) mysql_promote = true -> apply -> promoted to a standalone instance
-#   4) on V2 MySQL: rds_set_external_source(..., position (1), ssl 1) -> rds_start_replication
+#   4) on V2 MySQL: rds_set_external_source(..., that file/position, ssl 1) -> rds_start_replication
 # - read_only = 1 is pinned in the parameter group because the replica default
 #   (on only while it is a replica) would open writes at promotion.
 #   Set mysql_read_only = false right before the cutover.
 # ---------------------------------------------------------------
 locals {
-  mysql_promote   = false # true: promote the read replica (after recording position (1))
+  mysql_promote   = false # true: promote the read replica (after recording the start position)
   mysql_read_only = true  # false: allow writes right before the cutover
 }
 
