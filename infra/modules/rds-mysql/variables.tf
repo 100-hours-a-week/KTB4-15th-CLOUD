@@ -14,9 +14,16 @@ variable "environment" {
 # ---------------------------------------------------------------
 # 네트워크
 # ---------------------------------------------------------------
+variable "create_subnet_group" {
+  description = "DB Subnet Group 생성 여부 (같은 리전 리드 레플리카는 원본 것을 쓰므로 false)"
+  type        = bool
+  default     = true
+}
+
 variable "subnet_ids" {
-  description = "DB Subnet Group에 넣을 private subnet ID 목록 (2개 AZ 이상)"
+  description = "DB Subnet Group에 넣을 private subnet ID 목록 (2개 AZ 이상, create_subnet_group = true일 때 사용)"
   type        = list(string)
+  default     = []
 }
 
 variable "security_group_ids" {
@@ -36,17 +43,26 @@ variable "multi_az" {
   default     = false
 }
 
+
 variable "subnet_group_description" {
-  description = "DB Subnet Group 설명"
+  description = "DB Subnet Group 설명 (create_subnet_group = true일 때 사용)"
   type        = string
+  default     = null
 }
 
 # ---------------------------------------------------------------
 # 엔진·파라미터
 # ---------------------------------------------------------------
 variable "engine_version" {
-  description = "MySQL 엔진 버전 (예: 8.4.11)"
+  description = "MySQL 엔진 버전 (예: 8.4.11, 리드 레플리카는 원본을 따르므로 null)"
   type        = string
+  default     = null
+}
+
+variable "replicate_source_db" {
+  description = "리드 레플리카로 만들 때 원본 DB identifier (같은 리전). null이면 일반 인스턴스, null로 바꾸면 승격"
+  type        = string
+  default     = null
 }
 
 variable "parameter_group_family" {
@@ -84,8 +100,9 @@ variable "instance_class" {
 }
 
 variable "db_name" {
-  description = "생성할 초기 데이터베이스 이름"
+  description = "생성할 초기 데이터베이스 이름 (리드 레플리카는 원본을 따르므로 null)"
   type        = string
+  default     = null
 }
 
 variable "allocated_storage" {

@@ -22,3 +22,8 @@ output "arn" {
   description = "RDS 인스턴스 ARN"
   value       = aws_db_instance.this.arn
 }
+
+output "identifier" {
+  description = "RDS 인스턴스 identifier"
+  value       = aws_db_instance.this.identifier
+}

@@ -82,3 +82,66 @@ module "postgresql" {
 
   enabled_cloudwatch_logs_exports = ["postgresql", "upgrade"]
 }
+
+# ---------------------------------------------------------------
+# V2 dev MySQL (V1 MySQL zero-downtime migration target)
+# - Created as a same-region read replica of the existing dev RDS (lookddak-dev-mysql).
+#   Data, engine version, DB name, master user and encryption come from the source.
+# - Steps (see lookddak_infra/work/v1-mysql-migration/진행기록.md)
+#   1) apply as is -> read replica (brief I/O pause on the Single-AZ source at snapshot start)
+#      set binlog retention hours on the source before apply
+#   2) on V2 MySQL: rds_stop_replication -> record the replication start position
+#      (Relay_Source_Log_File, Exec_Source_Log_Pos from SHOW REPLICA STATUS)
+#   3) mysql_promote = true -> apply -> promoted to a standalone instance
+#   4) on V2 MySQL: rds_set_external_source(..., that file/position, ssl 1) -> rds_start_replication
+# - read_only = 1 is pinned in the parameter group because the replica default
+#   (on only while it is a replica) would open writes at promotion.
+#   Set mysql_read_only = false right before the cutover.
+# ---------------------------------------------------------------
+locals {
+  mysql_promote   = false # true: promote the read replica (after recording the start position)
+  mysql_read_only = true  # false: allow writes right before the cutover
+}
+
+module "mysql" {
+  source = "../../../../modules/rds-mysql"
+
+  name_prefix = "lookddak-dev-v2"
+  environment = "dev"
+
+  # Read replica of the existing dev RDS. Becomes standalone when mysql_promote = true.
+  replicate_source_db = local.mysql_promote ? null : var.v1_mysql_identifier
+
+  # Same-region replicas use the source Subnet Group (lookddak-dev-db-subnet-group).
+  create_subnet_group = false
+  security_group_ids  = [var.mysql_security_group_id]
+  availability_zone   = "ap-northeast-2a"
+  multi_az            = false
+
+  parameter_group_family      = "mysql8.4"
+  parameter_group_description = "LookDDak dev V2 MySQL 8.4 parameter group"
+  parameters = [
+    # Same values as the existing dev RDS (dev/v1/database)
+    { name = "character_set_server", value = "utf8mb4" },
+    { name = "collation_server", value = "utf8mb4_0900_ai_ci" },
+    { name = "log_output", value = "FILE" },
+    { name = "long_query_time", value = "2" },
+    { name = "require_secure_transport", value = "1" },
+    { name = "slow_query_log", value = "1" },
+    { name = "time_zone", value = "UTC" },
+    # Block application writes until the cutover
+    { name = "read_only", value = local.mysql_read_only ? "1" : "0" },
+  ]
+
+  instance_class        = "db.t4g.medium"
+  allocated_storage     = 20
+  max_allocated_storage = 50
+
+  # Keep automated backups so binlog stays on after promotion (rollback replication source).
+  backup_retention_period  = 7
+  backup_window            = "18:00-18:30"
+  maintenance_window       = "sun:19:00-sun:19:30"
+  deletion_protection      = false
+  skip_final_snapshot      = true
+  delete_automated_backups = true
+}

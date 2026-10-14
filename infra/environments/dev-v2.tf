@@ -37,6 +37,8 @@ module "dev_v2_database" {
 
   db_subnet_ids                = module.dev_v1_network.db_subnet_ids
   postgresql_security_group_id = module.dev_v2_network.security_group_ids["postgresql"]
+  mysql_security_group_id      = module.dev_v2_network.security_group_ids["mysql"]
+  v1_mysql_identifier          = module.dev_v1_database.mysql_identifier
 
   read_admin_password_from_ssm = var.dev_v2_postgresql_read_admin_password_from_ssm
   admin_password_wo            = var.dev_v2_postgresql_admin_password_wo
