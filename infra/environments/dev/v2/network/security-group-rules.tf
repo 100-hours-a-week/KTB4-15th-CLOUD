@@ -145,7 +145,7 @@ resource "aws_vpc_security_group_egress_rule" "crawler_to_postgresql" {
 
 # ---------------------------------------------------------------
 # PostgreSQL
-# Only FastAPI and Crawler can initiate database connections.
+# FastAPI, Crawler and V1 dev EC2 can initiate database connections.
 # ---------------------------------------------------------------
 resource "aws_vpc_security_group_ingress_rule" "postgresql_from_fastapi" {
   security_group_id            = aws_security_group.v2["postgresql"].id
@@ -163,6 +163,26 @@ resource "aws_vpc_security_group_ingress_rule" "postgresql_from_crawler" {
   from_port                    = 5432
   to_port                      = 5432
   referenced_security_group_id = aws_security_group.v2["crawler"].id
+}
+
+# V1 dev EC2 -> V2 PostgreSQL for DB inspection and rollback replication.
+# Security groups are stateful; response traffic needs no reverse rules.
+resource "aws_vpc_security_group_ingress_rule" "postgresql_from_v1_dev_app" {
+  security_group_id            = aws_security_group.v2["postgresql"].id
+  description                  = "PostgreSQL traffic from V1 dev EC2"
+  ip_protocol                  = "tcp"
+  from_port                    = 5432
+  to_port                      = 5432
+  referenced_security_group_id = var.dev_app_security_group_id
+}
+
+resource "aws_vpc_security_group_egress_rule" "v1_dev_app_to_postgresql" {
+  security_group_id            = var.dev_app_security_group_id
+  description                  = "PostgreSQL traffic to V2 dev RDS"
+  ip_protocol                  = "tcp"
+  from_port                    = 5432
+  to_port                      = 5432
+  referenced_security_group_id = aws_security_group.v2["postgresql"].id
 }
 
 # ---------------------------------------------------------------
