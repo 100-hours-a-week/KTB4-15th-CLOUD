@@ -99,8 +99,8 @@ module "postgresql" {
 #   Set mysql_read_only = false right before the cutover.
 # ---------------------------------------------------------------
 locals {
-  mysql_promote   = false # true: promote the read replica (after recording the start position)
-  mysql_read_only = true  # false: allow writes right before the cutover
+  mysql_promote   = true # true: promote the read replica (after recording the start position)
+  mysql_read_only = true # false: allow writes right before the cutover
 }
 
 module "mysql" {
