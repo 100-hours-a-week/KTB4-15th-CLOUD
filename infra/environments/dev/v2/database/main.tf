@@ -101,7 +101,7 @@ module "postgresql" {
 #   this DB only when ProxySQL routes to it; replication threads ignore read_only.
 # ---------------------------------------------------------------
 locals {
-  mysql_promote   = true # true: promote the read replica (after recording the start position)
+  mysql_promote   = true  # true: promote the read replica (after recording the start position)
   mysql_read_only = false # false: writes allowed (kept 0 during dev cutover rehearsals; ProxySQL decides the write target)
 }
 
