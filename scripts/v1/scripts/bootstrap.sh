@@ -4,7 +4,7 @@
 #
 # 역할: 최초 전체 스택 기동 또는 EC2 전체 스택 복구
 #
-# 기동 순서: PostgreSQL → langgraph → FastAPI → Spring → Next.js → Nginx
+# 기동 순서: PostgreSQL → langgraph → PgBouncer(dev) → FastAPI → Spring → Next.js → Nginx
 
 set -Eeuo pipefail
 
@@ -12,6 +12,7 @@ readonly APP_DIR="/opt/lookddak"
 readonly ENV_FILE="${APP_DIR}/.env"
 readonly COMPOSE_FILE="${APP_DIR}/docker-compose.yaml"
 readonly PARAMETER_LOADER="${APP_DIR}/scripts/load-parameters.sh"
+readonly PGBOUNCER_PREPARE="${APP_DIR}/scripts/prepare-pgbouncer.sh"
 readonly LOCK_FILE="/var/lock/lookddak-deploy.lock"
 readonly AWS_REGION="ap-northeast-2"
 
@@ -70,6 +71,16 @@ service_port_ready() {
         pg_isready \
           -U "$POSTGRES_USER" \
           -d "$POSTGRES_DB" \
+        >/dev/null 2>&1
+      ;;
+
+    pgbouncer)
+      docker compose exec -T pgbouncer \
+        pg_isready \
+          -h /var/run/pgbouncer \
+          -p 6432 \
+          -U pgbouncer_admin \
+          -d pgbouncer \
         >/dev/null 2>&1
       ;;
 
@@ -277,7 +288,22 @@ docker compose exec -T postgresql sh -c '
 log "langgraph 스키마 준비 완료"
 
 # -------------------------------------------------------------------
-# 8. 애플리케이션을 의존 순서대로 기동
+# 8. Dev에서 PgBouncer 인증 파일 준비 및 선기동
+# -------------------------------------------------------------------
+
+if docker compose config --services | grep -qx pgbouncer; then
+  [[ -x "$PGBOUNCER_PREPARE" ]] \
+    || fail "prepare-pgbouncer.sh가 없거나 실행할 수 없습니다."
+
+  log "PgBouncer SCRAM 인증 파일 준비"
+  "$PGBOUNCER_PREPARE"
+  log "PgBouncer SCRAM 인증 파일 준비 완료"
+
+  start_service pgbouncer
+fi
+
+# -------------------------------------------------------------------
+# 9. 애플리케이션을 의존 순서대로 기동
 # -------------------------------------------------------------------
 
 start_service fastapi
@@ -285,7 +311,7 @@ start_service spring
 start_service nextjs
 
 # -------------------------------------------------------------------
-# 9. Nginx 기동 및 설정 검사
+# 10. Nginx 기동 및 설정 검사
 # -------------------------------------------------------------------
 
 log "Nginx 실행"
@@ -305,7 +331,7 @@ docker compose exec -T nginx nginx -t >/dev/null
 log "Nginx 실행 및 설정 확인 성공"
 
 # -------------------------------------------------------------------
-# 10. 최종 상태 출력
+# 11. 최종 상태 출력
 # -------------------------------------------------------------------
 
 docker compose ps
