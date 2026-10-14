@@ -35,6 +35,11 @@ locals {
       description = "LookDDak dev V2 PostgreSQL security group"
       tier        = "db"
     }
+    mysql = {
+      name        = "lookddak-dev-v2-mysql-sg"
+      description = "LookDDak dev V2 MySQL security group"
+      tier        = "db"
+    }
   }
 }
 
