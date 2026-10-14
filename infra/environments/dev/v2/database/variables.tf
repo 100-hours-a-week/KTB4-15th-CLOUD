@@ -26,3 +26,13 @@ variable "admin_password_wo" {
   sensitive   = true
   ephemeral   = true
 }
+
+variable "v1_mysql_identifier" {
+  description = "Existing dev RDS MySQL identifier (read replica source)"
+  type        = string
+}
+
+variable "mysql_security_group_id" {
+  description = "V2 MySQL security group ID"
+  type        = string
+}

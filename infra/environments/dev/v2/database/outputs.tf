@@ -35,3 +35,13 @@ output "secure_parameter_arns" {
     name => "arn:aws:ssm:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:parameter${path}"
   }
 }
+
+output "mysql_identifier" {
+  description = "V2 dev MySQL RDS identifier"
+  value       = module.mysql.identifier
+}
+
+output "mysql_address" {
+  description = "V2 dev MySQL endpoint address"
+  value       = module.mysql.address
+}
