@@ -97,10 +97,12 @@ module "postgresql" {
 # - read_only = 1 is pinned in the parameter group because the replica default
 #   (on only while it is a replica) would open writes at promotion.
 #   Set mysql_read_only = false right before the cutover.
+#   dev: kept false during cutover/rollback rehearsals (2026-10-14~). Application writes reach
+#   this DB only when ProxySQL routes to it; replication threads ignore read_only.
 # ---------------------------------------------------------------
 locals {
-  mysql_promote   = true # true: promote the read replica (after recording the start position)
-  mysql_read_only = true # false: allow writes right before the cutover
+  mysql_promote   = true  # true: promote the read replica (after recording the start position)
+  mysql_read_only = false # false: writes allowed (kept 0 during dev cutover rehearsals; ProxySQL decides the write target)
 }
 
 module "mysql" {
