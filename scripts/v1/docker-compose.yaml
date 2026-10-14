@@ -181,8 +181,10 @@ services:
       postgresql:
         condition: service_healthy
     environment:
-      DATABASE_URL: "${DATABASE_URL:-}"
-      CHECKPOINT_DSN: "${CHECKPOINT_DSN:-}"
+      # Dev 등에서 FastAPI만 프록시로 전환할 수 있도록 별도 주소를 우선한다.
+      # override가 없는 prod는 기존 직접 연결 주소를 그대로 사용한다.
+      DATABASE_URL: "${FASTAPI_DATABASE_URL:-${DATABASE_URL:-}}"
+      CHECKPOINT_DSN: "${FASTAPI_CHECKPOINT_DSN:-${CHECKPOINT_DSN:-}}"
       INTERNAL_API_KEY: "${INTERNAL_API_KEY:-}"
       POSTGRES_DB: "${POSTGRES_DB:-}"
       POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-}"

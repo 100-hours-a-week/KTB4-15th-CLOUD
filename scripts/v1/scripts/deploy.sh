@@ -23,6 +23,7 @@ RUN_ID="${3:-manual}"
 readonly APP_DIR="/opt/lookddak"
 readonly ENV_FILE="${APP_DIR}/.env"
 readonly PARAMETER_LOADER="${APP_DIR}/scripts/load-parameters.sh"
+readonly PGBOUNCER_PREPARE="${APP_DIR}/scripts/prepare-pgbouncer.sh"
 readonly LOCK_FILE="/var/lock/lookddak-deploy.lock"
 readonly HISTORY_FILE="${APP_DIR}/deploy-history.log"
 readonly AWS_REGION="ap-northeast-2"
@@ -122,6 +123,60 @@ wait_for_service_port() {
 
   log "${COMPOSE_SERVICE}가 ${WAIT_TIMEOUT}초 안에 준비되지 않았습니다."
   docker compose ps "$COMPOSE_SERVICE" || true
+  return 1
+}
+
+pgbouncer_ready() {
+  local container_id
+
+  container_id="$(docker compose ps -q pgbouncer)"
+  [[ -n "$container_id" ]] || return 1
+
+  [[ "$(
+    docker inspect \
+      --format '{{.State.Status}}|{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' \
+      "$container_id" 2>/dev/null
+  )" == "running|healthy" ]]
+}
+
+# Dev의 AI 배포는 FastAPI만 재생성하므로, --no-deps 전환 전에
+# PgBouncer가 실제로 준비됐는지 별도로 보장한다.
+ensure_pgbouncer_for_ai() {
+  local deadline
+
+  [[ "$SERVICE_KEY" == "ai" ]] || return 0
+
+  if ! docker compose config --services | grep -qx pgbouncer; then
+    return 0
+  fi
+
+  if pgbouncer_ready; then
+    log "PgBouncer가 이미 정상 실행 중입니다."
+    return 0
+  fi
+
+  [[ -x "$PGBOUNCER_PREPARE" ]] || {
+    log "prepare-pgbouncer.sh가 없거나 실행할 수 없습니다."
+    return 1
+  }
+
+  log "PgBouncer 인증 파일 준비 및 기동"
+  "$PGBOUNCER_PREPARE" || return 1
+  docker compose up -d --no-deps pgbouncer || return 1
+
+  deadline=$((SECONDS + WAIT_TIMEOUT))
+
+  while ((SECONDS < deadline)); do
+    if pgbouncer_ready; then
+      log "PgBouncer 실행 및 헬스체크 성공"
+      return 0
+    fi
+
+    sleep "$CHECK_INTERVAL"
+  done
+
+  log "PgBouncer가 ${WAIT_TIMEOUT}초 안에 준비되지 않았습니다."
+  docker compose ps pgbouncer || true
   return 1
 }
 
@@ -261,6 +316,12 @@ log "Parameter Store 런타임 설정 조회 성공"
 
 log "Compose 설정 확인"
 docker compose config --quiet
+
+if ! ensure_pgbouncer_for_ai; then
+  record "pgbouncer-unavailable-service-unchanged"
+  log "PgBouncer 준비 실패. FastAPI 컨테이너는 변경하지 않았습니다."
+  exit 1
+fi
 
 # -------------------------------------------------------------------
 # 3. 현재 배포 상태 확인

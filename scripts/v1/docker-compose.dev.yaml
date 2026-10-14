@@ -24,6 +24,9 @@ services:
         awslogs-group: /lookddak/dev/spring
 
   fastapi:
+    depends_on:
+      pgbouncer:
+        condition: service_healthy
     logging:
       options:
         awslogs-group: /lookddak/dev/fastapi
@@ -32,3 +35,39 @@ services:
     logging:
       options:
         awslogs-group: /lookddak/dev/postgresql
+
+  # Dev에서만 추가한다. postgresql 서비스와 데이터 볼륨은 변경하지 않는다.
+  pgbouncer:
+    image: edoburu/pgbouncer:v1.26.0-p0@sha256:b17551c776ef7e5769ef80b956d20f85e2fd25dd8912d31d58f782aad495b711
+    container_name: lookddak-pgbouncer
+    restart: always
+    expose:
+      - "6432"
+    networks:
+      - db-network
+    depends_on:
+      postgresql:
+        condition: service_healthy
+    volumes:
+      - ./pgbouncer/pgbouncer.ini:/etc/pgbouncer/pgbouncer.ini:ro
+      - ./pgbouncer/pg_hba.conf:/etc/pgbouncer/pg_hba.conf:ro
+      - ./pgbouncer/pg_ident.conf:/etc/pgbouncer/pg_ident.conf:ro
+      - ./pgbouncer/userlist.txt:/etc/pgbouncer/userlist.txt:ro
+    healthcheck:
+      test: ["CMD", "pg_isready", "-h", "/var/run/pgbouncer", "-p", "6432", "-U", "pgbouncer_admin", "-d", "pgbouncer"]
+      interval: 5s
+      timeout: 3s
+      retries: 6
+      start_period: 5s
+    # 새 CloudWatch/IAM 리소스 없이 제한된 크기의 로컬 로그를 남긴다.
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    stop_grace_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 128M

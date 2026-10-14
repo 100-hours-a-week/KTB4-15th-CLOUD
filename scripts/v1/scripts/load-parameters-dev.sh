@@ -104,6 +104,10 @@ load_runtime_parameters() {
   DATABASE_URL="postgresql://${postgres_user_encoded}:${postgres_password_encoded}@postgresql:5432/${postgres_db_encoded}"
   CHECKPOINT_DSN="${DATABASE_URL}?options=-csearch_path%3Dlanggraph"
 
+  # 원본 DB 확인 등에는 직접 연결 주소를 유지하고 FastAPI만 PgBouncer로 보낸다.
+  FASTAPI_DATABASE_URL="postgresql://${postgres_user_encoded}:${postgres_password_encoded}@pgbouncer:6432/${postgres_db_encoded}"
+  FASTAPI_CHECKPOINT_DSN="${FASTAPI_DATABASE_URL}?options=-csearch_path%3Dlanggraph"
+
   DB_URL="jdbc:mysql://${RDS_HOST}:${RDS_PORT}/${RDS_DATABASE}?sslMode=REQUIRED&serverTimezone=UTC&characterEncoding=UTF-8"
   DB_USERNAME="$RDS_APP_USERNAME"
   DB_PASSWORD="$RDS_APP_PASSWORD"
@@ -114,6 +118,8 @@ load_runtime_parameters() {
     POSTGRES_PASSWORD \
     DATABASE_URL \
     CHECKPOINT_DSN \
+    FASTAPI_DATABASE_URL \
+    FASTAPI_CHECKPOINT_DSN \
     DB_URL \
     DB_USERNAME \
     DB_PASSWORD \
@@ -133,6 +139,8 @@ cleanup_runtime_parameters() {
     POSTGRES_PASSWORD \
     DATABASE_URL \
     CHECKPOINT_DSN \
+    FASTAPI_DATABASE_URL \
+    FASTAPI_CHECKPOINT_DSN \
     RDS_HOST \
     RDS_PORT \
     RDS_DATABASE \

@@ -185,6 +185,26 @@ resource "aws_vpc_security_group_egress_rule" "v1_dev_app_to_postgresql" {
   referenced_security_group_id = aws_security_group.v2["postgresql"].id
 }
 
+# V2 PostgreSQL -> V1 dev EC2 for forward logical replication.
+# The RDS subscriber initiates the connection to the PostgreSQL publisher on EC2.
+resource "aws_vpc_security_group_egress_rule" "postgresql_to_v1_dev_app" {
+  security_group_id            = aws_security_group.v2["postgresql"].id
+  description                  = "Logical replication to V1 dev PostgreSQL"
+  ip_protocol                  = "tcp"
+  from_port                    = 5432
+  to_port                      = 5432
+  referenced_security_group_id = var.dev_app_security_group_id
+}
+
+resource "aws_vpc_security_group_ingress_rule" "v1_dev_app_from_postgresql" {
+  security_group_id            = var.dev_app_security_group_id
+  description                  = "Logical replication from V2 dev PostgreSQL"
+  ip_protocol                  = "tcp"
+  from_port                    = 5432
+  to_port                      = 5432
+  referenced_security_group_id = aws_security_group.v2["postgresql"].id
+}
+
 # ---------------------------------------------------------------
 # MySQL (V1 MySQL migration target, read replica of the existing dev RDS)
 # - V1 dev EC2 (ProxySQL) and V2 Spring connect to it after the cutover.
