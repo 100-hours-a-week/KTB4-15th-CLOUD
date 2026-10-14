@@ -20,7 +20,9 @@
 #       이 경우 [2a]에서 원복한다. (proxysql.cnf의 multiplex=2 쿼리 룰로 고정을 막는 것이 전제)
 #   [3] SOURCE 최종 binlog 위치(②) 기록 → TARGET SOURCE_POS_WAIT
 #   [4] TARGET binlog 위치(③) 기록 → TARGET 복제 중지·해제
-#   [5] ProxySQL: TARGET ONLINE, SOURCE OFFLINE_HARD (대기 쿼리가 TARGET에서 실행)
+#   [5] ProxySQL: TARGET ONLINE, SOURCE 행 삭제 (대기 쿼리가 TARGET에서 실행)
+#       삭제 후 LOAD하면 ProxySQL은 SOURCE를 OFFLINE_HARD와 같이 처리한다.
+#       OFFLINE_HARD 행을 남기면 memory·disk에만 SOURCE가 남아 cnf(1행)와 어긋나므로 지운다.
 #   [6] 역방향 복제: SOURCE가 ③ 위치부터 TARGET을 복제 (롤백 경로)
 #
 # 실패 시 자동 원복
@@ -236,11 +238,11 @@ log "[4] TARGET 복제 중지·해제 (+$(elapsed "$T_START")s)"
 # [5]
 STAGE=5
 # LOAD TO RUNTIME이 실제 전환 시점. 이 명령 이후로는 TARGET이 쓰기를 받으므로 원복하지 않는다.
-q_admin "REPLACE INTO mysql_servers (hostgroup_id, hostname, port, use_ssl, max_connections, status) VALUES (${WRITER_HOSTGROUP}, '${TARGET}', 3306, ${SRC_USE_SSL:-1}, ${SRC_MAX_CONN:-100}, 'ONLINE'); UPDATE mysql_servers SET status='OFFLINE_HARD' WHERE hostgroup_id=${WRITER_HOSTGROUP} AND hostname='${SOURCE}'; LOAD MYSQL SERVERS TO RUNTIME;"
+q_admin "REPLACE INTO mysql_servers (hostgroup_id, hostname, port, use_ssl, max_connections, status) VALUES (${WRITER_HOSTGROUP}, '${TARGET}', 3306, ${SRC_USE_SSL:-1}, ${SRC_MAX_CONN:-100}, 'ONLINE'); DELETE FROM mysql_servers WHERE hostgroup_id=${WRITER_HOSTGROUP} AND hostname='${SOURCE}'; LOAD MYSQL SERVERS TO RUNTIME;"
 WAIT_SECONDS="$(elapsed "$T_START")"
 trap - ERR
 STAGE=6
-log "[5] ProxySQL TARGET → ONLINE, SOURCE → OFFLINE_HARD"
+log "[5] ProxySQL TARGET → ONLINE, SOURCE 행 삭제 (쓰기 대상은 TARGET 하나)"
 log "=== 전환 완료: 쓰기 대기 구간 ${WAIT_SECONDS}초"
 q_admin "SAVE MYSQL SERVERS TO DISK;" || log "경고: SAVE MYSQL SERVERS TO DISK 실패 (runtime은 전환됨)"
 
@@ -265,6 +267,7 @@ set -e
 # ---------------------------------------------------------------
 log "=== 결과"
 q_admin_v "SELECT hostgroup_id, hostname, status FROM runtime_mysql_servers WHERE hostgroup_id=${WRITER_HOSTGROUP}"
+q_admin_v "SELECT 'memory' AS layer, hostgroup_id, hostname, status FROM mysql_servers WHERE hostgroup_id=${WRITER_HOSTGROUP}"
 q_admin_v "SELECT hostgroup, srv_host, status, ConnUsed, ConnFree, Queries FROM stats_mysql_connection_pool WHERE hostgroup=${WRITER_HOSTGROUP}"
 q_admin_v "SELECT errno, count_star, last_error FROM stats_mysql_errors"
 
