@@ -3,13 +3,23 @@
 # - prod/v1/database, dev/v1/database에서 환경별 값만 넣어 사용한다.
 # - 이 모듈에는 lifecycle prevent_destroy를 두지 않는다 (변수로 켜고 끌 수 없음).
 #   운영 DB 보호는 deletion_protection = true(AWS 측 삭제 거부)로 한다.
+# - replicate_source_db를 지정하면 같은 리전 리드 레플리카로 만든다.
+#   (데이터·엔진 버전·DB 이름·마스터 계정은 원본에서 물려받으므로 지정하지 않는다)
+#   이 값을 null로 바꾸고 apply하면 레플리카가 독립 인스턴스로 승격된다.
 # ---------------------------------------------------------------
 locals {
   # mysql8.4 → mysql84
   parameter_group_suffix = replace(var.parameter_group_family, ".", "")
+
+  is_replica = var.replicate_source_db != null
 }
 
+# 같은 리전 리드 레플리카는 원본의 Subnet Group을 그대로 쓰므로(API가 지정을 거부)
+# create_subnet_group = false로 두고 만들지 않는다.
+# (count 추가로 기존 주소 aws_db_subnet_group.this는 Terraform이 this[0]으로 자동 이동)
 resource "aws_db_subnet_group" "this" {
+  count = var.create_subnet_group ? 1 : 0
+
   name        = "${var.name_prefix}-db-subnet-group"
   description = var.subnet_group_description
   subnet_ids  = var.subnet_ids
@@ -42,9 +52,11 @@ resource "aws_db_parameter_group" "this" {
 }
 
 resource "aws_db_instance" "this" {
-  identifier     = "${var.name_prefix}-mysql"
+  identifier          = "${var.name_prefix}-mysql"
+  replicate_source_db = var.replicate_source_db
+
   db_name        = var.db_name
-  engine         = "mysql"
+  engine         = local.is_replica ? null : "mysql"
   engine_version = var.engine_version
   instance_class = var.instance_class
 
@@ -64,7 +76,7 @@ resource "aws_db_instance" "this" {
   multi_az               = var.multi_az
   network_type           = "IPV4"
   publicly_accessible    = false
-  db_subnet_group_name   = aws_db_subnet_group.this.name
+  db_subnet_group_name   = var.create_subnet_group ? aws_db_subnet_group.this[0].name : null
   vpc_security_group_ids = var.security_group_ids
 
   parameter_group_name = aws_db_parameter_group.this.name
