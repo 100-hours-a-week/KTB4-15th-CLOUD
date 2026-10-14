@@ -1,1 +1,4 @@
 proxysql.cnf
+proxysql.cnf.bak-*
+proxysql.cnf.new
+logs/
