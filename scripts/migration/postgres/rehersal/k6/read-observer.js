@@ -5,7 +5,7 @@
 
 import http from 'k6/http';
 import exec from 'k6/execution';
-import { check } from 'k6';
+import { check, sleep } from 'k6';
 import { Counter } from 'k6/metrics';
 
 const BASE_URL = (__ENV.BASE_URL || 'https://dev.lookddak.com').replace(/\/$/, '');
@@ -20,6 +20,11 @@ const MAX_FAILURE_RATE = Number.parseFloat(__ENV.MAX_FAILURE_RATE || '0');
 const P99_MS = Number.parseInt(__ENV.P99_MS || '5000', 10);
 const PREALLOCATED_VUS = Number.parseInt(__ENV.PREALLOCATED_VUS || String(Math.max(10, RATE)), 10);
 const MAX_VUS = Number.parseInt(__ENV.MAX_VUS || String(Math.max(20, RATE * 2)), 10);
+const TEST_PASSWORD = __ENV.TEST_PASSWORD || '';
+const TEST_EMAIL_PREFIX = __ENV.TEST_EMAIL_PREFIX || `pg-rehearsal-${RUN_ID}-`;
+const TEST_EMAIL_DOMAIN = __ENV.TEST_EMAIL_DOMAIN || 'example.com';
+const TOKEN_REFRESH_INTERVAL_MS = Number.parseInt(__ENV.TOKEN_REFRESH_INTERVAL_MS || '45000', 10);
+const JSON_HEADERS = { 'Content-Type': 'application/json' };
 
 if (!READ_PATH.startsWith('/')) {
   exec.test.abort('READ_PATH는 /로 시작해야 합니다.');
@@ -29,6 +34,9 @@ if (!Number.isInteger(RATE) || RATE <= 0) {
 }
 
 export const options = {
+  // VU별 테스트 계정의 access/refresh 쿠키를 반복 요청 사이에도 유지합니다.
+  noCookiesReset: true,
+  setupTimeout: '5m',
   scenarios: {
     read_observer: {
       executor: 'constant-arrival-rate',
@@ -41,14 +49,63 @@ export const options = {
     },
   },
   thresholds: {
+    // 서버가 느려져 예약된 요청 자체를 보내지 못한 경우도 리허설 실패로 판정합니다.
+    dropped_iterations: ['count==0'],
     'checks{endpoint:cost_free_read}': ['rate==1'],
     'http_req_failed{endpoint:cost_free_read}': [`rate<=${MAX_FAILURE_RATE}`],
     'http_req_duration{endpoint:cost_free_read}': [`p(99)<${P99_MS}`],
+    auth_failures: ['count==0'],
   },
   summaryTrendStats: ['avg', 'min', 'med', 'p(95)', 'p(99)', 'max'],
 };
 
 const observationFailures = new Counter('observation_failures');
+const authFailures = new Counter('auth_failures');
+
+function emailOf(vuId) {
+  return `${TEST_EMAIL_PREFIX}${String(vuId).padStart(2, '0')}@${TEST_EMAIL_DOMAIN}`;
+}
+
+function authRequest(name, method, path, body, jar) {
+  const params = {
+    headers: JSON_HEADERS,
+    timeout: HTTP_TIMEOUT,
+    tags: { endpoint: 'auth', name },
+  };
+  if (jar) params.jar = jar;
+  return http.request(method, `${BASE_URL}${path}`, body ? JSON.stringify(body) : null, params);
+}
+
+function login(email, jar) {
+  return authRequest('auth_login', 'POST', '/api/v1/auth/login', {
+    email,
+    password: TEST_PASSWORD,
+  }, jar);
+}
+
+// 테스트 계정 모드에서는 k6가 사용할 계정을 준비하고 로그인이 가능한지 먼저 확인합니다.
+// 이미 같은 계정이 있으면 회원가입 실패는 무시하고 로그인 결과로 최종 판정합니다.
+export function setup() {
+  if (!TEST_PASSWORD) return { accountMode: false };
+
+  for (let i = 1; i <= MAX_VUS; i += 1) {
+    const email = emailOf(i);
+    const jar = new http.CookieJar();
+    authRequest('auth_signup', 'POST', '/api/v1/auth/signup', {
+      email,
+      password: TEST_PASSWORD,
+    }, jar);
+    const response = login(email, jar);
+    if (response.status !== 200) {
+      exec.test.abort(`테스트 계정 로그인 실패: ${email} status=${response.status}`);
+    }
+    // 회원가입·로그인이 Nginx rate limit을 순간적으로 넘지 않도록 준비 요청을 분산합니다.
+    sleep(0.1);
+  }
+
+  console.log(`읽기 관찰용 테스트 계정 ${MAX_VUS}개 준비 완료`);
+  return { accountMode: true };
+}
 
 function requestHeaders(requestId) {
   const headers = {
@@ -66,10 +123,41 @@ function requestHeaders(requestId) {
   return headers;
 }
 
-export default function () {
+let loggedIn = false;
+let lastTokenRefreshAt = 0;
+
+function ensureVuLogin() {
+  if (loggedIn) return true;
+  const response = login(emailOf(exec.vu.idInTest));
+  if (response.status !== 200) {
+    authFailures.add(1, { operation: 'login', status: String(response.status) });
+    return false;
+  }
+  loggedIn = true;
+  lastTokenRefreshAt = Date.now();
+  return true;
+}
+
+function refreshVuTokenIfNeeded() {
+  if (Date.now() - lastTokenRefreshAt < TOKEN_REFRESH_INTERVAL_MS) return true;
+  const response = authRequest('auth_refresh', 'POST', '/api/v1/auth/refresh');
+  if (response.status < 200 || response.status >= 300) {
+    authFailures.add(1, { operation: 'refresh', status: String(response.status) });
+    loggedIn = false;
+    return ensureVuLogin();
+  }
+  lastTokenRefreshAt = Date.now();
+  return true;
+}
+
+export default function (data) {
+  if (data.accountMode && (!ensureVuLogin() || !refreshVuTokenIfNeeded())) {
+    return;
+  }
+
   const requestId = `mig-${RUN_ID}-${exec.vu.idInTest}-${exec.scenario.iterationInTest}-${Date.now()}`;
   const response = http.get(`${BASE_URL}${READ_PATH}`, {
-    headers: requestHeaders(requestId),
+    headers: data.accountMode ? { Accept: 'application/json', 'X-Request-ID': requestId } : requestHeaders(requestId),
     timeout: HTTP_TIMEOUT,
     redirects: 0,
     tags: { endpoint: 'cost_free_read', name: 'cost_free_read' },
