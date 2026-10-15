@@ -94,8 +94,8 @@ for r in rows:
             streak[side] = None
         d = 0
         if writer and host != writer and prev and prev["proxy_online"] == writer:
-            replicating = (r[f"{side}_src"] == writer and r[f"{side}_io"] == "Yes" and r[f"{side}_sql"] == "Yes"
-                           and prev[f"{side}_src"] == writer and prev[f"{side}_io"] == "Yes" and prev[f"{side}_sql"] == "Yes")
+            # 이번 샘플에서 쓰기 대상을 복제 중이면, 그동안의 증가는 복제 적용분(밀린 분 따라잡기 포함)으로 본다
+            replicating = r[f"{side}_src"] == writer and r[f"{side}_io"] == "Yes" and r[f"{side}_sql"] == "Yes"
             if not replicating:
                 try:
                     d = sum(int(r[f"{side}_{c}"]) - int(prev[f"{side}_{c}"]) for c in ("com_ins", "com_upd", "com_del"))
