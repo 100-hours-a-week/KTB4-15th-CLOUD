@@ -85,6 +85,9 @@ services:
     init: true
     command: ["sleep", "infinity"]
     working_dir: /work
+    volumes:
+      - ./scripts/migration/postgres/rehersal/pgbench:/scripts:ro
+      - ./scripts/migration/postgres/rehersal/results:/results
     networks:
       - db-network
     depends_on:
