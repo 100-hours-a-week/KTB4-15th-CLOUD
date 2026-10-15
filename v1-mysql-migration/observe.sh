@@ -21,8 +21,11 @@
 #     앱 연결 = 관리자·repl·rdsadmin·event_scheduler·system user·unauthenticated user를 뺀 연결.
 #     unauthenticated user는 인증(TLS 핸드셰이크) 중인 새 연결로, verify-sync.sh 등 관리 스크립트가
 #     연결을 여는 순간 잠깐 보이므로 앱 연결로 세지 않는다.
-#   - 쓰기 대상이 아닌 DB의 Com_insert/update/delete 증가 (보조 신호: ROW 복제 적용은 잡히지 않지만
-#     RDS 내부 작업(heartbeat, rds_* 프로시저)도 잡힐 수 있어 앱 연결과 함께 판단)
+#   - 쓰기 대상이 아닌 DB의 Com_insert/update/delete 증가 (보조 신호)
+#     복제로 적용한 쓰기도 레플리카의 Com_*에 잡히므로(2026-10-15 부하 기준 측정에서 확인),
+#     쓰기 대상을 복제 중(원본 = 쓰기 대상, IO·SQL Yes)인 동안의 증가는 세지 않는다.
+#     그 밖의 증가는 연속 구간으로 묶어 출력한다. rds_* 프로시저([6]·[7]), RDS 내부 작업도 잡힐 수 있다.
+#   - 수집을 Ctrl+C로 멈출 때 기록 중이던 샘플은 버린다. 열 개수가 맞지 않는 줄은 report에서 건너뛴다.
 
 set -Euo pipefail
 
@@ -33,7 +36,9 @@ report() {
   [[ -f "$csv" ]] || { echo "CSV 없음: $csv"; exit 64; }
   python3 - "$csv" <<'PY'
 import csv, sys
-rows = list(csv.DictReader(open(sys.argv[1])))
+all_rows = list(csv.DictReader(open(sys.argv[1])))
+rows = [r for r in all_rows if None not in r and None not in r.values()]
+skipped = len(all_rows) - len(rows)
 if not rows:
     print("기록 없음"); sys.exit(0)
 old, new = rows[0]["old_host"], rows[0]["new_host"]
@@ -42,6 +47,14 @@ events = []
 prev = None
 max_lag = {"old": 0, "new": 0}
 streak = {"old": None, "new": None}
+com = {"old": None, "new": None}   # [시작, 끝, 합계] 연속 증가 구간
+
+def flush_com(side):
+    if com[side]:
+        a, b, total = com[side]
+        span = a if a == b else f"{a}~{b}"
+        events.append((a, f"? 쓰기 대상이 아닌 {name[old if side == 'old' else new]} Com_insert/update/delete +{total} ({span}, 복제 외 쓰기. 앱 연결 0이면 rds_* 프로시저·RDS 내부 작업일 수 있음)"))
+        com[side] = None
 for r in rows:
     t = r["ts_utc"]
     writer = r["proxy_online"]
@@ -79,19 +92,30 @@ for r in rows:
         elif not bad and streak[side]:
             events.append((t, f"   {label} 앱 연결 0으로 돌아옴 ({streak[side]}부터)"))
             streak[side] = None
-        if writer and host != writer:
-            if prev and prev["proxy_online"] == writer:
+        d = 0
+        if writer and host != writer and prev and prev["proxy_online"] == writer:
+            replicating = (r[f"{side}_src"] == writer and r[f"{side}_io"] == "Yes" and r[f"{side}_sql"] == "Yes"
+                           and prev[f"{side}_src"] == writer and prev[f"{side}_io"] == "Yes" and prev[f"{side}_sql"] == "Yes")
+            if not replicating:
                 try:
                     d = sum(int(r[f"{side}_{c}"]) - int(prev[f"{side}_{c}"]) for c in ("com_ins", "com_upd", "com_del"))
                 except ValueError:
                     d = 0
-                if d > 0:
-                    events.append((t, f"? 쓰기 대상이 아닌 {label} Com_insert/update/delete +{d} (앱 연결 0이면 RDS 내부 작업일 수 있음)"))
+        if d > 0:
+            if com[side]:
+                com[side][1] = t
+                com[side][2] += d
+            else:
+                com[side] = [t, t, d]
+        else:
+            flush_com(side)
     prev = r
 for side in ("old", "new"):
+    flush_com(side)
     if streak[side]:
         events.append((rows[-1]["ts_utc"], f"!! {name[old if side == 'old' else new]} 앱 연결이 끝까지 남아 있음 ({streak[side]}부터)"))
-print(f"측정: {rows[0]['ts_utc']} ~ {rows[-1]['ts_utc']} UTC, {len(rows)}개 샘플")
+events.sort(key=lambda e: e[0])
+print(f"측정: {rows[0]['ts_utc']} ~ {rows[-1]['ts_utc']} UTC, {len(rows)}개 샘플" + (f" (열 개수가 맞지 않는 줄 {skipped}개 건너뜀)" if skipped else ""))
 print(f"구 DB = {old}\n신 DB = {new}\n")
 for t, e in events:
     print(f"{t}  {e}")
@@ -128,7 +152,9 @@ LOG_DIR="${SCRIPT_DIR}/logs"
 mkdir -p "$LOG_DIR"
 CSV="${LOG_DIR}/observe-$(date -u '+%Y%m%d-%H%M%S').csv"
 
-trap 'stop_cli; echo; log "수집 종료: ${CSV}"; log "요약: ${SCRIPT_DIR}/observe.sh report ${CSV}"; exit 0' INT TERM
+# Ctrl+C는 플래그만 세우고, 루프 경계에서 멈춘다 (기록 중이던 샘플은 버림)
+STOP=0
+trap 'STOP=1' INT TERM
 trap 'stop_cli' EXIT
 
 load_credentials "$ENV_NAME"
@@ -172,14 +198,25 @@ done
 echo "$HEADER" > "$CSV"
 log "수집 시작 (${INTERVAL}초 간격, Ctrl+C로 종료): ${CSV}"
 
+NCOMMA="$(tr -cd ',' <<<"$HEADER" | wc -c)"
 n=0
-while :; do
+bad=0
+while ((STOP == 0)); do
   t0="$(date +%s.%N)"
   line="$(date -u '+%H:%M:%S'),$(date +%s),${OLD_HOST},${NEW_HOST},$(proxy_state),$(db_state "$OLD_HOST"),$(db_state "$NEW_HOST")"
-  echo "$line" >> "$CSV"
-  n=$((n + 1))
-  if ((n % 30 == 0)); then
-    log "샘플 ${n}개"
+  ((STOP == 0)) || break
+  if [[ "$(tr -cd ',' <<<"$line" | wc -c)" -eq "$NCOMMA" ]]; then
+    echo "$line" >> "$CSV"
+    n=$((n + 1))
+    if ((n % 30 == 0)); then
+      log "샘플 ${n}개"
+    fi
+  else
+    bad=$((bad + 1))
+    log "열 개수가 맞지 않는 샘플 버림 (누적 ${bad}개)"
   fi
-  sleep "$(awk -v a="$t0" -v b="$(date +%s.%N)" -v i="$INTERVAL" 'BEGIN {d=i-(b-a); print (d>0)?d:0}')"
+  sleep "$(awk -v a="$t0" -v b="$(date +%s.%N)" -v i="$INTERVAL" 'BEGIN {d=i-(b-a); print (d>0)?d:0}')" || true
 done
+echo
+log "수집 종료: ${CSV} (샘플 ${n}개)"
+log "요약: ${SCRIPT_DIR}/observe.sh report ${CSV}"
