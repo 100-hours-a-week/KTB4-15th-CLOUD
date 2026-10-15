@@ -18,6 +18,9 @@
 #   - ProxySQL 에러·연결 획득 실패 증가
 #   - 복제 에러, 스레드 중단, 지연 > 2초
 #   - 쓰기 대상이 아닌 DB의 앱 연결 (split-brain 신호)
+#     앱 연결 = 관리자·repl·rdsadmin·event_scheduler·system user·unauthenticated user를 뺀 연결.
+#     unauthenticated user는 인증(TLS 핸드셰이크) 중인 새 연결로, verify-sync.sh 등 관리 스크립트가
+#     연결을 여는 순간 잠깐 보이므로 앱 연결로 세지 않는다.
 #   - 쓰기 대상이 아닌 DB의 Com_insert/update/delete 증가 (보조 신호: ROW 복제 적용은 잡히지 않지만
 #     RDS 내부 작업(heartbeat, rds_* 프로시저)도 잡힐 수 있어 앱 연결과 함께 판단)
 
@@ -93,8 +96,14 @@ print(f"구 DB = {old}\n신 DB = {new}\n")
 for t, e in events:
     print(f"{t}  {e}")
 print(f"\n최대 복제 지연: 구 DB {max_lag['old']}초, 신 DB {max_lag['new']}초")
-print(f"마지막 상태: 쓰기 대상={name.get(rows[-1]['proxy_online'], rows[-1]['proxy_online'])}, "
-      f"ProxySQL 에러 누적={rows[-1]['proxy_err_total']}, 연결 획득 실패 누적={rows[-1]['connpool_get_fail']}")
+def growth(k):
+    try:
+        a, b = int(rows[0][k] or 0), int(rows[-1][k] or 0)
+        return f"+{b - a} (측정 시작 시 누적 {a})"
+    except ValueError:
+        return "알 수 없음"
+print(f"마지막 상태: 쓰기 대상={name.get(rows[-1]['proxy_online'], rows[-1]['proxy_online'])}")
+print(f"측정 구간 증가: ProxySQL 에러 {growth('proxy_err_total')}, 연결 획득 실패 {growth('connpool_get_fail')}")
 PY
 }
 
@@ -125,7 +134,7 @@ trap 'stop_cli' EXIT
 load_credentials "$ENV_NAME"
 start_cli
 
-APP_FILTER="user NOT IN ('${RDS_ADMIN}', 'repl', 'rdsadmin', 'event_scheduler', 'system user')"
+APP_FILTER="user NOT IN ('${RDS_ADMIN}', 'repl', 'rdsadmin', 'event_scheduler', 'system user', 'unauthenticated user')"
 
 # 한 DB의 상태를 key=value 한 줄로 (세로 출력 -E를 파싱)
 db_state() {
