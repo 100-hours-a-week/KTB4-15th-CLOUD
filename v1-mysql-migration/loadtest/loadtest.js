@@ -7,7 +7,7 @@
 //            --summary-export results/summary.json --out csv=results/raw.csv.gz loadtest.js
 //
 // 요청 비율 (한 iteration = 요청 1개)
-//   40% PATCH /api/v1/chat-rooms/{id}                 채팅방 제목 변경 (UPDATE 1건)
+//   40% PATCH /api/v1/chat-rooms/{id}                 채팅방 제목 변경 (UPDATE 1건, 제목은 매번 고유값 → 정합성 검증)
 //   20% POST  /api/v1/products/{id}/purchase-link-clicks  클릭 수 +1 (카운터 검증)
 //   10% POST  /api/v1/auth/refresh                     토큰 교체 (SELECT + UPDATE + INSERT)
 //   15% GET   /api/v1/members/me                       읽기
@@ -108,8 +108,8 @@ function ensureLogin() {
   loggedIn = true;
 }
 
-function call(name, method, url, body) {
-  const params = { headers: JSON_HEADERS, tags: { name }, timeout: HTTP_TIMEOUT };
+function call(name, method, url, body, extraTags) {
+  const params = { headers: JSON_HEADERS, tags: Object.assign({ name }, extraTags || {}), timeout: HTTP_TIMEOUT };
   let res = http.request(method, url, body ? JSON.stringify(body) : null, params);
   if (res.status === 401) {
     // access token 만료나 refresh rotation 실패 → 다시 로그인 후 한 번 재시도
@@ -132,8 +132,12 @@ export default function (data) {
   const r = Math.random();
 
   if (r < 0.40) {
-    call('chat_title', 'PATCH', `${BASE}/api/v1/chat-rooms/${roomId}`,
-      { title: `lt-${exec.vu.idInTest}-${exec.vu.iterationInScenario % 100000}` });
+    // 정합성 검증: 제목을 매번 다른 값으로 보내고 태그로 남긴다.
+    // VU 하나가 자기 채팅방 하나만 순서대로 바꾸므로 "마지막으로 성공 응답을 받은 제목 = DB 최종 값"이어야 한다.
+    // (analyze.py가 CSV에서 채팅방별 마지막 성공 제목을 뽑고, check-integrity.sh가 두 DB와 비교)
+    const title = `lt-${exec.vu.idInTest}-${exec.vu.iterationInScenario}`;
+    call('chat_title', 'PATCH', `${BASE}/api/v1/chat-rooms/${roomId}`, { title },
+      { room: String(roomId), title });
   } else if (r < 0.60) {
     const res = call('product_click', 'POST', `${BASE}/api/v1/products/${PRODUCT_ID}/purchase-link-clicks`);
     if (res.status >= 200 && res.status < 300) {
