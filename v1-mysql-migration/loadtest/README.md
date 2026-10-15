@@ -53,7 +53,7 @@ k6 지표
 |---|---|---|
 | 사용자 | `analyze.py` | 요청별 응답 시간·실패, 초별 지연·실패 |
 | 전환 | `cutover.sh` 로그 | 단계별 시각(ms), ②·③, 쓰기 대기 |
-| ProxySQL | `observe.sh` | 쓰기 대상, 서버별 `ConnUsed`·`ConnFree`, 에러·연결 획득 실패 |
+| ProxySQL | `observe.sh` | 쓰기 대상, 서버별 `ConnUsed`·`ConnFree`, 에러·연결 획득 실패 (연결 획득 실패는 전환 대기 중 재시도 횟수라 대기 구간에 크게 오르는 것이 정상) |
 | 복제 | `observe.sh` | 두 DB 복제 방향·스레드·지연·적용 위치·에러 |
 | Spring | `docker logs lookddak-spring` | SQL 예외, read-only 에러 |
 | RDS | CloudWatch (1분) | CPU, 연결 수, 쓰기 지연 (큰 흐름만) |
@@ -64,10 +64,15 @@ k6 지표
 | 결과 불명 반영 (실패 응답인데 반영) | 클릭 증가량 > `clicks_ok`, 제목 = 나중에 실패로 받은 제목 (`check-integrity.sh`, 경고) |
 | 트랜잭션 일부 유실 | `relogins` > 0 (refresh token 교체 꼬임) |
 | 두 DB 불일치 | `verify-sync.sh`, `check-integrity.sh` 두 DB 비교, 복제 에러 (`observe.sh`) |
-| 쓰기 경로가 둘 (split-brain) | 쓰기 대상이 아닌 DB의 앱 연결, 보조로 `Com_insert/update/delete` 증가 (`observe.sh report`) |
+| 쓰기 경로가 둘 (split-brain) | 쓰기 대상이 아닌 DB의 앱 연결, 보조로 복제가 멈춘 동안의 `Com_insert/update/delete` 증가 (`observe.sh report`). 복제로 적용한 쓰기도 `Com_*`에 잡히므로 복제 중인 증가는 세지 않음 |
 | 전환 경계 오류 | `SOURCE_POS_WAIT` ≥ 0, 역방향 복제 Yes/Yes (`cutover.sh`), 사후 `verify-sync.sh` |
 
 ## 1. 부하 머신 (같은 리전 EC2, 리허설 후 삭제)
+
+로컬에서 쏴도 된다 (2026-10-15 4차 리허설은 로컬 k6 v0.54.0). 이때는
+- k6는 같은 버전(v0.54.0)을 릴리스에서 받아 체크섬 확인 후 사용 (`brew`는 1.x 설치)
+- dev nginx `/api/`는 IP당 20r/s 제한이 있으므로, 초당 20건을 넘기려면 리허설 동안만 로컬 공인 IP를 IP당 제한에서 제외하고 끝나면 원복
+- 집 회선 왕복 지연(p50 수십 ms)이 응답 시간에 섞인다
 
 - AMI: Amazon Linux 2023 (arm64), `t4g.small`
 - 서브넷: 인터넷으로 나갈 수 있는 곳 (퍼블릭 IP 또는 NAT)
@@ -104,7 +109,7 @@ python3 analyze.py results/baseline.csv.gz
 ```
 
 - 에러 0, p99가 안정적인지 확인. 이 값이 전환 중 측정의 비교 기준
-- 같은 시간 dev EC2에서 `observe.sh`를 돌려 기준 상태(쓰기 대상이 아닌 DB의 `Com_*` 증가 여부 등)도 확인
+- 같은 시간 dev EC2에서 `observe.sh`를 돌려 기준 상태(복제 지연, 연결 풀, 앱 연결)도 확인
 - 에러가 있으면 부하를 줄이고(`RATE`) 원인부터 확인
 
 ## 3. 부하 중 전환·롤백
@@ -154,7 +159,7 @@ docker logs --since 20m lookddak-spring 2>&1 | grep -iE "SQLException|ERROR|read
 
 | 순서 | 확인 | 통과 기준 |
 |---|---|---|
-| 1 | `observe.sh report` | 쓰기 대상이 아닌 DB에 앱 연결 없음, 복제 에러 없음, ProxySQL 에러·연결 획득 실패 증가 없음 |
+| 1 | `observe.sh report` | 쓰기 대상이 아닌 DB에 앱 연결 없음, 복제 에러 없음, ProxySQL 에러 증가 없음 (연결 획득 실패는 전환 대기 구간에만 증가하면 정상) |
 | 2 | `cutover.sh` 로그 | 두 번 모두 종료 코드 0, 역방향 복제 정상 |
 | 3 | `verify-sync.sh` | 모든 테이블 일치 |
 | 4 | `check-integrity.sh` | 제목·클릭 모두 OK, 두 DB 일치 (결과불명은 경고: 실패 시각과 cutover 단계 확인) |
