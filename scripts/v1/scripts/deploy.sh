@@ -29,7 +29,7 @@ readonly HISTORY_FILE="${APP_DIR}/deploy-history.log"
 readonly AWS_REGION="ap-northeast-2"
 
 readonly LOCK_WAIT=60
-readonly WAIT_TIMEOUT=150
+readonly WAIT_TIMEOUT=210
 readonly CHECK_INTERVAL=5
 
 log() {

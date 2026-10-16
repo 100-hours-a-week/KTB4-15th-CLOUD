@@ -30,11 +30,22 @@ services:
     logging:
       options:
         awslogs-group: /lookddak/dev/fastapi
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
 
   postgresql:
+    # RDS 논리 복제 연결을 EC2 사설 IP의 5432에서 받는다.
+    ports:
+      - "${POSTGRES_BIND_IP:?POSTGRES_BIND_IP is required}:5432:5432"
     logging:
       options:
         awslogs-group: /lookddak/dev/postgresql
+    deploy:
+      resources:
+        limits:
+          memory: 768M
 
   # Dev에서만 추가한다. postgresql 서비스와 데이터 볼륨은 변경하지 않는다.
   pgbouncer:
@@ -71,3 +82,56 @@ services:
         limits:
           cpus: "0.25"
           memory: 128M
+
+  # Lightweight load generator used only for Dev DB migration rehearsals.
+  # It stays idle until a pgbench command is executed and publishes no host port.
+  pgbench:
+    image: pgvector/pgvector:0.8.6-pg16-bookworm
+    container_name: lookddak-pgbench
+    profiles: ["rehearsal"]
+    restart: unless-stopped
+    init: true
+    command: ["sleep", "infinity"]
+    working_dir: /work
+    volumes:
+      - ./scripts/migration/postgres/rehersal/pgbench:/scripts:ro
+      - ./scripts/migration/postgres/rehersal/results:/results
+    networks:
+      - db-network
+    depends_on:
+      pgbouncer:
+        condition: service_healthy
+    environment:
+      PGHOST: pgbouncer
+      PGPORT: "6432"
+      PGDATABASE: lookddak_ai
+      PGUSER: lookddak_app
+      PGCONNECT_TIMEOUT: "5"
+      PGAPPNAME: lookddak-pgbench
+      TZ: KST-9
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+      - /work:size=16m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "pgbench", "--version"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "2"
+    stop_grace_period: 5s
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 128M
+          pids: 64
