@@ -97,7 +97,7 @@ services:
       PGHOST: pgbouncer
       PGPORT: "6432"
       PGDATABASE: lookddak_ai
-      PGUSER: lookddak_ai_app
+      PGUSER: lookddak_app
       PGCONNECT_TIMEOUT: "5"
       PGAPPNAME: lookddak-pgbench
       TZ: KST-9

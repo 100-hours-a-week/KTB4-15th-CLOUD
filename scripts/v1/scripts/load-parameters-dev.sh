@@ -38,6 +38,8 @@ load_runtime_parameters() {
   local postgres_user_encoded
   local postgres_password_encoded
   local postgres_db_encoded
+  local pgbouncer_user_encoded
+  local pgbouncer_password_encoded
 
   POSTGRES_DB="$(
     get_parameter "/lookddak/dev/postgresql/database"
@@ -49,6 +51,14 @@ load_runtime_parameters() {
 
   POSTGRES_PASSWORD="$(
     get_parameter "/lookddak/dev/postgresql/password"
+  )"
+
+  PGBOUNCER_DB_USER="$(
+    get_parameter "/lookddak/dev/v2/postgresql/app/username"
+  )"
+
+  PGBOUNCER_DB_PASSWORD="$(
+    get_parameter "/lookddak/dev/v2/postgresql/app/password"
   )"
 
   RDS_HOST="$(
@@ -100,12 +110,14 @@ load_runtime_parameters() {
   postgres_user_encoded="$(urlencode "$POSTGRES_USER")"
   postgres_password_encoded="$(urlencode "$POSTGRES_PASSWORD")"
   postgres_db_encoded="$(urlencode "$POSTGRES_DB")"
+  pgbouncer_user_encoded="$(urlencode "$PGBOUNCER_DB_USER")"
+  pgbouncer_password_encoded="$(urlencode "$PGBOUNCER_DB_PASSWORD")"
 
   DATABASE_URL="postgresql://${postgres_user_encoded}:${postgres_password_encoded}@postgresql:5432/${postgres_db_encoded}"
   CHECKPOINT_DSN="${DATABASE_URL}?options=-csearch_path%3Dlanggraph"
 
   # 원본 DB 확인 등에는 직접 연결 주소를 유지하고 FastAPI만 PgBouncer로 보낸다.
-  FASTAPI_DATABASE_URL="postgresql://${postgres_user_encoded}:${postgres_password_encoded}@pgbouncer:6432/${postgres_db_encoded}"
+  FASTAPI_DATABASE_URL="postgresql://${pgbouncer_user_encoded}:${pgbouncer_password_encoded}@pgbouncer:6432/${postgres_db_encoded}"
   FASTAPI_CHECKPOINT_DSN="${FASTAPI_DATABASE_URL}?options=-csearch_path%3Dlanggraph"
 
   DB_URL="jdbc:mysql://${RDS_HOST}:${RDS_PORT}/${RDS_DATABASE}?sslMode=REQUIRED&serverTimezone=UTC&characterEncoding=UTF-8"
@@ -116,6 +128,8 @@ load_runtime_parameters() {
     POSTGRES_DB \
     POSTGRES_USER \
     POSTGRES_PASSWORD \
+    PGBOUNCER_DB_USER \
+    PGBOUNCER_DB_PASSWORD \
     DATABASE_URL \
     CHECKPOINT_DSN \
     FASTAPI_DATABASE_URL \
@@ -137,6 +151,8 @@ cleanup_runtime_parameters() {
     POSTGRES_DB \
     POSTGRES_USER \
     POSTGRES_PASSWORD \
+    PGBOUNCER_DB_USER \
+    PGBOUNCER_DB_PASSWORD \
     DATABASE_URL \
     CHECKPOINT_DSN \
     FASTAPI_DATABASE_URL \

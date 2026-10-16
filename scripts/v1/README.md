@@ -86,6 +86,7 @@ POSTGRES_BIND_IP=10.30.1.15
 - `pgbouncer/userlist.txt`에는 원본 PostgreSQL의 SCRAM 검증값이 들어가므로 Git에 넣지 않습니다. `prepare-pgbouncer.sh`가 평문 비밀번호를 출력하지 않고 서버에서 생성합니다.
 - `bootstrap.sh`는 PostgreSQL과 `langgraph` 스키마를 먼저 준비한 뒤 PgBouncer를 기동합니다. `deploy.sh ai ...`도 FastAPI 전환 전에 PgBouncer 헬스체크를 확인합니다.
 - PgBouncer 준비 스크립트는 PostgreSQL의 `wal_level`을 변경하거나 PostgreSQL을 재시작하지 않습니다.
+- Dev FastAPI와 리허설용 pgbench는 PgBouncer에 `lookddak_app`으로 접속합니다. PgBouncer도 EC2와 RDS 양쪽 백엔드에 같은 역할을 사용하므로 SCRAM 자격 증명을 평문으로 저장하지 않고 전환할 수 있습니다.
 
 서버에서 수동으로 다시 준비할 때는 다음 순서로 실행합니다.
 
