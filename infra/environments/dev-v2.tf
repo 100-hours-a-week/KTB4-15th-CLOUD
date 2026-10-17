@@ -23,6 +23,10 @@ module "dev_v2_alb" {
   subject_alternative_names = [
     "dev.lookddak.com",
   ]
+
+  v1_domain_name       = "dev.lookddak.com"
+  v1_instance_id       = module.dev_v1_compute.instance_id
+  v1_health_check_path = var.dev_v1_alb_health_check_path
 }
 
 module "dev_v2_ecs_cluster" {
@@ -93,6 +97,12 @@ variable "dev_v2_postgresql_admin_password_wo" {
   default     = null
   sensitive   = true
   ephemeral   = true
+}
+
+variable "dev_v1_alb_health_check_path" {
+  description = "HTTPS path on the V1 dev nginx that returns 200 for the V2 ALB health check (/ returns 307 to /onboarding)"
+  type        = string
+  default     = "/onboarding"
 }
 
 variable "dev_v2_create_services" {
