@@ -2,6 +2,10 @@ module "shared_core" {
   source = "./shared/core"
 }
 
+module "shared_ecs_taskdef_store" {
+  source = "./shared/ecs-taskdef-store"
+}
+
 module "prod_v1_network" {
   source = "./prod/v1/network"
 }
