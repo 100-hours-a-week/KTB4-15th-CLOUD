@@ -70,6 +70,18 @@ module "dev_v2_crawler" {
   crawler_security_group_id = module.dev_v2_network.security_group_ids["crawler"]
 }
 
+module "dev_v2_task_definitions" {
+  source = "./dev/v2/task-definitions"
+
+  bucket_name             = module.shared_ecs_taskdef_store.bucket_name
+  ecr_repository_urls     = module.dev_ecr.repository_urls
+  task_role_arns          = module.dev_v2_iam.task_role_arns
+  task_execution_role_arn = module.dev_v2_iam.task_execution_role_arn
+  queue_urls              = module.dev_v2_sqs.queue_urls
+  log_group_names         = module.dev_v2_logging.log_group_names
+  images_bucket_name      = module.dev_s3.images_bucket_name
+}
+
 module "dev_v2_ecs_services" {
   source = "./dev/v2/ecs-services"
 
@@ -157,6 +169,11 @@ output "dev_v2_sqs_task_role_arns" {
     spring  = module.dev_v2_iam.task_role_arns["spring"]
     fastapi = module.dev_v2_iam.task_role_arns["fastapi"]
   }
+}
+
+output "dev_v2_task_definition_template_s3_keys" {
+  description = "V2 dev Task Definition template S3 keys read by app CI"
+  value       = module.dev_v2_task_definitions.template_s3_keys
 }
 
 output "dev_v2_log_group_names" {
