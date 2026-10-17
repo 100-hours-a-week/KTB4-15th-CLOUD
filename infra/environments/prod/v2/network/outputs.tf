@@ -22,3 +22,8 @@ output "private_app_route_table_id" {
   description = "V2 Prod Private App 공용 Route Table ID"
   value       = aws_route_table.private_app.id
 }
+
+output "security_group_ids" {
+  description = "V2 Prod 서비스별 보안 그룹 ID"
+  value       = { for name, security_group in aws_security_group.v2 : name => security_group.id }
+}
