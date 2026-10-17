@@ -79,7 +79,16 @@ locals {
         BODY_IMAGE_REMOTE_API_KEY      = "${local.ssm}/fastapi/body-image-validation/api-key"
       }
       port_mappings = [{ name = "fastapi-http", container_port = 8000 }]
-      health_check  = null
+
+      # V1 compose와 같은 방식: /health 라우트가 없어 8000 포트 TCP 연결만 확인한다.
+      # ALB가 없어 이 헬스 체크가 배포 중 비정상 Task 판단 기준이 된다.
+      health_check = {
+        command      = ["CMD", "python", "-c", "import socket; socket.create_connection(('localhost', 8000), 3).close()"]
+        interval     = 30
+        timeout      = 5
+        retries      = 3
+        start_period = 180
+      }
     }
   }
 }
