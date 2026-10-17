@@ -4,6 +4,7 @@ output "ecr_repository_arns" {
     nextjs  = aws_ecr_repository.nextjs.arn
     spring  = aws_ecr_repository.spring.arn
     fastapi = aws_ecr_repository.fastapi.arn
+    crawler = aws_ecr_repository.crawler.arn
   }
 }
 

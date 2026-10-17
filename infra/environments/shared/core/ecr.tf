@@ -110,3 +110,29 @@ resource "aws_ecr_lifecycle_policy" "fastapi" {
   repository = aws_ecr_repository.fastapi.name
   policy     = local.ecr_lifecycle_policy_keep_35
 }
+
+# ---------------------------------------------------------------
+# Crawler
+# ---------------------------------------------------------------
+resource "aws_ecr_repository" "crawler" {
+  name                 = "lookddak-crawler"
+  image_tag_mutability = "IMMUTABLE"
+
+  image_scanning_configuration {
+    scan_on_push = true
+  }
+
+  encryption_configuration {
+    encryption_type = "AES256"
+  }
+
+  tags = {
+    Environment = "prod"
+    Service     = "crawler"
+  }
+}
+
+resource "aws_ecr_lifecycle_policy" "crawler" {
+  repository = aws_ecr_repository.crawler.name
+  policy     = local.ecr_lifecycle_policy_keep_35
+}

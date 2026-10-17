@@ -1,0 +1,73 @@
+{
+  "family": "lookddak-prod-v2-nextjs",
+  "taskRoleArn": "arn:aws:iam::686496667254:role/lookddak-prod-v2-nextjs-task",
+  "executionRoleArn": "arn:aws:iam::686496667254:role/lookddak-prod-v2-task-execution",
+  "networkMode": "awsvpc",
+  "containerDefinitions": [
+    {
+      "name": "nextjs",
+      "image": "686496667254.dkr.ecr.ap-northeast-2.amazonaws.com/lookddak-nextjs@sha256:REPLACED_BY_CI",
+      "essential": true,
+      "environment": [
+        {
+          "name": "API_BASE_URL",
+          "value": "http://spring:8080"
+        },
+        {
+          "name": "NODE_ENV",
+          "value": "production"
+        },
+        {
+          "name": "NODE_OPTIONS",
+          "value": "--max-old-space-size=384"
+        },
+        {
+          "name": "TZ",
+          "value": "Asia/Seoul"
+        }
+      ],
+      "portMappings": [
+        {
+          "name": "nextjs-http",
+          "containerPort": 3000,
+          "hostPort": 3000,
+          "protocol": "tcp",
+          "appProtocol": "http"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/lookddak/prod/v2/nextjs",
+          "awslogs-region": "ap-northeast-2",
+          "awslogs-stream-prefix": "ecs"
+        }
+      },
+      "privileged": false,
+      "readonlyRootFilesystem": false
+    }
+  ],
+  "requiresCompatibilities": [
+    "FARGATE"
+  ],
+  "cpu": "512",
+  "memory": "1024",
+  "runtimePlatform": {
+    "operatingSystemFamily": "LINUX",
+    "cpuArchitecture": "ARM64"
+  },
+  "tags": [
+    {
+      "key": "Environment",
+      "value": "prod"
+    },
+    {
+      "key": "Service",
+      "value": "nextjs"
+    },
+    {
+      "key": "Version",
+      "value": "v2"
+    }
+  ]
+}
