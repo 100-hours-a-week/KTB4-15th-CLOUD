@@ -35,3 +35,8 @@ output "target_group_arns" {
     spring = aws_lb_target_group.spring.arn
   }
 }
+
+output "v1_target_group_arn" {
+  description = "V1 dev EC2 nginx target group ARN"
+  value       = aws_lb_target_group.v1.arn
+}

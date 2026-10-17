@@ -33,3 +33,18 @@ variable "subject_alternative_names" {
   type        = list(string)
   default     = []
 }
+
+variable "v1_domain_name" {
+  description = "V1 dev domain routed to the V1 dev EC2 nginx through the ALB"
+  type        = string
+}
+
+variable "v1_instance_id" {
+  description = "V1 dev EC2 instance ID registered in the V1 target group"
+  type        = string
+}
+
+variable "v1_health_check_path" {
+  description = "HTTPS path on the V1 dev nginx that returns 200 for ALB health checks"
+  type        = string
+}
