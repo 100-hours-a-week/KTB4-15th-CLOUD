@@ -94,7 +94,7 @@ variable "dev_v2_task_definition_arns" {
   default     = {}
 }
 
-output "dev_v2_fastapi_body_image_validation_parameter_paths" {
-  description = "SecureString paths to create manually for the V2 dev FastAPI body image validation integration"
+output "dev_fastapi_body_image_validation_parameter_paths" {
+  description = "SecureString paths to create manually for the shared V1/V2 dev FastAPI body image validation integration"
   value       = module.dev_parameter_store.fastapi_body_image_validation_parameter_paths
 }

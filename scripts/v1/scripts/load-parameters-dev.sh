@@ -91,6 +91,22 @@ load_runtime_parameters() {
     get_parameter "/lookddak/dev/fastapi/openAI-api-key"
   )"
 
+  BODY_IMAGE_VALIDATION_URL="$(
+    get_parameter "/lookddak/dev/fastapi/body-image-validation/url"
+  )"
+
+  BODY_IMAGE_VALIDATION_PROXY_KEY="$(
+    get_parameter "/lookddak/dev/fastapi/body-image-validation/proxy-key"
+  )"
+
+  BODY_IMAGE_VALIDATION_PROXY_SECRET="$(
+    get_parameter "/lookddak/dev/fastapi/body-image-validation/proxy-secret"
+  )"
+
+  BODY_IMAGE_VALIDATION_API_KEY="$(
+    get_parameter "/lookddak/dev/fastapi/body-image-validation/api-key"
+  )"
+
   INTERNAL_API_KEY="$(
     get_parameter "/lookddak/dev/internal/ai-api-key"
   )"
@@ -128,6 +144,10 @@ load_runtime_parameters() {
     RUNWARE_VTON_API_KEY \
     RUNWARE_LLM_API_KEY \
     OPENAI_API_KEY \
+    BODY_IMAGE_VALIDATION_URL \
+    BODY_IMAGE_VALIDATION_PROXY_KEY \
+    BODY_IMAGE_VALIDATION_PROXY_SECRET \
+    BODY_IMAGE_VALIDATION_API_KEY \
     INTERNAL_API_KEY \
     AI_INTERNAL_API_KEY
 }
@@ -154,6 +174,10 @@ cleanup_runtime_parameters() {
     RUNWARE_VTON_API_KEY \
     RUNWARE_LLM_API_KEY \
     OPENAI_API_KEY \
+    BODY_IMAGE_VALIDATION_URL \
+    BODY_IMAGE_VALIDATION_PROXY_KEY \
+    BODY_IMAGE_VALIDATION_PROXY_SECRET \
+    BODY_IMAGE_VALIDATION_API_KEY \
     INTERNAL_API_KEY \
     AI_INTERNAL_API_KEY
 }

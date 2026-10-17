@@ -4,10 +4,10 @@ locals {
   # Parameter Store는 값 없는 파라미터를 생성할 수 없으므로, 실제
   # SecureString은 AWS Console에서 수동 생성하고 Terraform에는 경로만 정의한다.
   fastapi_body_image_validation_parameter_paths = {
-    BODY_IMAGE_VALIDATION_URL          = "/lookddak/dev/v2/fastapi/body-image-validation/url"
-    BODY_IMAGE_VALIDATION_PROXY_KEY    = "/lookddak/dev/v2/fastapi/body-image-validation/proxy-key"
-    BODY_IMAGE_VALIDATION_PROXY_SECRET = "/lookddak/dev/v2/fastapi/body-image-validation/proxy-secret"
-    BODY_IMAGE_VALIDATION_API_KEY      = "/lookddak/dev/v2/fastapi/body-image-validation/api-key"
+    BODY_IMAGE_VALIDATION_URL          = "/lookddak/dev/fastapi/body-image-validation/url"
+    BODY_IMAGE_VALIDATION_PROXY_KEY    = "/lookddak/dev/fastapi/body-image-validation/proxy-key"
+    BODY_IMAGE_VALIDATION_PROXY_SECRET = "/lookddak/dev/fastapi/body-image-validation/proxy-secret"
+    BODY_IMAGE_VALIDATION_API_KEY      = "/lookddak/dev/fastapi/body-image-validation/api-key"
   }
 }
 

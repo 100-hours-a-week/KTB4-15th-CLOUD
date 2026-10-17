@@ -20,19 +20,19 @@
       "secrets": [
         {
           "name": "BODY_IMAGE_VALIDATION_URL",
-          "valueFrom": "/lookddak/dev/v2/fastapi/body-image-validation/url"
+          "valueFrom": "/lookddak/dev/fastapi/body-image-validation/url"
         },
         {
           "name": "BODY_IMAGE_VALIDATION_PROXY_KEY",
-          "valueFrom": "/lookddak/dev/v2/fastapi/body-image-validation/proxy-key"
+          "valueFrom": "/lookddak/dev/fastapi/body-image-validation/proxy-key"
         },
         {
           "name": "BODY_IMAGE_VALIDATION_PROXY_SECRET",
-          "valueFrom": "/lookddak/dev/v2/fastapi/body-image-validation/proxy-secret"
+          "valueFrom": "/lookddak/dev/fastapi/body-image-validation/proxy-secret"
         },
         {
           "name": "BODY_IMAGE_VALIDATION_API_KEY",
-          "valueFrom": "/lookddak/dev/v2/fastapi/body-image-validation/api-key"
+          "valueFrom": "/lookddak/dev/fastapi/body-image-validation/api-key"
         }
       ],
       "privileged": false,
