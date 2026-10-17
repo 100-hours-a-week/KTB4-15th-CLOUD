@@ -89,6 +89,96 @@ resource "aws_iam_role_policy_attachment" "task_s3_images_rw" {
 }
 
 # ---------------------------------------------------------------
+# Spring fitting queue policy
+# - Publishes fitting requests and consumes final fitting results.
+# - DLQ access remains with infrastructure operators.
+# ---------------------------------------------------------------
+resource "aws_iam_policy" "spring_sqs_fitting" {
+  name        = "lookddak-dev-v2-spring-sqs-fitting"
+  description = "Publish fitting requests and consume fitting results in V2 dev"
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Sid      = "PublishFittingRequests"
+      Action   = "sqs:SendMessage"
+      Effect   = "Allow"
+      Resource = var.sqs_queue_arns["be-fitting-request"]
+      }, {
+      Sid = "ConsumeFittingResults"
+      Action = [
+        "sqs:ReceiveMessage",
+        "sqs:DeleteMessage",
+        "sqs:ChangeMessageVisibility",
+      ]
+      Effect   = "Allow"
+      Resource = var.sqs_queue_arns["be-fitting-response"]
+    }]
+  })
+
+  tags = {
+    Component   = "sqs"
+    Environment = "dev"
+    Service     = "spring"
+    Version     = "v2"
+  }
+}
+
+resource "aws_iam_role_policy_attachment" "spring_sqs_fitting" {
+  role       = aws_iam_role.task["spring"].name
+  policy_arn = aws_iam_policy.spring_sqs_fitting.arn
+}
+
+# ---------------------------------------------------------------
+# FastAPI fitting queue policy
+# - Consumes BE requests, owns the internal AI processing queue,
+#   and publishes final results back to BE.
+# ---------------------------------------------------------------
+resource "aws_iam_policy" "fastapi_sqs_fitting" {
+  name        = "lookddak-dev-v2-fastapi-sqs-fitting"
+  description = "Consume fitting requests, process AI responses, and publish fitting results in V2 dev"
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Sid = "ConsumeFittingRequests"
+      Action = [
+        "sqs:ReceiveMessage",
+        "sqs:DeleteMessage",
+        "sqs:ChangeMessageVisibility",
+      ]
+      Effect   = "Allow"
+      Resource = var.sqs_queue_arns["be-fitting-request"]
+      }, {
+      Sid = "ProduceAndConsumeAiResponses"
+      Action = [
+        "sqs:SendMessage",
+        "sqs:ReceiveMessage",
+        "sqs:DeleteMessage",
+        "sqs:ChangeMessageVisibility",
+      ]
+      Effect   = "Allow"
+      Resource = var.sqs_queue_arns["ai-fitting-response"]
+      }, {
+      Sid      = "PublishFittingResults"
+      Action   = "sqs:SendMessage"
+      Effect   = "Allow"
+      Resource = var.sqs_queue_arns["be-fitting-response"]
+    }]
+  })
+
+  tags = {
+    Component   = "sqs"
+    Environment = "dev"
+    Service     = "fastapi"
+    Version     = "v2"
+  }
+}
+
+resource "aws_iam_role_policy_attachment" "fastapi_sqs_fitting" {
+  role       = aws_iam_role.task["fastapi"].name
+  policy_arn = aws_iam_policy.fastapi_sqs_fitting.arn
+}
+
+# ---------------------------------------------------------------
 # Crawler Scheduler policy
 # - The crawler Task Definition is created in a later step.
 # - PassRole is limited to the crawler Task Role and Execution Role.
