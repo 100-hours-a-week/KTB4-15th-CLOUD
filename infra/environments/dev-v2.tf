@@ -19,7 +19,10 @@ module "dev_v2_alb" {
   public_subnet_ids     = module.dev_v2_network.alb_public_subnet_ids
   alb_security_group_id = module.dev_v2_network.security_group_ids["alb"]
   route53_zone_id       = module.shared_core.route53_zone_id
-  domain_name           = "dev.lookddak.com"
+  domain_name           = "v2-dev.lookddak.com"
+  subject_alternative_names = [
+    "dev.lookddak.com",
+  ]
 }
 
 module "dev_v2_ecs_cluster" {
@@ -145,6 +148,11 @@ output "dev_v2_sqs_task_role_arns" {
 output "dev_v2_log_group_names" {
   description = "V2 dev ECS application CloudWatch Log Group names"
   value       = module.dev_v2_logging.log_group_names
+}
+
+output "dev_v2_test_domain_name" {
+  description = "V2 dev test domain routed to the Application Load Balancer"
+  value       = module.dev_v2_alb.test_domain_name
 }
 
 output "dev_v2_runtime_secure_parameter_arns" {

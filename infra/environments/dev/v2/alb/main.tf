@@ -1,11 +1,12 @@
 # ---------------------------------------------------------------
 # ACM certificate
-# - The service A alias remains owned by V1 until ECS services are ready.
-# - This module creates only the DNS validation CNAME record.
+# - V1 keeps dev.lookddak.com until the V2 cutover is approved.
+# - V2 uses an isolated test hostname during validation.
 # ---------------------------------------------------------------
 resource "aws_acm_certificate" "dev" {
-  domain_name       = var.domain_name
-  validation_method = "DNS"
+  domain_name               = var.domain_name
+  subject_alternative_names = var.subject_alternative_names
+  validation_method         = "DNS"
 
   lifecycle {
     create_before_destroy = true
@@ -40,6 +41,18 @@ resource "aws_acm_certificate_validation" "dev" {
   validation_record_fqdns = [for record in aws_route53_record.certificate_validation : record.fqdn]
 }
 
+resource "aws_route53_record" "dev_v2" {
+  zone_id = var.route53_zone_id
+  name    = var.domain_name
+  type    = "A"
+
+  alias {
+    name                   = aws_lb.dev_v2.dns_name
+    zone_id                = aws_lb.dev_v2.zone_id
+    evaluate_target_health = false
+  }
+}
+
 # ---------------------------------------------------------------
 # Application Load Balancer
 # ---------------------------------------------------------------
@@ -61,7 +74,6 @@ resource "aws_lb" "dev_v2" {
 # ---------------------------------------------------------------
 # Target groups
 # - ECS services will register Fargate task IPs in a later step.
-# - Custom health check settings are intentionally omitted.
 # ---------------------------------------------------------------
 resource "aws_lb_target_group" "nextjs" {
   name             = "lookddak-dev-v2-nextjs-tg"
@@ -70,6 +82,18 @@ resource "aws_lb_target_group" "nextjs" {
   protocol_version = "HTTP1"
   target_type      = "ip"
   vpc_id           = var.vpc_id
+
+  health_check {
+    enabled             = true
+    path                = "/"
+    port                = "traffic-port"
+    protocol            = "HTTP"
+    matcher             = "200"
+    interval            = 30
+    timeout             = 5
+    healthy_threshold   = 2
+    unhealthy_threshold = 3
+  }
 
   tags = {
     Name        = "lookddak-dev-v2-nextjs-tg"
@@ -86,6 +110,18 @@ resource "aws_lb_target_group" "spring" {
   protocol_version = "HTTP1"
   target_type      = "ip"
   vpc_id           = var.vpc_id
+
+  health_check {
+    enabled             = true
+    path                = "/actuator/health"
+    port                = "traffic-port"
+    protocol            = "HTTP"
+    matcher             = "200"
+    interval            = 30
+    timeout             = 5
+    healthy_threshold   = 2
+    unhealthy_threshold = 3
+  }
 
   tags = {
     Name        = "lookddak-dev-v2-spring-tg"
@@ -145,10 +181,9 @@ resource "aws_lb_listener" "https" {
 }
 
 # ---------------------------------------------------------------
-# Path routing
+# Host and path routing
 # - The Spring rule must be evaluated before the broader Next.js rule.
-# - ALB forwards the original /v2 path; application path handling is
-#   finalized with the ECS task definitions and application configuration.
+# - No /v2 prefix is forwarded to either application.
 # ---------------------------------------------------------------
 resource "aws_lb_listener_rule" "spring" {
   listener_arn = aws_lb_listener.https.arn
@@ -161,7 +196,13 @@ resource "aws_lb_listener_rule" "spring" {
 
   condition {
     path_pattern {
-      values = ["/v2/api", "/v2/api/*"]
+      values = ["/api", "/api/*"]
+    }
+  }
+
+  condition {
+    host_header {
+      values = [var.domain_name]
     }
   }
 
@@ -182,8 +223,8 @@ resource "aws_lb_listener_rule" "nextjs" {
   }
 
   condition {
-    path_pattern {
-      values = ["/v2", "/v2/*"]
+    host_header {
+      values = [var.domain_name]
     }
   }
 
