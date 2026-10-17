@@ -173,3 +173,4 @@ merge하면 `terraform-apply` workflow가 실행되어 인프라에 반영됩니
 | GitHub OIDC Provider | `token.actions.githubusercontent.com` | GitHub Actions → AWS 인증 |
 | Plan Role | `gha-terraform-plan-role` | PR 워크플로 (`terraform-pr`) |
 | Apply Role | `gha-terraform-apply-role` | main 워크플로 (`terraform-apply`) |
+| Dev FastAPI 본문 이미지 검증 설정 | `/lookddak/dev/fastapi/body-image-validation/*` | V1/V2 런타임 주입용 SecureString 4개 |

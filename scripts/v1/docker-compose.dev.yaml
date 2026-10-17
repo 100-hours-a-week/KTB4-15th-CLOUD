@@ -27,6 +27,11 @@ services:
     depends_on:
       pgbouncer:
         condition: service_healthy
+    environment:
+      BODY_IMAGE_VALIDATION_URL: "${BODY_IMAGE_VALIDATION_URL:?BODY_IMAGE_VALIDATION_URL is required}"
+      BODY_IMAGE_VALIDATION_PROXY_KEY: "${BODY_IMAGE_VALIDATION_PROXY_KEY:?BODY_IMAGE_VALIDATION_PROXY_KEY is required}"
+      BODY_IMAGE_VALIDATION_PROXY_SECRET: "${BODY_IMAGE_VALIDATION_PROXY_SECRET:?BODY_IMAGE_VALIDATION_PROXY_SECRET is required}"
+      BODY_IMAGE_VALIDATION_API_KEY: "${BODY_IMAGE_VALIDATION_API_KEY:?BODY_IMAGE_VALIDATION_API_KEY is required}"
     logging:
       options:
         awslogs-group: /lookddak/dev/fastapi

@@ -1,7 +1,8 @@
 # ---------------------------------------------------------------
 # ECS Task Execution Role policy
 # - Uses a project-scoped ECR pattern so a future crawler repository is covered.
-# - Parameter Store access is limited to /lookddak/dev/*.
+# - Parameter Store access is limited to V2 paths and shared FastAPI runtime
+#   parameters used by both V1 and V2 dev.
 # - KMS decrypt is limited to the SSM managed key through the SSM service.
 # ---------------------------------------------------------------
 resource "aws_iam_policy" "task_execution" {
@@ -20,10 +21,13 @@ resource "aws_iam_policy" "task_execution" {
       Effect   = "Allow"
       Resource = local.ecr_repository_arn_pattern
       }, {
-      Sid      = "ReadDevParameters"
-      Action   = ["ssm:GetParameter", "ssm:GetParameters", "ssm:GetParametersByPath"]
-      Effect   = "Allow"
-      Resource = local.dev_parameter_arn_pattern
+      Sid    = "ReadDevParameters"
+      Action = ["ssm:GetParameter", "ssm:GetParameters", "ssm:GetParametersByPath"]
+      Effect = "Allow"
+      Resource = [
+        local.dev_v2_parameter_arn_pattern,
+        local.dev_fastapi_parameter_arn_pattern,
+      ]
       }, {
       Sid      = "DecryptDevParametersViaSsm"
       Action   = "kms:Decrypt"

@@ -16,7 +16,8 @@ locals {
   task_services = toset(["nextjs", "spring", "fastapi", "crawler"])
 
   dev_image_bucket_arn                = "arn:${local.partition}:s3:::lookddak-dev-images-${local.account_id}-${local.region}"
-  dev_parameter_arn_pattern           = "arn:${local.partition}:ssm:${local.region}:${local.account_id}:parameter/lookddak/dev/*"
+  dev_fastapi_parameter_arn_pattern   = "arn:${local.partition}:ssm:${local.region}:${local.account_id}:parameter/lookddak/dev/fastapi/body-image-validation/*"
+  dev_v2_parameter_arn_pattern        = "arn:${local.partition}:ssm:${local.region}:${local.account_id}:parameter/lookddak/dev/v2/*"
   ecr_repository_arn_pattern          = "arn:${local.partition}:ecr:${local.region}:${local.account_id}:repository/lookddak-*"
   crawler_task_definition_arn_pattern = "arn:${local.partition}:ecs:${local.region}:${local.account_id}:task-definition/lookddak-dev-v2-crawler:*"
   crawler_schedule_group_arn          = "arn:${local.partition}:scheduler:${local.region}:${local.account_id}:schedule-group/lookddak-dev-v2"

@@ -1,5 +1,16 @@
 # dev RDS 접속 정보 (String). 비밀번호(SecureString)는 콘솔에서 관리한다.
 
+locals {
+  # Parameter Store는 값 없는 파라미터를 생성할 수 없으므로, 실제
+  # SecureString은 AWS Console에서 수동 생성하고 Terraform에는 경로만 정의한다.
+  fastapi_body_image_validation_parameter_paths = {
+    BODY_IMAGE_VALIDATION_URL          = "/lookddak/dev/fastapi/body-image-validation/url"
+    BODY_IMAGE_VALIDATION_PROXY_KEY    = "/lookddak/dev/fastapi/body-image-validation/proxy-key"
+    BODY_IMAGE_VALIDATION_PROXY_SECRET = "/lookddak/dev/fastapi/body-image-validation/proxy-secret"
+    BODY_IMAGE_VALIDATION_API_KEY      = "/lookddak/dev/fastapi/body-image-validation/api-key"
+  }
+}
+
 resource "aws_ssm_parameter" "rds_admin_username" {
   name        = "/lookddak/dev/rds/admin/username"
   description = "LookDDak dev RDS administrator username"
