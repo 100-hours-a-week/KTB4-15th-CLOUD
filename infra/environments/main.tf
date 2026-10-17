@@ -132,8 +132,9 @@ module "dev_v1_cicd_deploy_policy" {
 module "dev_v1_edge" {
   source = "./dev/v1/edge"
 
-  zone_id       = module.shared_core.route53_zone_id
-  app_public_ip = module.dev_v1_compute.public_ip
+  zone_id      = module.shared_core.route53_zone_id
+  alb_dns_name = module.dev_v2_alb.alb_dns_name
+  alb_zone_id  = module.dev_v2_alb.alb_zone_id
 }
 
 module "dev_v1_parameter_store" {
