@@ -33,6 +33,17 @@ resource "aws_ecs_service" "this" {
   enable_ecs_managed_tags = true
   enable_execute_command  = var.enable_execute_command
 
+  # Rolling update: start new tasks first, stop old tasks only after the new
+  # ones are healthy (no capacity drop during deployment).
+  deployment_minimum_healthy_percent = 100
+  deployment_maximum_percent         = 200
+
+  # Stop a failing deployment and roll back to the last completed revision.
+  deployment_circuit_breaker {
+    enable   = true
+    rollback = true
+  }
+
   network_configuration {
     subnets          = var.subnet_ids
     security_groups  = var.security_group_ids
