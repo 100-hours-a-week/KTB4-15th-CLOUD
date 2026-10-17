@@ -32,6 +32,12 @@ variable "desired_count" {
   default     = 1
 }
 
+variable "enable_execute_command" {
+  description = "Enable ECS Exec for tasks started by the service"
+  type        = bool
+  default     = false
+}
+
 variable "subnet_ids" {
   description = "Private subnet IDs for Fargate tasks"
   type        = list(string)

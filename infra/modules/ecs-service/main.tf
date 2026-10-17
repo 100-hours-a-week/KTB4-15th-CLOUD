@@ -31,6 +31,7 @@ resource "aws_ecs_service" "this" {
   scheduling_strategy = "REPLICA"
 
   enable_ecs_managed_tags = true
+  enable_execute_command  = var.enable_execute_command
 
   network_configuration {
     subnets          = var.subnet_ids

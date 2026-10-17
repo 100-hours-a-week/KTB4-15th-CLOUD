@@ -40,12 +40,13 @@ module "nextjs" {
 module "spring" {
   source = "../../../../modules/ecs-service"
 
-  create_service      = var.create_services
-  service_name        = "lookddak-dev-v2-spring-service"
-  cluster_arn         = var.cluster_arn
-  cluster_name        = var.cluster_name
-  task_definition_arn = lookup(var.task_definition_arns, "spring", null)
-  desired_count       = 1
+  create_service         = var.create_services
+  service_name           = "lookddak-dev-v2-spring-service"
+  cluster_arn            = var.cluster_arn
+  cluster_name           = var.cluster_name
+  task_definition_arn    = lookup(var.task_definition_arns, "spring", null)
+  desired_count          = 1
+  enable_execute_command = true
 
   subnet_ids         = var.private_app_subnet_ids
   security_group_ids = [var.security_group_ids["spring"]]
