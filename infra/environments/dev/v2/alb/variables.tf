@@ -24,6 +24,12 @@ variable "route53_zone_id" {
 }
 
 variable "domain_name" {
-  description = "Domain name covered by the ALB certificate"
+  description = "V2 dev test domain covered by the ALB certificate and routed to the ALB"
   type        = string
+}
+
+variable "subject_alternative_names" {
+  description = "Additional domains covered by the ALB certificate for a future cutover"
+  type        = list(string)
+  default     = []
 }
