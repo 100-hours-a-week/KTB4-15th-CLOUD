@@ -119,7 +119,8 @@
   "cpu": "1024",
   "memory": "2048",
   "runtimePlatform": {
-    "operatingSystemFamily": "LINUX"
+    "operatingSystemFamily": "LINUX",
+    "cpuArchitecture": "ARM64"
   },
   "tags": [
     {
