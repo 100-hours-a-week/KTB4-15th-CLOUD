@@ -140,6 +140,41 @@ resource "aws_iam_role_policy_attachment" "spring_sqs_fitting" {
 }
 
 # ---------------------------------------------------------------
+# Spring ECS Exec policy
+# - SSM Messages channel actions do not support resource-level ARNs.
+# ---------------------------------------------------------------
+resource "aws_iam_policy" "spring_ecs_exec" {
+  name        = "lookddak-dev-v2-spring-ecs-exec"
+  description = "Allow the V2 dev Spring task to establish ECS Exec channels"
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Sid = "EcsExecChannels"
+      Action = [
+        "ssmmessages:CreateControlChannel",
+        "ssmmessages:CreateDataChannel",
+        "ssmmessages:OpenControlChannel",
+        "ssmmessages:OpenDataChannel",
+      ]
+      Effect   = "Allow"
+      Resource = "*"
+    }]
+  })
+
+  tags = {
+    Name        = "lookddak-dev-v2-spring-ecs-exec"
+    Environment = "dev"
+    Service     = "spring"
+    Version     = "v2"
+  }
+}
+
+resource "aws_iam_role_policy_attachment" "spring_ecs_exec" {
+  role       = aws_iam_role.task["spring"].name
+  policy_arn = aws_iam_policy.spring_ecs_exec.arn
+}
+
+# ---------------------------------------------------------------
 # FastAPI fitting queue policy
 # - Consumes BE requests, owns the internal AI processing queue,
 #   and publishes final results back to BE.
