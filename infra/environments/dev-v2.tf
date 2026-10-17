@@ -94,6 +94,18 @@ module "dev_v2_ecs_services" {
   task_definition_arns   = var.dev_v2_task_definition_arns
 }
 
+module "dev_v2_cicd_deploy_policy" {
+  source = "./dev/v2/cicd-deploy-policy"
+
+  deploy_role_names       = module.dev_v1_iam.deploy_role_names
+  template_bucket_arn     = module.shared_ecs_taskdef_store.bucket_arn
+  ecr_repository_arns     = module.dev_ecr.ecr_repository_arns
+  cluster_name            = module.dev_v2_ecs_cluster.cluster_name
+  service_names           = module.dev_v2_ecs_services.service_names
+  task_role_arns          = module.dev_v2_iam.task_role_arns
+  task_execution_role_arn = module.dev_v2_iam.task_execution_role_arn
+}
+
 # The default path reads the manually-created SecureString with an ephemeral
 # resource. The write-only input exists only so a full local plan can be run
 # before that SecureString is created; it must not be used for apply.
