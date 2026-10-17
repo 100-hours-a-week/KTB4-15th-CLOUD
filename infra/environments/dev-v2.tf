@@ -98,13 +98,17 @@ variable "dev_v2_postgresql_admin_password_wo" {
 variable "dev_v2_create_services" {
   description = "Create the V2 dev ECS services and their Auto Scaling resources"
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "dev_v2_task_definition_arns" {
   description = "Initial registered V2 task definition revision ARNs keyed by nextjs, spring, and fastapi"
   type        = map(string)
-  default     = {}
+  default = {
+    nextjs  = "arn:aws:ecs:ap-northeast-2:686496667254:task-definition/lookddak-dev-v2-nextjs:1"
+    spring  = "arn:aws:ecs:ap-northeast-2:686496667254:task-definition/lookddak-dev-v2-spring:1"
+    fastapi = "arn:aws:ecs:ap-northeast-2:686496667254:task-definition/lookddak-dev-v2-fastapi:1"
+  }
 }
 
 output "dev_fastapi_body_image_validation_parameter_paths" {
