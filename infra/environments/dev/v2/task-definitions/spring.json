@@ -8,6 +8,20 @@
       "name": "spring",
       "image": "686496667254.dkr.ecr.ap-northeast-2.amazonaws.com/lookddak-dev-spring@sha256:REPLACED_BY_CI",
       "essential": true,
+      "environment": [
+        {
+          "name": "BE_FITTING_REQUEST_QUEUE_URL",
+          "value": "https://sqs.ap-northeast-2.amazonaws.com/686496667254/lookddak-dev-v2-be-fitting-request"
+        },
+        {
+          "name": "BE_FITTING_RESPONSE_QUEUE_URL",
+          "value": "https://sqs.ap-northeast-2.amazonaws.com/686496667254/lookddak-dev-v2-be-fitting-response"
+        },
+        {
+          "name": "AWS_REGION",
+          "value": "ap-northeast-2"
+        }
+      ],
       "portMappings": [
         {
           "name": "spring-http",

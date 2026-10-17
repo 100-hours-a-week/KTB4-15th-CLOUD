@@ -26,10 +26,15 @@ module "dev_v2_ecs_cluster" {
   source = "./dev/v2/ecs-cluster"
 }
 
+module "dev_v2_sqs" {
+  source = "./dev/v2/sqs"
+}
+
 module "dev_v2_iam" {
   source = "./dev/v2/iam"
 
   ecs_cluster_arn = module.dev_v2_ecs_cluster.cluster_arn
+  sqs_queue_arns  = module.dev_v2_sqs.queue_arns
 }
 
 module "dev_v2_database" {
@@ -97,4 +102,37 @@ variable "dev_v2_task_definition_arns" {
 output "dev_fastapi_body_image_validation_parameter_paths" {
   description = "SecureString paths to create manually for the shared V1/V2 dev FastAPI body image validation integration"
   value       = module.dev_parameter_store.fastapi_body_image_validation_parameter_paths
+}
+
+output "dev_v2_sqs_queue_urls" {
+  description = "V2 dev fitting main queue URLs for Spring and FastAPI task definitions"
+  value       = module.dev_v2_sqs.queue_urls
+}
+
+output "dev_v2_sqs_queue_arns" {
+  description = "V2 dev fitting main queue ARNs"
+  value       = module.dev_v2_sqs.queue_arns
+}
+
+output "dev_v2_sqs_dlq_urls" {
+  description = "V2 dev fitting dead-letter queue URLs"
+  value       = module.dev_v2_sqs.dlq_urls
+}
+
+output "dev_v2_sqs_dlq_arns" {
+  description = "V2 dev fitting dead-letter queue ARNs"
+  value       = module.dev_v2_sqs.dlq_arns
+}
+
+output "dev_v2_sqs_alarm_names" {
+  description = "V2 dev fitting SQS CloudWatch alarm names routed through the existing Discord alert pipeline"
+  value       = module.dev_v2_sqs.alarm_names
+}
+
+output "dev_v2_sqs_task_role_arns" {
+  description = "V2 dev Spring and FastAPI task roles with fitting queue permissions"
+  value = {
+    spring  = module.dev_v2_iam.task_role_arns["spring"]
+    fastapi = module.dev_v2_iam.task_role_arns["fastapi"]
+  }
 }

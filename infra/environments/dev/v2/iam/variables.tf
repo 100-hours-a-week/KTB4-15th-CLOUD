@@ -2,3 +2,12 @@ variable "ecs_cluster_arn" {
   description = "Crawler Scheduler가 Task를 실행할 V2 dev ECS Cluster ARN"
   type        = string
 }
+
+variable "sqs_queue_arns" {
+  description = "V2 dev fitting main queue ARNs keyed by logical queue name"
+  type = object({
+    be-fitting-request  = string
+    ai-fitting-response = string
+    be-fitting-response = string
+  })
+}
