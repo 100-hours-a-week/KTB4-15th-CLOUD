@@ -6,6 +6,7 @@
 module "prod_v2_network" {
   source = "./prod/v2/network"
 
-  vpc_id                    = module.prod_v1_network.vpc_id
-  existing_public_subnet_id = module.prod_v1_network.public_subnet_ids[0]
+  vpc_id                     = module.prod_v1_network.vpc_id
+  existing_public_subnet_id  = module.prod_v1_network.public_subnet_ids[0]
+  prod_app_security_group_id = module.prod_v1_network.app_security_group_id
 }
