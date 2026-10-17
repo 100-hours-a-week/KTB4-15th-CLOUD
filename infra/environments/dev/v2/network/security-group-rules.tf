@@ -38,6 +38,17 @@ resource "aws_vpc_security_group_egress_rule" "alb_to_spring" {
   referenced_security_group_id = aws_security_group.v2["spring"].id
 }
 
+# ALB -> V1 dev EC2 nginx (dev.lookddak.com until the V2 cutover).
+# The V1 app security group already allows 443 from the internet.
+resource "aws_vpc_security_group_egress_rule" "alb_to_v1_dev_app" {
+  security_group_id            = aws_security_group.v2["alb"].id
+  description                  = "V1 dev nginx HTTPS traffic"
+  ip_protocol                  = "tcp"
+  from_port                    = 443
+  to_port                      = 443
+  referenced_security_group_id = var.dev_app_security_group_id
+}
+
 # ---------------------------------------------------------------
 # Next.js
 # ---------------------------------------------------------------
