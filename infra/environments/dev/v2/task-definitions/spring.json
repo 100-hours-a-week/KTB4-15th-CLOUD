@@ -27,7 +27,7 @@
         },
         {
           "name": "CORS_ALLOWED_ORIGINS",
-          "value": "https://dev.lookddak.com"
+          "value": "https://dev.lookddak.com,https://v2-dev.lookddak.com"
         },
         {
           "name": "SENTRY_ENVIRONMENT",
@@ -103,7 +103,8 @@
   "cpu": "1024",
   "memory": "2048",
   "runtimePlatform": {
-    "operatingSystemFamily": "LINUX"
+    "operatingSystemFamily": "LINUX",
+    "cpuArchitecture": "ARM64"
   },
   "tags": [
     {
