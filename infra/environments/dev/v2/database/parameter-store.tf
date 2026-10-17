@@ -39,6 +39,13 @@ locals {
       value       = local.migration_username
       credential  = "migration"
     }
+    mysql_jdbc_url = {
+      name        = local.parameter_paths.mysql_jdbc_url
+      description = "LookDDak dev V2 Spring JDBC URL for the promoted MySQL instance"
+      value       = "jdbc:mysql://${module.mysql.address}:3306/lookddak?sslMode=REQUIRED&serverTimezone=UTC&characterEncoding=UTF-8"
+      credential  = "connection"
+      service     = "mysql"
+    }
   }
 }
 
@@ -55,7 +62,7 @@ resource "aws_ssm_parameter" "postgresql" {
   tags = {
     CredentialType = each.value.credential
     Environment    = "dev"
-    Service        = "postgresql"
+    Service        = try(each.value.service, "postgresql")
     Version        = "v2"
   }
 }

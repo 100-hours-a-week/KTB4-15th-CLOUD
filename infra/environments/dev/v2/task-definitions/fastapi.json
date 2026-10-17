@@ -10,6 +10,18 @@
       "essential": true,
       "environment": [
         {
+          "name": "AWS_REGION",
+          "value": "ap-northeast-2"
+        },
+        {
+          "name": "S3_BUCKET",
+          "value": "lookddak-dev-images-686496667254-ap-northeast-2"
+        },
+        {
+          "name": "BODY_IMAGE_VALIDATION_MODE",
+          "value": "remote"
+        },
+        {
           "name": "BE_FITTING_REQUEST_QUEUE_URL",
           "value": "https://sqs.ap-northeast-2.amazonaws.com/686496667254/lookddak-dev-v2-be-fitting-request"
         },
@@ -22,8 +34,20 @@
           "value": "https://sqs.ap-northeast-2.amazonaws.com/686496667254/lookddak-dev-v2-be-fitting-response"
         },
         {
-          "name": "AWS_REGION",
-          "value": "ap-northeast-2"
+          "name": "WEB_CONCURRENCY",
+          "value": "1"
+        },
+        {
+          "name": "MALLOC_ARENA_MAX",
+          "value": "2"
+        },
+        {
+          "name": "UVICORN_TIMEOUT_GRACEFUL_SHUTDOWN",
+          "value": "30"
+        },
+        {
+          "name": "TZ",
+          "value": "Asia/Seoul"
         }
       ],
       "portMappings": [
@@ -37,22 +61,54 @@
       ],
       "secrets": [
         {
-          "name": "BODY_IMAGE_VALIDATION_URL",
+          "name": "DATABASE_URL",
+          "valueFrom": "/lookddak/dev/v2/postgresql/app/database-url"
+        },
+        {
+          "name": "CHECKPOINT_DSN",
+          "valueFrom": "/lookddak/dev/v2/postgresql/app/checkpoint-dsn"
+        },
+        {
+          "name": "INTERNAL_API_KEY",
+          "valueFrom": "/lookddak/dev/internal/ai-api-key"
+        },
+        {
+          "name": "RUNWARE_VTON_API_KEY",
+          "valueFrom": "/lookddak/dev/fastapi/runware-vton-api-key"
+        },
+        {
+          "name": "RUNWARE_LLM_API_KEY",
+          "valueFrom": "/lookddak/dev/fastapi/runware-llm-api-key"
+        },
+        {
+          "name": "OPENAI_API_KEY",
+          "valueFrom": "/lookddak/dev/fastapi/openAI-api-key"
+        },
+        {
+          "name": "BODY_IMAGE_REMOTE_URL",
           "valueFrom": "/lookddak/dev/fastapi/body-image-validation/url"
         },
         {
-          "name": "BODY_IMAGE_VALIDATION_PROXY_KEY",
+          "name": "BODY_IMAGE_REMOTE_PROXY_KEY",
           "valueFrom": "/lookddak/dev/fastapi/body-image-validation/proxy-key"
         },
         {
-          "name": "BODY_IMAGE_VALIDATION_PROXY_SECRET",
+          "name": "BODY_IMAGE_REMOTE_PROXY_SECRET",
           "valueFrom": "/lookddak/dev/fastapi/body-image-validation/proxy-secret"
         },
         {
-          "name": "BODY_IMAGE_VALIDATION_API_KEY",
+          "name": "BODY_IMAGE_REMOTE_API_KEY",
           "valueFrom": "/lookddak/dev/fastapi/body-image-validation/api-key"
         }
       ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/lookddak/dev/v2/fastapi",
+          "awslogs-region": "ap-northeast-2",
+          "awslogs-stream-prefix": "ecs"
+        }
+      },
       "privileged": false,
       "readonlyRootFilesystem": false
     }

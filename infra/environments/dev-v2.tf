@@ -26,6 +26,10 @@ module "dev_v2_ecs_cluster" {
   source = "./dev/v2/ecs-cluster"
 }
 
+module "dev_v2_logging" {
+  source = "./dev/v2/logging"
+}
+
 module "dev_v2_sqs" {
   source = "./dev/v2/sqs"
 }
@@ -34,6 +38,7 @@ module "dev_v2_iam" {
   source = "./dev/v2/iam"
 
   ecs_cluster_arn = module.dev_v2_ecs_cluster.cluster_arn
+  log_group_arns  = values(module.dev_v2_logging.log_group_arns)
   sqs_queue_arns  = module.dev_v2_sqs.queue_arns
 }
 
@@ -135,4 +140,14 @@ output "dev_v2_sqs_task_role_arns" {
     spring  = module.dev_v2_iam.task_role_arns["spring"]
     fastapi = module.dev_v2_iam.task_role_arns["fastapi"]
   }
+}
+
+output "dev_v2_log_group_names" {
+  description = "V2 dev ECS application CloudWatch Log Group names"
+  value       = module.dev_v2_logging.log_group_names
+}
+
+output "dev_v2_runtime_secure_parameter_arns" {
+  description = "V2 PostgreSQL SecureString ARNs managed manually outside Terraform"
+  value       = module.dev_v2_database.secure_parameter_arns
 }
