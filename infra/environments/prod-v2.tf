@@ -11,6 +11,27 @@ module "prod_v2_network" {
   prod_app_security_group_id = module.prod_v1_network.app_security_group_id
 }
 
+module "prod_v2_ecs_cluster" {
+  source = "./prod/v2/ecs-cluster"
+}
+
+module "prod_v2_logging" {
+  source = "./prod/v2/logging"
+}
+
+module "prod_v2_sqs" {
+  source = "./prod/v2/sqs"
+}
+
+module "prod_v2_iam" {
+  source = "./prod/v2/iam"
+
+  ecs_cluster_arn     = module.prod_v2_ecs_cluster.cluster_arn
+  ecr_repository_arns = values(module.shared_core.ecr_repository_arns)
+  log_group_arns      = values(module.prod_v2_logging.log_group_arns)
+  sqs_queue_arns      = module.prod_v2_sqs.queue_arns
+}
+
 module "prod_v2_database" {
   source = "./prod/v2/database"
 
@@ -19,6 +40,27 @@ module "prod_v2_database" {
 
   read_admin_password_from_ssm = var.prod_v2_postgresql_read_admin_password_from_ssm
   admin_password_wo            = var.prod_v2_postgresql_admin_password_wo
+}
+
+module "prod_v2_crawler" {
+  source = "./prod/v2/crawler"
+
+  ecs_cluster_arn           = module.prod_v2_ecs_cluster.cluster_arn
+  scheduler_role_arn        = module.prod_v2_iam.crawler_scheduler_role_arn
+  private_app_subnet_ids    = module.prod_v2_network.private_app_subnet_ids
+  crawler_security_group_id = module.prod_v2_network.security_group_ids["crawler"]
+}
+
+module "prod_v2_ecs_services" {
+  source = "./prod/v2/ecs-services"
+
+  create_services        = var.prod_v2_create_services
+  cluster_arn            = module.prod_v2_ecs_cluster.cluster_arn
+  cluster_name           = module.prod_v2_ecs_cluster.cluster_name
+  private_app_subnet_ids = module.prod_v2_network.private_app_subnet_ids
+  security_group_ids     = module.prod_v2_network.security_group_ids
+  target_group_arns      = var.prod_v2_target_group_arns
+  task_definition_arns   = var.prod_v2_task_definition_arns
 }
 
 # The default path reads the manually-created SecureString with an ephemeral
@@ -38,6 +80,24 @@ variable "prod_v2_postgresql_admin_password_wo" {
   ephemeral   = true
 }
 
+variable "prod_v2_create_services" {
+  description = "Create the V2 prod ECS services and their Auto Scaling resources"
+  type        = bool
+  default     = false
+}
+
+variable "prod_v2_target_group_arns" {
+  description = "V2 prod ALB target group ARNs keyed by nextjs and spring"
+  type        = map(string)
+  default     = {}
+}
+
+variable "prod_v2_task_definition_arns" {
+  description = "Initial registered V2 prod task definition revision ARNs keyed by nextjs, spring, and fastapi"
+  type        = map(string)
+  default     = {}
+}
+
 output "prod_v2_postgresql_parameter_paths" {
   description = "Parameter Store paths used by V2 Prod PostgreSQL"
   value       = module.prod_v2_database.parameter_paths
@@ -46,4 +106,49 @@ output "prod_v2_postgresql_parameter_paths" {
 output "prod_v2_postgresql_secure_parameter_arns" {
   description = "V2 Prod PostgreSQL SecureString ARNs managed manually outside Terraform"
   value       = module.prod_v2_database.secure_parameter_arns
+}
+
+output "prod_v2_ecs_cluster_name" {
+  description = "V2 prod ECS cluster name"
+  value       = module.prod_v2_ecs_cluster.cluster_name
+}
+
+output "prod_v2_service_connect_namespace_arn" {
+  description = "V2 prod Service Connect namespace ARN"
+  value       = module.prod_v2_ecs_services.service_connect_namespace_arn
+}
+
+output "prod_v2_sqs_queue_urls" {
+  description = "V2 prod fitting main queue URLs"
+  value       = module.prod_v2_sqs.queue_urls
+}
+
+output "prod_v2_sqs_dlq_urls" {
+  description = "V2 prod fitting dead-letter queue URLs"
+  value       = module.prod_v2_sqs.dlq_urls
+}
+
+output "prod_v2_sqs_alarm_names" {
+  description = "V2 prod fitting SQS CloudWatch alarm names"
+  value       = module.prod_v2_sqs.alarm_names
+}
+
+output "prod_v2_log_group_names" {
+  description = "V2 prod ECS application CloudWatch Log Group names"
+  value       = module.prod_v2_logging.log_group_names
+}
+
+output "prod_v2_task_execution_role_arn" {
+  description = "V2 prod ECS Task Execution Role ARN"
+  value       = module.prod_v2_iam.task_execution_role_arn
+}
+
+output "prod_v2_task_role_arns" {
+  description = "V2 prod ECS Task Role ARNs keyed by service name"
+  value       = module.prod_v2_iam.task_role_arns
+}
+
+output "prod_v2_crawler_schedule_arn" {
+  description = "V2 prod crawler schedule ARN"
+  value       = module.prod_v2_crawler.schedule_arn
 }
