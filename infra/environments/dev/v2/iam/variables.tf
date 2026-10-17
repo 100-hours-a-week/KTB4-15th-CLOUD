@@ -3,6 +3,11 @@ variable "ecs_cluster_arn" {
   type        = string
 }
 
+variable "log_group_arns" {
+  description = "V2 dev ECS application CloudWatch Log Group ARNs"
+  type        = list(string)
+}
+
 variable "sqs_queue_arns" {
   description = "V2 dev fitting main queue ARNs keyed by logical queue name"
   type = object({

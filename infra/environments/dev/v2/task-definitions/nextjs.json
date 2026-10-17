@@ -8,6 +8,24 @@
       "name": "nextjs",
       "image": "686496667254.dkr.ecr.ap-northeast-2.amazonaws.com/lookddak-dev-nextjs@sha256:REPLACED_BY_CI",
       "essential": true,
+      "environment": [
+        {
+          "name": "API_BASE_URL",
+          "value": "http://spring:8080"
+        },
+        {
+          "name": "NODE_ENV",
+          "value": "production"
+        },
+        {
+          "name": "NODE_OPTIONS",
+          "value": "--max-old-space-size=384"
+        },
+        {
+          "name": "TZ",
+          "value": "Asia/Seoul"
+        }
+      ],
       "portMappings": [
         {
           "name": "nextjs-http",
@@ -17,6 +35,14 @@
           "appProtocol": "http"
         }
       ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/lookddak/dev/v2/nextjs",
+          "awslogs-region": "ap-northeast-2",
+          "awslogs-stream-prefix": "ecs"
+        }
+      },
       "privileged": false,
       "readonlyRootFilesystem": false
     }

@@ -16,13 +16,18 @@ locals {
     database           = "/lookddak/dev/v2/postgresql/database"
     app_username       = "/lookddak/dev/v2/postgresql/app/username"
     app_password       = "/lookddak/dev/v2/postgresql/app/password"
+    app_database_url   = "/lookddak/dev/v2/postgresql/app/database-url"
+    app_checkpoint_dsn = "/lookddak/dev/v2/postgresql/app/checkpoint-dsn"
     migration_username = "/lookddak/dev/v2/postgresql/migration/username"
     migration_password = "/lookddak/dev/v2/postgresql/migration/password"
+    mysql_jdbc_url     = "/lookddak/dev/v2/mysql/jdbc-url"
   }
 
   secure_parameter_paths = {
     admin_password     = local.parameter_paths.admin_password
     app_password       = local.parameter_paths.app_password
+    app_database_url   = local.parameter_paths.app_database_url
+    app_checkpoint_dsn = local.parameter_paths.app_checkpoint_dsn
     migration_password = local.parameter_paths.migration_password
   }
 }

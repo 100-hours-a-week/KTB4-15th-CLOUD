@@ -1,8 +1,9 @@
 # ---------------------------------------------------------------
 # ECS Task Execution Role policy
 # - Uses a project-scoped ECR pattern so a future crawler repository is covered.
-# - Parameter Store access is limited to V2 paths and shared FastAPI runtime
-#   parameters used by both V1 and V2 dev.
+# - Parameter Store access is limited to V2 paths and shared V1/V2 dev
+#   application parameters.
+# - CloudWatch Logs access is limited to the four V2 application log groups.
 # - KMS decrypt is limited to the SSM managed key through the SSM service.
 # ---------------------------------------------------------------
 resource "aws_iam_policy" "task_execution" {
@@ -27,6 +28,16 @@ resource "aws_iam_policy" "task_execution" {
       Resource = [
         local.dev_v2_parameter_arn_pattern,
         local.dev_fastapi_parameter_arn_pattern,
+        local.dev_internal_parameter_arn_pattern,
+        local.dev_rds_app_parameter_arn_pattern,
+        local.dev_spring_parameter_arn_pattern,
+      ]
+      }, {
+      Sid    = "WriteV2ApplicationLogs"
+      Action = ["logs:CreateLogStream", "logs:PutLogEvents"]
+      Effect = "Allow"
+      Resource = [
+        for arn in var.log_group_arns : "${arn}:*"
       ]
       }, {
       Sid      = "DecryptDevParametersViaSsm"

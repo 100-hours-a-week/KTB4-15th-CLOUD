@@ -10,6 +10,30 @@
       "essential": true,
       "environment": [
         {
+          "name": "SPRING_PROFILES_ACTIVE",
+          "value": "prod"
+        },
+        {
+          "name": "AWS_REGION",
+          "value": "ap-northeast-2"
+        },
+        {
+          "name": "AWS_S3_BUCKET",
+          "value": "lookddak-dev-images-686496667254-ap-northeast-2"
+        },
+        {
+          "name": "AI_SERVER_URL",
+          "value": "http://fastapi:8000"
+        },
+        {
+          "name": "CORS_ALLOWED_ORIGINS",
+          "value": "https://dev.lookddak.com"
+        },
+        {
+          "name": "SENTRY_ENVIRONMENT",
+          "value": "dev"
+        },
+        {
           "name": "BE_FITTING_REQUEST_QUEUE_URL",
           "value": "https://sqs.ap-northeast-2.amazonaws.com/686496667254/lookddak-dev-v2-be-fitting-request"
         },
@@ -18,8 +42,12 @@
           "value": "https://sqs.ap-northeast-2.amazonaws.com/686496667254/lookddak-dev-v2-be-fitting-response"
         },
         {
-          "name": "AWS_REGION",
-          "value": "ap-northeast-2"
+          "name": "JAVA_TOOL_OPTIONS",
+          "value": "-XX:MaxRAMPercentage=75.0 -XX:InitialRAMPercentage=25.0 -XX:MaxMetaspaceSize=192m -XX:+UseContainerSupport -Dnetworkaddress.cache.ttl=10"
+        },
+        {
+          "name": "TZ",
+          "value": "Asia/Seoul"
         }
       ],
       "portMappings": [
@@ -31,6 +59,40 @@
           "appProtocol": "http"
         }
       ],
+      "secrets": [
+        {
+          "name": "DB_URL",
+          "valueFrom": "/lookddak/dev/v2/mysql/jdbc-url"
+        },
+        {
+          "name": "DB_USERNAME",
+          "valueFrom": "/lookddak/dev/rds/app/username"
+        },
+        {
+          "name": "DB_PASSWORD",
+          "valueFrom": "/lookddak/dev/rds/app/password"
+        },
+        {
+          "name": "JWT_SECRET",
+          "valueFrom": "/lookddak/dev/spring/jwt-secret"
+        },
+        {
+          "name": "AI_INTERNAL_API_KEY",
+          "valueFrom": "/lookddak/dev/internal/ai-api-key"
+        },
+        {
+          "name": "SENTRY_DSN",
+          "valueFrom": "/lookddak/dev/spring/sentry_dsn"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/lookddak/dev/v2/spring",
+          "awslogs-region": "ap-northeast-2",
+          "awslogs-stream-prefix": "ecs"
+        }
+      },
       "privileged": false,
       "readonlyRootFilesystem": false
     }
