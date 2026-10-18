@@ -80,6 +80,11 @@ module "dev_v2_task_definitions" {
   queue_urls              = module.dev_v2_sqs.queue_urls
   log_group_names         = module.dev_v2_logging.log_group_names
   images_bucket_name      = module.dev_s3.images_bucket_name
+
+  # 임시 (2026-10-18): V2 Spring이 V2 Dev MySQL에 직접 써서 V1과 split-brain이 생겼다
+  # (refresh_token PK 충돌로 V2 Dev MySQL 복제 SQL Thread 중단).
+  # V2 Dev MySQL 재구축과 쓰기 경로 단일화(ProxySQL 경유 등)가 끝날 때까지 V1 구 DB를 쓴다.
+  spring_mysql_target = "v1"
 }
 
 module "dev_v2_ecs_services" {

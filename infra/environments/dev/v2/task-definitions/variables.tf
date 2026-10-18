@@ -32,3 +32,13 @@ variable "images_bucket_name" {
   description = "dev 이미지 버킷 이름"
   type        = string
 }
+
+variable "spring_mysql_target" {
+  description = "V2 Spring이 연결할 MySQL: v1 = V1 dev 구 DB(lookddak-dev-mysql), v2 = V2 Dev MySQL"
+  type        = string
+
+  validation {
+    condition     = contains(["v1", "v2"], var.spring_mysql_target)
+    error_message = "spring_mysql_target must be v1 or v2."
+  }
+}
