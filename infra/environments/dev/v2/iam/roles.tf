@@ -50,20 +50,3 @@ resource "aws_iam_role" "crawler_scheduler" {
     Version     = "v2"
   }
 }
-
-# ---------------------------------------------------------------
-# Shared local MQ test role for BE and AI developers
-# ---------------------------------------------------------------
-resource "aws_iam_role" "mq_local_test" {
-  name                 = "lookddak-dev-v2-mq-local-test"
-  description          = "Allow BE and AI developers to test the V2 dev SQS flow locally"
-  assume_role_policy   = local.mq_local_test_assume_role_policy
-  max_session_duration = 3600
-
-  tags = {
-    Component   = "sqs"
-    Environment = "dev"
-    Purpose     = "local-mq-test"
-    Version     = "v2"
-  }
-}
