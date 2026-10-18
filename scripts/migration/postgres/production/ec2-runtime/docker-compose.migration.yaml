@@ -1,0 +1,116 @@
+# V1 Prod PostgreSQL 무중단 마이그레이션 준비용 overlay.
+# 파일을 배치하는 것만으로는 활성화되지 않는다.
+# 운영 EC2의 /opt/lookddak/.env에 아래 값을 명시한 뒤 별도 작업 창에서 활성화한다.
+# COMPOSE_FILE=docker-compose.yaml:docker-compose.postgres-migration.yaml
+
+services:
+  fastapi:
+    depends_on:
+      pgbouncer:
+        condition: service_healthy
+    # 기본 Compose의 EC2 PostgreSQL 직결 값을 운영 마이그레이션 overlay에서
+    # 명시적으로 덮어써 FastAPI가 반드시 PgBouncer를 사용하게 한다.
+    environment:
+      DATABASE_URL: "${FASTAPI_DATABASE_URL:?FASTAPI_DATABASE_URL is required}"
+      CHECKPOINT_DSN: "${FASTAPI_CHECKPOINT_DSN:?FASTAPI_CHECKPOINT_DSN is required}"
+
+  postgresql:
+    # RDS 논리 복제 연결은 EC2 사설 IP의 5432로만 받는다.
+    ports:
+      - "${POSTGRES_BIND_IP:?POSTGRES_BIND_IP is required}:5432:5432"
+    command: >
+      postgres
+      -c shared_buffers=256MB
+      -c effective_cache_size=768MB
+      -c maintenance_work_mem=64MB
+      -c work_mem=8MB
+      -c wal_level=logical
+      -c max_replication_slots=10
+      -c max_wal_senders=10
+      -c max_slot_wal_keep_size=2GB
+
+  pgbouncer:
+    image: edoburu/pgbouncer:v1.26.0-p0@sha256:b17551c776ef7e5769ef80b956d20f85e2fd25dd8912d31d58f782aad495b711
+    container_name: lookddak-pgbouncer
+    restart: always
+    expose:
+      - "6432"
+    networks:
+      - db-network
+    depends_on:
+      postgresql:
+        condition: service_healthy
+    volumes:
+      - ./pgbouncer.prod/pgbouncer.ini:/etc/pgbouncer/pgbouncer.ini:ro
+      - ./pgbouncer.prod/pg_hba.conf:/etc/pgbouncer/pg_hba.conf:ro
+      - ./pgbouncer.prod/pg_ident.conf:/etc/pgbouncer/pg_ident.conf:ro
+      - ./pgbouncer.prod/userlist.txt:/etc/pgbouncer/userlist.txt:ro
+    healthcheck:
+      test: ["CMD", "pg_isready", "-h", "/var/run/pgbouncer", "-p", "6432", "-U", "pgbouncer_admin", "-d", "pgbouncer"]
+      interval: 5s
+      timeout: 3s
+      retries: 6
+      start_period: 5s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    stop_grace_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 128M
+
+  # 실제 부하 시험 때만 --profile migration으로 기동한다.
+  pgbench:
+    image: pgvector/pgvector:0.8.6-pg16-bookworm
+    container_name: lookddak-pgbench
+    profiles: ["migration"]
+    restart: unless-stopped
+    init: true
+    command: ["sleep", "infinity"]
+    working_dir: /work
+    volumes:
+      - ./scripts/migration/postgres/production/workload/pgbench:/scripts:ro
+      - ./scripts/migration/postgres/production/results:/results
+    networks:
+      - db-network
+    depends_on:
+      pgbouncer:
+        condition: service_healthy
+    environment:
+      PGHOST: pgbouncer
+      PGPORT: "6432"
+      PGDATABASE: lookddak_ai
+      PGUSER: lookddak_app
+      PGCONNECT_TIMEOUT: "5"
+      PGAPPNAME: lookddak-prod-pgbench
+      TZ: KST-9
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+      - /work:size=16m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "pgbench", "--version"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "2"
+    stop_grace_period: 5s
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 128M
+          pids: 64

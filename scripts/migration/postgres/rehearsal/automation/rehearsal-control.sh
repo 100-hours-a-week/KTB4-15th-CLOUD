@@ -4,9 +4,10 @@ set -Eeuo pipefail
 set +x
 MODE=${1:-help}
 RUN_ID=${2:-}
-[[ "$RUN_ID" =~ ^[A-Za-z0-9_-]+$ ]] || { echo 'Usage: bash r1-3-tools.sh {start|status|rollback|finish} <new-run-id>'; exit 2; }
-ROOT=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
-RESULT="$ROOT/results/$RUN_ID"
+[[ "$RUN_ID" =~ ^[A-Za-z0-9_-]+$ ]] || { echo 'Usage: bash rehearsal-control.sh {start|status|rollback|finish} <new-run-id>'; exit 2; }
+AUTOMATION_ROOT=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+REHEARSAL_ROOT="${REHEARSAL_ROOT:-$(cd -- "${AUTOMATION_ROOT}/.." && pwd)}"
+RESULT="$REHEARSAL_ROOT/results/$RUN_ID"
 DB_RUN_ID="$RUN_ID-live"
 REGION=${AWS_REGION:-ap-northeast-2}
 FWD=lookddak_pg_forward_sub
@@ -79,9 +80,9 @@ sync_sequence() {
   echo "SEQUENCE_SYNCED from=$from to=$to value=$value is_called=$called"
 }
 snapshot() {
-  ec2snapshot -v run_id="$DB_RUN_ID" < "$ROOT/sql/data-consistency-r1-3.sql" | sudo tee "$RESULT/consistency-ec2.txt" >/dev/null
+  ec2snapshot -v run_id="$DB_RUN_ID" < "$REHEARSAL_ROOT/sql/data-consistency.sql" | sudo tee "$RESULT/consistency-ec2.txt" >/dev/null
   budget
-  rdssnapshot -v run_id="$DB_RUN_ID" < "$ROOT/sql/data-consistency-r1-3.sql" | sudo tee "$RESULT/consistency-rds.txt" >/dev/null
+  rdssnapshot -v run_id="$DB_RUN_ID" < "$REHEARSAL_ROOT/sql/data-consistency.sql" | sudo tee "$RESULT/consistency-rds.txt" >/dev/null
   budget
   if ! sudo diff -u "$RESULT/consistency-ec2.txt" "$RESULT/consistency-rds.txt" > /tmp/"$RUN_ID"-consistency.diff; then
     sudo cp /tmp/"$RUN_ID"-consistency.diff "$RESULT/consistency.diff"
@@ -119,7 +120,7 @@ if [[ "$MODE" = start ]]; then
     export PGHOST=pgbouncer PGPORT=6432 PGDATABASE=lookddak_ai PGUSER=lookddak_app PGAPPNAME=lookddak-pgbench
     mkdir -p "/results/$1"
     nohup sh -c '\''
-      pgbench -n -M simple -c 4 -j 2 -R 30 -L 5000 -T 600 -P 5 --progress-timestamp -l --log-prefix="/results/$1/pgbench-tx" -f /scripts/ledger-r1-3.sql -D "run_id=$2" -D source_label=via_pgbouncer -D client_event_no=0 -D hold_sec=0 &
+      pgbench -n -M simple -c 4 -j 2 -R 30 -L 5000 -T 600 -P 5 --progress-timestamp -l --log-prefix="/results/$1/pgbench-tx" -f /scripts/ledger.sql -D "run_id=$2" -D source_label=via_pgbouncer -D client_event_no=0 -D hold_sec=0 &
       pid=$!; printf "%s\n" "$pid" > "/results/$1/pgbench-live.pid"
       wait "$pid"; rc=$?; printf "%s\n" "$rc" > "/results/$1/pgbench-live.exit"; exit "$rc"
     '\'' sh "$1" "$2" > "/results/$1/pgbench-live.log" 2>&1 < /dev/null &
