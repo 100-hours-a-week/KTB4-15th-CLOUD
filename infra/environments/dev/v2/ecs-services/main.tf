@@ -78,7 +78,7 @@ module "fastapi" {
   cluster_arn         = var.cluster_arn
   cluster_name        = var.cluster_name
   task_definition_arn = lookup(var.task_definition_arns, "fastapi", null)
-  desired_count       = 1
+  desired_count       = var.fastapi_tasks_enabled ? 1 : 0
 
   subnet_ids         = var.private_app_subnet_ids
   security_group_ids = [var.security_group_ids["fastapi"]]
@@ -91,8 +91,11 @@ module "fastapi" {
   service_connect_discovery_name = "fastapi"
   service_connect_dns_name       = "fastapi"
 
-  autoscaling_min_capacity  = 1
-  autoscaling_max_capacity  = 5
+  # min/max=0 makes Application Auto Scaling clamp an already-running
+  # service to zero even though the shared ECS module ignores desired_count.
+  autoscaling_min_capacity  = var.fastapi_tasks_enabled ? 1 : 0
+  autoscaling_max_capacity  = var.fastapi_tasks_enabled ? 5 : 0
+  autoscaling_suspended     = !var.fastapi_tasks_enabled
   cpu_target_value          = 70
   cpu_scale_out_cooldown    = 300
   cpu_scale_in_cooldown     = 300
