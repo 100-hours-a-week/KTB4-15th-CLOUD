@@ -39,21 +39,25 @@ docker exec lookddak-postgresql sh -c \
 
 test -s "$dump_file"
 test -s "$globals_file"
+# 업로드 전에 PostgreSQL 복원 도구가 custom-format archive를 끝까지 읽을 수 있는지 확인한다.
+docker exec -i lookddak-postgresql pg_restore --list < "$dump_file" >/dev/null
 sha256sum "$dump_file" "$globals_file" > "${tmp_dir}/SHA256SUMS"
 
 for file in "$dump_file" "$globals_file" "${tmp_dir}/SHA256SUMS"; do
   aws s3 cp "$file" "s3://${BACKUP_BUCKET}/${object_prefix}/$(basename "$file")" \
     --region "$AWS_REGION" \
     --only-show-errors \
-    --server-side-encryption aws:kms \
-    --ssekms-key-id alias/lookddak-prod-postgresql-backup
+    --sse aws:kms \
+    --sse-kms-key-id alias/lookddak-prod-postgresql-backup
 done
 
-aws s3api head-object \
+uploaded="$(aws s3api list-objects-v2 \
   --region "$AWS_REGION" \
   --bucket "$BACKUP_BUCKET" \
-  --key "${object_prefix}/$(basename "$dump_file")" \
-  --query '{Length:ContentLength,Modified:LastModified,Encryption:ServerSideEncryption,KmsKey:SSEKMSKeyId}' \
-  --output json
+  --prefix "${object_prefix}/" \
+  --query '[length(Contents), sum(Contents[].Size)]' \
+  --output text)"
+[[ "$uploaded" == $'3\t'* ]] || die "S3 백업 객체 3개를 확인하지 못했습니다: $uploaded"
+log "BACKUP_UPLOAD_VERIFIED object_count=${uploaded%%$'\t'*} total_bytes=${uploaded#*$'\t'}"
 
 log "BACKUP_SUCCEEDED object_prefix=$object_prefix"

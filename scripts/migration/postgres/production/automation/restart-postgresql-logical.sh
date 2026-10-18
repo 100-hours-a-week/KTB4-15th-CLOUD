@@ -12,6 +12,7 @@ RUN_ID="${2:-}"
 readonly MAX_PAUSE_SECONDS="${MAX_PAUSE_SECONDS:-30}"
 readonly PAUSE_DRAIN_TIMEOUT_SECONDS="${PAUSE_DRAIN_TIMEOUT_SECONDS:-10}"
 readonly POSTGRES_READY_TIMEOUT_SECONDS="${POSTGRES_READY_TIMEOUT_SECONDS:-20}"
+readonly PARAMETER_LOADER="${APP_DIR}/scripts/load-parameters.sh"
 PAUSED=0
 
 usage() {
@@ -21,9 +22,11 @@ usage() {
 [[ "$MODE" == "check" || "$MODE" == "run" ]] || { usage; exit 2; }
 require_run_id "$RUN_ID"
 require_root
-require_commands aws docker flock grep timeout
+require_commands aws docker flock grep seq sleep timeout
 
 check_preconditions() {
+  test -f "$PARAMETER_LOADER" \
+    || die "런타임 Parameter Store 로더가 없습니다: $PARAMETER_LOADER"
   require_healthy lookddak-postgresql
   require_healthy lookddak-pgbouncer
   require_healthy lookddak-fastapi
@@ -40,6 +43,10 @@ raise SystemExit(0 if (x.hostname, x.port, x.username) == ("pgbouncer", 6432, "l
     || die "10초를 넘긴 트랜잭션이 있어 재시작할 수 없습니다"
   MAX_BACKUP_AGE_HOURS=26 "${ROOT}/preflight.sh" >/dev/null \
     || die "사전 점검 또는 최신 백업 검증에 실패했습니다"
+  export AWS_REGION
+  # shellcheck source=/dev/null
+  source "$PARAMETER_LOADER"
+  load_runtime_parameters
   app_compose config --quiet
 }
 
@@ -52,12 +59,14 @@ resume_on_error() {
     pgbouncer_admin 'RESUME lookddak_ai;' >/dev/null 2>&1
     log "FAILSAFE=PgBouncer RESUME attempted; verify PostgreSQL and FastAPI immediately"
   fi
+  declare -F cleanup_runtime_parameters >/dev/null && cleanup_runtime_parameters
   exit "$rc"
 }
 
 check_preconditions
 if [[ "$MODE" == "check" ]]; then
   log "CHECK_COMPLETE=run 모드는 PgBouncer PAUSE 후 PostgreSQL을 재생성합니다"
+  cleanup_runtime_parameters
   exit 0
 fi
 
@@ -95,8 +104,13 @@ elapsed="$((SECONDS - pause_started))"
 ((elapsed <= MAX_PAUSE_SECONDS)) || die "PAUSE 시간이 ${MAX_PAUSE_SECONDS}초를 초과했습니다: ${elapsed}s"
 pgbouncer_admin 'RESUME lookddak_ai;' >/dev/null
 PAUSED=0
+for _ in $(seq 1 30); do
+  [[ "$(container_health lookddak-postgresql 2>/dev/null || true)" == "healthy" ]] && break
+  sleep 1
+done
 require_healthy lookddak-postgresql
 require_healthy lookddak-pgbouncer
 
 trap - ERR INT TERM
+cleanup_runtime_parameters
 log "RESTART_SUCCEEDED pause_seconds=$elapsed settings=$settings"
