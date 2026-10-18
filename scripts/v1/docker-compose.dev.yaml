@@ -99,8 +99,8 @@ services:
     command: ["sleep", "infinity"]
     working_dir: /work
     volumes:
-      - ./scripts/migration/postgres/rehersal/pgbench:/scripts:ro
-      - ./scripts/migration/postgres/rehersal/results:/results
+      - ./scripts/migration/postgres/rehearsal/workload/pgbench:/scripts:ro
+      - ./scripts/migration/postgres/rehearsal/results:/results
     networks:
       - db-network
     depends_on:

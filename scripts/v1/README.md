@@ -15,14 +15,14 @@ EC2는 Terraform으로 관리하지만, **서버 안의 파일은 Terraform 관�
 | `scripts/bootstrap.sh` | `/opt/lookddak/scripts/bootstrap.sh` | 최초 기동 또는 전체 스택 복구 |
 | `scripts/deploy.sh` | `/opt/lookddak/scripts/deploy.sh` | 서비스별 배포 (`deploy.sh <fe\|be\|ai> <이미지 태그>`) |
 | `scripts/load-parameters.sh` | `/opt/lookddak/scripts/load-parameters.sh` | Parameter Store 조회 함수 (bootstrap·deploy에서 source) |
-| `scripts/prepare-pgbouncer.sh` | `/opt/lookddak/scripts/prepare-pgbouncer.sh` | 원본 PostgreSQL의 SCRAM 검증값으로 PgBouncer 런타임 인증 파일 준비 |
+| `../migration/postgres/rehearsal/automation/prepare-pgbouncer.sh` | `/opt/lookddak/scripts/prepare-pgbouncer.sh` | 원본 PostgreSQL의 SCRAM 검증값으로 PgBouncer 런타임 인증 파일 준비 |
 | `scripts/container-metric.sh` | `/opt/lookddak/scripts/container-metric.sh` | 컨테이너·호스트 상태를 CloudWatch Logs(`/lookddak/prod/status`)로 전송 |
 | `scripts/docker-alert.sh` | `/opt/lookddak/scripts/docker-alert.sh` | 컨테이너 상태 변화를 EventBridge로 전송 |
 | `scripts/load-parameters-dev.sh` | dev 서버 `/opt/lookddak/scripts/load-parameters.sh` | dev 서버용 Parameter Store 조회 (`/lookddak/dev/*`) |
 | `docker-compose.dev.yaml` | `/opt/lookddak/docker-compose.dev.yaml` | dev 서버 전용 덮어쓰기 (로그 그룹, Nginx 설정) |
-| `pgbouncer/pgbouncer.ini` | `/opt/lookddak/pgbouncer/pgbouncer.ini` | Dev PgBouncer 트랜잭션 풀 설정 |
-| `pgbouncer/pg_hba.conf` | `/opt/lookddak/pgbouncer/pg_hba.conf` | 앱 SCRAM 인증 및 관리 콘솔 TCP 차단 |
-| `pgbouncer/pg_ident.conf` | `/opt/lookddak/pgbouncer/pg_ident.conf` | 컨테이너 내부 관리 사용자 peer 매핑 |
+| `../migration/postgres/rehearsal/ec2-runtime/pgbouncer/pgbouncer.ini` | `/opt/lookddak/pgbouncer/pgbouncer.ini` | Dev PgBouncer 트랜잭션 풀 설정 |
+| `../migration/postgres/rehearsal/ec2-runtime/pgbouncer/pg_hba.conf` | `/opt/lookddak/pgbouncer/pg_hba.conf` | 앱 SCRAM 인증 및 관리 콘솔 TCP 차단 |
+| `../migration/postgres/rehearsal/ec2-runtime/pgbouncer/pg_ident.conf` | `/opt/lookddak/pgbouncer/pg_ident.conf` | 컨테이너 내부 관리 사용자 peer 매핑 |
 | `nginx/conf.d.dev/default.conf` | `/opt/lookddak/nginx/conf.d.dev/default.conf` | dev 서버 Nginx 설정 |
 | `systemd/docker-alert.service` | `/etc/systemd/system/docker-alert.service` | `docker-alert.sh` 상시 실행 (systemd) |
 
@@ -44,8 +44,8 @@ EC2는 Terraform으로 관리하지만, **서버 안의 파일은 Terraform 관�
 |---|---|---|
 | `scripts/load-parameters-dev.sh` | `/opt/lookddak/scripts/load-parameters.sh` (**이 이름으로 복사**) | Parameter Store 경로가 `/lookddak/dev/...` |
 | `docker-compose.dev.yaml` | `/opt/lookddak/docker-compose.dev.yaml` | 아래 덮어쓰기 내용 |
-| `pgbouncer/*` | `/opt/lookddak/pgbouncer/*` | Dev FastAPI 앞의 PgBouncer 설정 (`userlist.txt` 제외) |
-| `scripts/prepare-pgbouncer.sh` | `/opt/lookddak/scripts/prepare-pgbouncer.sh` | PgBouncer 인증 파일 생성 및 고정 이미지 준비 |
+| `../migration/postgres/rehearsal/ec2-runtime/pgbouncer/*` | `/opt/lookddak/pgbouncer/*` | Dev FastAPI 앞의 PgBouncer 설정 (`userlist.txt` 제외) |
+| `../migration/postgres/rehearsal/automation/prepare-pgbouncer.sh` | `/opt/lookddak/scripts/prepare-pgbouncer.sh` | PgBouncer 인증 파일 생성 및 고정 이미지 준비 |
 | `nginx/conf.d.dev/default.conf` | `/opt/lookddak/nginx/conf.d.dev/default.conf` | 도메인 `dev.lookddak.com`, www 리다이렉트 없음 |
 
 - `load-parameters-dev.sh`를 `load-parameters.sh` 이름으로 복사하므로 `bootstrap.sh`, `deploy.sh`는 prod와 같은 파일을 그대로 사용합니다.
