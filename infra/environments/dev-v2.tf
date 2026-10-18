@@ -151,9 +151,9 @@ variable "dev_v2_spring_tasks_enabled" {
 }
 
 variable "dev_v2_fastapi_tasks_enabled" {
-  description = "Run V2 dev FastAPI tasks after PostgreSQL switchover preparation is complete"
+  description = "Run V2 dev FastAPI tasks after the PostgreSQL switchover is complete"
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "dev_v2_task_definition_arns" {
