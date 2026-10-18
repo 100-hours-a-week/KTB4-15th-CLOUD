@@ -75,16 +75,18 @@ locals {
         TZ                                = "Asia/Seoul"
       }
       secrets = {
-        DATABASE_URL                   = "${local.ssm}/v2/postgresql/app/database-url"
-        CHECKPOINT_DSN                 = "${local.ssm}/v2/postgresql/app/checkpoint-dsn"
-        INTERNAL_API_KEY               = "${local.ssm}/internal/ai-api-key"
-        RUNWARE_VTON_API_KEY           = "${local.ssm}/fastapi/runware-vton-api-key"
-        RUNWARE_LLM_API_KEY            = "${local.ssm}/fastapi/runware-llm-api-key"
-        OPENAI_API_KEY                 = "${local.ssm}/fastapi/openAI-api-key"
-        BODY_IMAGE_REMOTE_URL          = "${local.ssm}/fastapi/body-image-validation/url"
-        BODY_IMAGE_REMOTE_PROXY_KEY    = "${local.ssm}/fastapi/body-image-validation/proxy-key"
-        BODY_IMAGE_REMOTE_PROXY_SECRET = "${local.ssm}/fastapi/body-image-validation/proxy-secret"
-        BODY_IMAGE_REMOTE_API_KEY      = "${local.ssm}/fastapi/body-image-validation/api-key"
+        DATABASE_URL                        = "${local.ssm}/v2/postgresql/app/database-url"
+        CHECKPOINT_DSN                      = "${local.ssm}/v2/postgresql/app/checkpoint-dsn"
+        INTERNAL_API_KEY                    = "${local.ssm}/internal/ai-api-key"
+        RUNWARE_VTON_API_KEY                = "${local.ssm}/fastapi/runware-vton-api-key"
+        RUNWARE_LLM_API_KEY                 = "${local.ssm}/fastapi/runware-llm-api-key"
+        OPENAI_API_KEY                      = "${local.ssm}/fastapi/openAI-api-key"
+        WEBHOOK_TOKEN                       = "${local.ssm}/fastapi/webhook-token"
+        VIRTUAL_FITTING_RUNWARE_WEBHOOK_URL = "${local.ssm}/fastapi/virtual-fitting-runware-webhook-url"
+        BODY_IMAGE_REMOTE_URL               = "${local.ssm}/fastapi/body-image-validation/url"
+        BODY_IMAGE_REMOTE_PROXY_KEY         = "${local.ssm}/fastapi/body-image-validation/proxy-key"
+        BODY_IMAGE_REMOTE_PROXY_SECRET      = "${local.ssm}/fastapi/body-image-validation/proxy-secret"
+        BODY_IMAGE_REMOTE_API_KEY           = "${local.ssm}/fastapi/body-image-validation/api-key"
       }
       port_mappings = [{ name = "fastapi-http", container_port = 8000 }]
 
