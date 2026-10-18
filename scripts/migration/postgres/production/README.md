@@ -38,3 +38,12 @@ sudo POSTGRES_BIND_IP=10.20.1.203 \
 ```
 
 전환 중 검증에 실패하면 `.env`와 FastAPI를 기존 PostgreSQL 직결 상태로 자동 복구한다.
+
+V1의 운영 스키마를 V2 RDS에 데이터 없이 준비하고 공통 계정 권한을 적용할 때는
+다음 순서로 실행한다. `products_backup_*` 테이블은 제외하며 논리 복제는 시작하지 않는다.
+
+```bash
+sudo /opt/lookddak/scripts/migration/postgres/production/automation/prepare-rds-schema.py check
+sudo /opt/lookddak/scripts/migration/postgres/production/automation/prepare-rds-schema.py apply
+sudo /opt/lookddak/scripts/migration/postgres/production/automation/prepare-rds-schema.py verify
+```
