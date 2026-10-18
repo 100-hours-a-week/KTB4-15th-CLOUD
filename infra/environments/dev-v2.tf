@@ -142,10 +142,12 @@ variable "dev_v2_create_services" {
   default     = true
 }
 
+# 2026-10-18: Spring revision이 V1 dev 구 DB를 가리키는 spring:2로 바뀌어(spring_mysql_target = "v1")
+# V2 Dev MySQL 복제 상태와 관계없이 split-brain 없이 실행할 수 있다.
 variable "dev_v2_spring_tasks_enabled" {
-  description = "Run V2 dev Spring tasks after MySQL replication is safe for application writes"
+  description = "Run V2 dev Spring tasks (Spring uses the V1 dev MySQL while spring_mysql_target = v1)"
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "dev_v2_fastapi_tasks_enabled" {
