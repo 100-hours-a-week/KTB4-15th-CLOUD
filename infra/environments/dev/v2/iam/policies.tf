@@ -225,6 +225,44 @@ resource "aws_iam_role_policy_attachment" "fastapi_sqs_fitting" {
 }
 
 # ---------------------------------------------------------------
+# Shared local MQ test policy
+# - Covers the complete BE -> AI -> BE flow across the three dev queues.
+# - PurgeQueue and all non-SQS permissions are intentionally excluded.
+# ---------------------------------------------------------------
+resource "aws_iam_policy" "mq_local_test" {
+  name        = "lookddak-dev-v2-mq-local-test"
+  description = "Test the complete LookDDak V2 dev fitting SQS flow from local environments"
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Sid = "TestFittingMessageFlow"
+      Action = [
+        "sqs:GetQueueUrl",
+        "sqs:GetQueueAttributes",
+        "sqs:SendMessage",
+        "sqs:ReceiveMessage",
+        "sqs:DeleteMessage",
+        "sqs:ChangeMessageVisibility",
+      ]
+      Effect   = "Allow"
+      Resource = values(var.sqs_queue_arns)
+    }]
+  })
+
+  tags = {
+    Component   = "sqs"
+    Environment = "dev"
+    Purpose     = "local-mq-test"
+    Version     = "v2"
+  }
+}
+
+resource "aws_iam_role_policy_attachment" "mq_local_test" {
+  role       = aws_iam_role.mq_local_test.name
+  policy_arn = aws_iam_policy.mq_local_test.arn
+}
+
+# ---------------------------------------------------------------
 # Crawler Scheduler policy
 # - The crawler Task Definition is created in a later step.
 # - PassRole is limited to the crawler Task Role and Execution Role.

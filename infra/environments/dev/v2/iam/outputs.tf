@@ -27,3 +27,13 @@ output "crawler_scheduler_role_name" {
   description = "V2 Crawler EventBridge Scheduler Role 이름"
   value       = aws_iam_role.crawler_scheduler.name
 }
+
+output "mq_local_test_role_arn" {
+  description = "Shared IAM Role ARN for BE and AI local V2 dev MQ testing"
+  value       = aws_iam_role.mq_local_test.arn
+}
+
+output "mq_local_test_role_name" {
+  description = "Shared IAM Role name for BE and AI local V2 dev MQ testing"
+  value       = aws_iam_role.mq_local_test.name
+}
