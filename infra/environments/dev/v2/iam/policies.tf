@@ -257,8 +257,8 @@ resource "aws_iam_policy" "mq_local_test" {
   }
 }
 
-resource "aws_iam_role_policy_attachment" "mq_local_test" {
-  role       = aws_iam_role.mq_local_test.name
+resource "aws_iam_user_policy_attachment" "mq_local_test" {
+  user       = aws_iam_user.mq_local_test.name
   policy_arn = aws_iam_policy.mq_local_test.arn
 }
 

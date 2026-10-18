@@ -16,13 +16,3 @@ variable "sqs_queue_arns" {
     be-fitting-response = string
   })
 }
-
-variable "mq_test_trusted_user_names" {
-  description = "IAM users allowed to assume the shared V2 dev MQ local test role"
-  type        = set(string)
-
-  validation {
-    condition     = length(var.mq_test_trusted_user_names) > 0
-    error_message = "mq_test_trusted_user_names must contain at least one IAM user name."
-  }
-}
