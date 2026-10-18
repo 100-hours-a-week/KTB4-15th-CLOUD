@@ -6,7 +6,7 @@
   "containerDefinitions": [
     {
       "name": "nextjs",
-      "image": "686496667254.dkr.ecr.ap-northeast-2.amazonaws.com/lookddak-nextjs@sha256:REPLACED_BY_CI",
+      "image": "686496667254.dkr.ecr.ap-northeast-2.amazonaws.com/lookddak-nextjs@sha256:a6465c46cd1ea2c5500bbd6714112c1b031ff3cd52a264cb9ebce4d430182927",
       "essential": true,
       "environment": [
         {

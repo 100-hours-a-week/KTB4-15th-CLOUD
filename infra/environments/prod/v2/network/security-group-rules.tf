@@ -1,23 +1,18 @@
 # ---------------------------------------------------------------
 # ALB
-# Internet -> ALB -> Next.js / Spring
+# CloudFront -> ALB -> Next.js / Spring
 # ---------------------------------------------------------------
-resource "aws_vpc_security_group_ingress_rule" "alb_http_from_internet" {
-  security_group_id = aws_security_group.v2["alb"].id
-  description       = "HTTP from internet for HTTPS redirect"
-  ip_protocol       = "tcp"
-  from_port         = 80
-  to_port           = 80
-  cidr_ipv4         = "0.0.0.0/0"
+data "aws_ec2_managed_prefix_list" "cloudfront_origin_facing" {
+  name = "com.amazonaws.global.cloudfront.origin-facing"
 }
 
-resource "aws_vpc_security_group_ingress_rule" "alb_https_from_internet" {
+resource "aws_vpc_security_group_ingress_rule" "alb_https_from_cloudfront" {
   security_group_id = aws_security_group.v2["alb"].id
-  description       = "HTTPS from internet"
+  description       = "HTTPS from CloudFront origin-facing servers"
   ip_protocol       = "tcp"
   from_port         = 443
   to_port           = 443
-  cidr_ipv4         = "0.0.0.0/0"
+  prefix_list_id    = data.aws_ec2_managed_prefix_list.cloudfront_origin_facing.id
 }
 
 resource "aws_vpc_security_group_egress_rule" "alb_to_nextjs" {

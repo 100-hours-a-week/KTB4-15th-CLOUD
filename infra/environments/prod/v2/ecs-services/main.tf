@@ -30,7 +30,7 @@ module "nextjs" {
   cluster_arn         = var.cluster_arn
   cluster_name        = var.cluster_name
   task_definition_arn = lookup(var.task_definition_arns, "nextjs", null)
-  desired_count       = 2
+  desired_count       = local.effective_service_capacity["nextjs"].desired_count
 
   subnet_ids         = var.private_app_subnet_ids
   security_group_ids = [var.security_group_ids["nextjs"]]
@@ -41,8 +41,8 @@ module "nextjs" {
   service_connect_namespace_arn = aws_service_discovery_http_namespace.service_connect.arn
   service_connect_mode          = "client"
 
-  autoscaling_min_capacity = 2
-  autoscaling_max_capacity = 5
+  autoscaling_min_capacity = local.effective_service_capacity["nextjs"].min_capacity
+  autoscaling_max_capacity = local.effective_service_capacity["nextjs"].max_capacity
   cpu_target_value         = 60
   cpu_scale_out_cooldown   = 180
   cpu_scale_in_cooldown    = 300
@@ -58,7 +58,7 @@ module "spring" {
   cluster_arn            = var.cluster_arn
   cluster_name           = var.cluster_name
   task_definition_arn    = lookup(var.task_definition_arns, "spring", null)
-  desired_count          = 2
+  desired_count          = local.effective_service_capacity["spring"].desired_count
   enable_execute_command = true
 
   subnet_ids         = var.private_app_subnet_ids
@@ -73,8 +73,8 @@ module "spring" {
   service_connect_discovery_name = "spring"
   service_connect_dns_name       = "spring"
 
-  autoscaling_min_capacity = 2
-  autoscaling_max_capacity = 5
+  autoscaling_min_capacity = local.effective_service_capacity["spring"].min_capacity
+  autoscaling_max_capacity = local.effective_service_capacity["spring"].max_capacity
   cpu_target_value         = 60
   cpu_scale_out_cooldown   = 120
   cpu_scale_in_cooldown    = 300
@@ -90,7 +90,7 @@ module "fastapi" {
   cluster_arn         = var.cluster_arn
   cluster_name        = var.cluster_name
   task_definition_arn = lookup(var.task_definition_arns, "fastapi", null)
-  desired_count       = 2
+  desired_count       = local.effective_service_capacity["fastapi"].desired_count
 
   subnet_ids         = var.private_app_subnet_ids
   security_group_ids = [var.security_group_ids["fastapi"]]
@@ -103,8 +103,8 @@ module "fastapi" {
   service_connect_discovery_name = "fastapi"
   service_connect_dns_name       = "fastapi"
 
-  autoscaling_min_capacity  = 2
-  autoscaling_max_capacity  = 5
+  autoscaling_min_capacity  = local.effective_service_capacity["fastapi"].min_capacity
+  autoscaling_max_capacity  = local.effective_service_capacity["fastapi"].max_capacity
   cpu_target_value          = 70
   cpu_scale_out_cooldown    = 300
   cpu_scale_in_cooldown     = 300

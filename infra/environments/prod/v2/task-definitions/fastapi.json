@@ -6,7 +6,7 @@
   "containerDefinitions": [
     {
       "name": "fastapi",
-      "image": "686496667254.dkr.ecr.ap-northeast-2.amazonaws.com/lookddak-fastapi@sha256:REPLACED_BY_CI",
+      "image": "686496667254.dkr.ecr.ap-northeast-2.amazonaws.com/lookddak-fastapi@sha256:f4025110e493c3cb35757872f775b6b5ca8e66bda047916c4f70abf5595245b1",
       "essential": true,
       "environment": [
         {
