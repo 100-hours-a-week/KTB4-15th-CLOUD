@@ -1,3 +1,4 @@
 results/
 __pycache__/
 *.pyc
+workload/k6/*.auth
