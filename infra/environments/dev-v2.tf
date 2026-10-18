@@ -86,6 +86,7 @@ module "dev_v2_ecs_services" {
   source = "./dev/v2/ecs-services"
 
   create_services        = var.dev_v2_create_services
+  spring_tasks_enabled   = var.dev_v2_spring_tasks_enabled
   cluster_arn            = module.dev_v2_ecs_cluster.cluster_arn
   cluster_name           = module.dev_v2_ecs_cluster.cluster_name
   private_app_subnet_ids = module.dev_v2_network.private_app_subnet_ids
@@ -133,6 +134,12 @@ variable "dev_v2_create_services" {
   description = "Create the V2 dev ECS services and their Auto Scaling resources"
   type        = bool
   default     = true
+}
+
+variable "dev_v2_spring_tasks_enabled" {
+  description = "Run V2 dev Spring tasks after MySQL replication is safe for application writes"
+  type        = bool
+  default     = false
 }
 
 variable "dev_v2_task_definition_arns" {

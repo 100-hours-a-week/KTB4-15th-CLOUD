@@ -113,6 +113,12 @@ resource "aws_appautoscaling_target" "this" {
   resource_id        = "service/${var.cluster_name}/${aws_ecs_service.this[0].name}"
   scalable_dimension = "ecs:service:DesiredCount"
   service_namespace  = "ecs"
+
+  suspended_state {
+    dynamic_scaling_in_suspended  = var.autoscaling_suspended
+    dynamic_scaling_out_suspended = var.autoscaling_suspended
+    scheduled_scaling_suspended   = var.autoscaling_suspended
+  }
 }
 
 resource "aws_appautoscaling_policy" "target_tracking" {

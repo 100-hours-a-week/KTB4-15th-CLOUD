@@ -111,6 +111,12 @@ variable "autoscaling_max_capacity" {
   type        = number
 }
 
+variable "autoscaling_suspended" {
+  description = "Suspend dynamic and scheduled ECS service scaling"
+  type        = bool
+  default     = false
+}
+
 variable "cpu_target_value" {
   description = "Optional CPU target tracking percentage"
   type        = number

@@ -45,7 +45,7 @@ module "spring" {
   cluster_arn            = var.cluster_arn
   cluster_name           = var.cluster_name
   task_definition_arn    = lookup(var.task_definition_arns, "spring", null)
-  desired_count          = 1
+  desired_count          = var.spring_tasks_enabled ? 1 : 0
   enable_execute_command = true
 
   subnet_ids         = var.private_app_subnet_ids
@@ -60,8 +60,9 @@ module "spring" {
   service_connect_discovery_name = "spring"
   service_connect_dns_name       = "spring"
 
-  autoscaling_min_capacity = 1
+  autoscaling_min_capacity = var.spring_tasks_enabled ? 1 : 0
   autoscaling_max_capacity = 5
+  autoscaling_suspended    = !var.spring_tasks_enabled
   cpu_target_value         = 60
   cpu_scale_out_cooldown   = 120
   cpu_scale_in_cooldown    = 300
