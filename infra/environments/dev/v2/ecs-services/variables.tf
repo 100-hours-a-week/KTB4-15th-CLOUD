@@ -10,6 +10,12 @@ variable "spring_tasks_enabled" {
   default     = true
 }
 
+variable "fastapi_tasks_enabled" {
+  description = "Run V2 FastAPI tasks and allow their Auto Scaling policies to act"
+  type        = bool
+  default     = true
+}
+
 variable "cluster_arn" {
   description = "V2 ECS cluster ARN"
   type        = string
