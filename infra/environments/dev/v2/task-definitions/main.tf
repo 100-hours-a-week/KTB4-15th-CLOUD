@@ -36,16 +36,18 @@ locals {
       cpu    = 1024
       memory = 2048
       environment = {
-        SPRING_PROFILES_ACTIVE        = "prod"
-        AWS_REGION                    = "ap-northeast-2"
-        AWS_S3_BUCKET                 = var.images_bucket_name
-        AI_SERVER_URL                 = "http://fastapi:8000"
-        CORS_ALLOWED_ORIGINS          = "https://dev.lookddak.com,https://v2-dev.lookddak.com"
-        SENTRY_ENVIRONMENT            = "dev"
-        BE_FITTING_REQUEST_QUEUE_URL  = var.queue_urls["be-fitting-request"]
-        BE_FITTING_RESPONSE_QUEUE_URL = var.queue_urls["be-fitting-response"]
-        JAVA_TOOL_OPTIONS             = "-XX:MaxRAMPercentage=75.0 -XX:InitialRAMPercentage=25.0 -XX:MaxMetaspaceSize=192m -XX:+UseContainerSupport -Dnetworkaddress.cache.ttl=10"
-        TZ                            = "Asia/Seoul"
+        SPRING_PROFILES_ACTIVE          = "prod"
+        AWS_REGION                      = "ap-northeast-2"
+        AWS_S3_BUCKET                   = var.images_bucket_name
+        AI_SERVER_URL                   = "http://fastapi:8000"
+        CORS_ALLOWED_ORIGINS            = "https://dev.lookddak.com,https://v2-dev.lookddak.com"
+        SENTRY_ENVIRONMENT              = "dev"
+        BE_FITTING_REQUEST_QUEUE_URL    = var.queue_urls["be-fitting-request"]
+        BE_FITTING_RESPONSE_QUEUE_URL   = var.queue_urls["be-fitting-response"]
+        FITTING_OUTBOX_ENABLED          = "true"
+        FITTING_RESULT_CONSUMER_ENABLED = "true"
+        JAVA_TOOL_OPTIONS               = "-XX:MaxRAMPercentage=75.0 -XX:InitialRAMPercentage=25.0 -XX:MaxMetaspaceSize=192m -XX:+UseContainerSupport -Dnetworkaddress.cache.ttl=10"
+        TZ                              = "Asia/Seoul"
       }
       secrets = {
         DB_URL              = local.spring_db_url_parameter[var.spring_mysql_target]
