@@ -11,6 +11,20 @@ module "prod_v2_network" {
   prod_app_security_group_id = module.prod_v1_network.app_security_group_id
 }
 
+module "prod_v2_edge" {
+  source = "./prod/v2/edge"
+
+  providers = {
+    aws           = aws
+    aws.us_east_1 = aws.us_east_1
+  }
+
+  vpc_id                = module.prod_v1_network.vpc_id
+  public_subnet_ids     = module.prod_v2_network.alb_public_subnet_ids
+  alb_security_group_id = module.prod_v2_network.security_group_ids["alb"]
+  route53_zone_id       = module.shared_core.route53_zone_id
+}
+
 module "prod_v2_ecs_cluster" {
   source = "./prod/v2/ecs-cluster"
 }
@@ -55,11 +69,13 @@ module "prod_v2_ecs_services" {
   source = "./prod/v2/ecs-services"
 
   create_services        = var.prod_v2_create_services
+  activate_services      = var.prod_v2_activate_services
+  service_capacity       = var.prod_v2_service_capacity
   cluster_arn            = module.prod_v2_ecs_cluster.cluster_arn
   cluster_name           = module.prod_v2_ecs_cluster.cluster_name
   private_app_subnet_ids = module.prod_v2_network.private_app_subnet_ids
   security_group_ids     = module.prod_v2_network.security_group_ids
-  target_group_arns      = var.prod_v2_target_group_arns
+  target_group_arns      = module.prod_v2_edge.target_group_arns
   task_definition_arns   = var.prod_v2_task_definition_arns
 }
 
@@ -83,19 +99,49 @@ variable "prod_v2_postgresql_admin_password_wo" {
 variable "prod_v2_create_services" {
   description = "Create the V2 prod ECS services and their Auto Scaling resources"
   type        = bool
+  default     = true
+}
+
+variable "prod_v2_activate_services" {
+  description = "Run V2 prod tasks after MySQL and the cutover prerequisites are ready"
+  type        = bool
   default     = false
 }
 
-variable "prod_v2_target_group_arns" {
-  description = "V2 prod ALB target group ARNs keyed by nextjs and spring"
-  type        = map(string)
-  default     = {}
+variable "prod_v2_service_capacity" {
+  description = "Desired and Auto Scaling capacities applied when V2 prod services are activated"
+  type = map(object({
+    desired_count = number
+    min_capacity  = number
+    max_capacity  = number
+  }))
+  default = {
+    nextjs = {
+      desired_count = 2
+      min_capacity  = 2
+      max_capacity  = 5
+    }
+    spring = {
+      desired_count = 2
+      min_capacity  = 2
+      max_capacity  = 5
+    }
+    fastapi = {
+      desired_count = 2
+      min_capacity  = 2
+      max_capacity  = 5
+    }
+  }
 }
 
 variable "prod_v2_task_definition_arns" {
   description = "Initial registered V2 prod task definition revision ARNs keyed by nextjs, spring, and fastapi"
   type        = map(string)
-  default     = {}
+  default = {
+    nextjs  = "arn:aws:ecs:ap-northeast-2:686496667254:task-definition/lookddak-prod-v2-nextjs:1"
+    spring  = "arn:aws:ecs:ap-northeast-2:686496667254:task-definition/lookddak-prod-v2-spring:1"
+    fastapi = "arn:aws:ecs:ap-northeast-2:686496667254:task-definition/lookddak-prod-v2-fastapi:1"
+  }
 }
 
 output "prod_v2_postgresql_parameter_paths" {
@@ -116,6 +162,21 @@ output "prod_v2_ecs_cluster_name" {
 output "prod_v2_service_connect_namespace_arn" {
   description = "V2 prod Service Connect namespace ARN"
   value       = module.prod_v2_ecs_services.service_connect_namespace_arn
+}
+
+output "prod_v2_test_domain_name" {
+  description = "V2 prod validation hostname routed to CloudFront"
+  value       = module.prod_v2_edge.test_domain_name
+}
+
+output "prod_v2_origin_domain_name" {
+  description = "V2 prod CloudFront origin hostname routed to the ALB"
+  value       = module.prod_v2_edge.origin_domain_name
+}
+
+output "prod_v2_cloudfront_distribution_id" {
+  description = "V2 prod CloudFront distribution ID"
+  value       = module.prod_v2_edge.cloudfront_distribution_id
 }
 
 output "prod_v2_sqs_queue_urls" {

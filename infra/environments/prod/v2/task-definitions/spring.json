@@ -6,7 +6,7 @@
   "containerDefinitions": [
     {
       "name": "spring",
-      "image": "686496667254.dkr.ecr.ap-northeast-2.amazonaws.com/lookddak-spring@sha256:REPLACED_BY_CI",
+      "image": "686496667254.dkr.ecr.ap-northeast-2.amazonaws.com/lookddak-spring@sha256:6251e33db2fe801acc698fbad00e3cf537b19c0c4c72784e45e469fed8dea0c9",
       "essential": true,
       "environment": [
         {
@@ -27,7 +27,7 @@
         },
         {
           "name": "CORS_ALLOWED_ORIGINS",
-          "value": "https://lookddak.com"
+          "value": "https://lookddak.com,https://v2-prod.lookddak.com"
         },
         {
           "name": "SENTRY_ENVIRONMENT",

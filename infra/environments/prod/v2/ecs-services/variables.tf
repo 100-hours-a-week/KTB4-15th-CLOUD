@@ -4,6 +4,39 @@ variable "create_services" {
   default     = false
 }
 
+variable "activate_services" {
+  description = "Run V2 prod tasks and enforce the configured minimum capacity"
+  type        = bool
+  default     = false
+}
+
+variable "service_capacity" {
+  description = "Desired and Auto Scaling capacities used after V2 prod services are activated"
+  type = map(object({
+    desired_count = number
+    min_capacity  = number
+    max_capacity  = number
+  }))
+
+  validation {
+    condition = alltrue([
+      for service in ["nextjs", "spring", "fastapi"] :
+      contains(keys(var.service_capacity), service)
+    ])
+    error_message = "service_capacity must include nextjs, spring, and fastapi."
+  }
+
+  validation {
+    condition = alltrue([
+      for capacity in values(var.service_capacity) :
+      capacity.desired_count >= capacity.min_capacity &&
+      capacity.min_capacity >= 0 &&
+      capacity.max_capacity >= capacity.min_capacity
+    ])
+    error_message = "Each desired count must be at least min_capacity, and max_capacity must be at least min_capacity."
+  }
+}
+
 variable "cluster_arn" {
   description = "V2 prod ECS cluster ARN"
   type        = string
