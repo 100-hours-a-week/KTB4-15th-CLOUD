@@ -12,6 +12,7 @@ RUN_ID="${2:-}"
 RATE="${PGBENCH_RATE:-5}"
 DURATION="${PGBENCH_DURATION_SECONDS:-600}"
 CLIENTS="${PGBENCH_CLIENTS:-2}"
+readonly PARAMETER_LOADER="${APP_DIR}/scripts/load-parameters.sh"
 
 usage() {
   printf '사용법: %s {prepare|container-start|start|status|stop|finish} <작업-ID>\n' "$(basename "$0")"
@@ -23,7 +24,7 @@ case "$ACTION" in
 esac
 require_run_id "$RUN_ID"
 require_root
-require_commands aws docker flock grep
+require_commands aws docker flock grep seq sleep
 
 RESULT_DIR="${RESULT_ROOT}/${RUN_ID}"
 PID_FILE="/results/${RUN_ID}/pgbench.pid"
@@ -47,8 +48,21 @@ fi
 
 if [[ "$ACTION" == "container-start" ]]; then
   acquire_migration_lock
+  test -f "$PARAMETER_LOADER" \
+    || die "런타임 Parameter Store 로더가 없습니다: $PARAMETER_LOADER"
+  export AWS_REGION
+  # shellcheck source=/dev/null
+  source "$PARAMETER_LOADER"
+  load_runtime_parameters
+  trap cleanup_runtime_parameters EXIT
   app_compose --profile migration up -d --no-deps pgbench
+  for _ in $(seq 1 30); do
+    [[ "$(container_health lookddak-pgbench 2>/dev/null || true)" == "healthy" ]] && break
+    sleep 1
+  done
   require_healthy lookddak-pgbench
+  cleanup_runtime_parameters
+  trap - EXIT
   log "PGBENCH_CONTAINER_READY=no workload started"
   exit 0
 fi

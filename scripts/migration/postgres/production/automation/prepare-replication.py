@@ -37,13 +37,13 @@ def protect_logs(conn):
         require(conn.execute("SHOW pg_stat_statements.track").fetchone()[0] == 'none', 'Query statistics protection failed')
 
 def tables_metadata(conn):
-    rows = conn.execute("SELECT n.nspname,c.relname,c.relreplident,c.relrowsecurity,EXISTS(SELECT 1 FROM pg_index i WHERE i.indrelid=c.oid AND i.indisprimary),has_table_privilege('lookddak_migration',c.oid,'SELECT'),has_schema_privilege('lookddak_migration',n.oid,'USAGE') FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname IN ('public','langgraph') AND c.relkind IN ('r','p') ORDER BY 1,2").fetchall()
+    rows = conn.execute("SELECT n.nspname,c.relname,c.relreplident,c.relrowsecurity,EXISTS(SELECT 1 FROM pg_index i WHERE i.indrelid=c.oid AND i.indisprimary),has_table_privilege('lookddak_migration',c.oid,'SELECT'),has_schema_privilege('lookddak_migration',n.oid,'USAGE') FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname IN ('public','langgraph') AND c.relkind IN ('r','p') AND NOT (n.nspname='public' AND c.relname LIKE 'products\\_backup\\_%' ESCAPE '\\') ORDER BY 1,2").fetchall()
     require(sorted((r[0],r[1]) for r in rows) == sorted(TABLES), 'The configured replication table scope has changed')
     for r in rows:
         require(not r[3], 'Row security needs review before replication')
         require(r[4] or r[2] in ('f','i'), 'A table lacks usable replica identity')
         require(r[5] and r[6], 'The migration role lacks SELECT or schema USAGE')
-    columns = conn.execute("SELECT n.nspname,c.relname,a.attname,format_type(a.atttypid,a.atttypmod),a.attnotnull,a.attgenerated FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace JOIN pg_attribute a ON a.attrelid=c.oid WHERE n.nspname IN ('public','langgraph') AND c.relkind IN ('r','p') AND a.attnum>0 AND NOT a.attisdropped ORDER BY 1,2,a.attnum").fetchall()
+    columns = conn.execute("SELECT n.nspname,c.relname,a.attname,format_type(a.atttypid,a.atttypmod),a.attnotnull,a.attgenerated FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace JOIN pg_attribute a ON a.attrelid=c.oid WHERE n.nspname IN ('public','langgraph') AND c.relkind IN ('r','p') AND NOT (n.nspname='public' AND c.relname LIKE 'products\\_backup\\_%' ESCAPE '\\') AND a.attnum>0 AND NOT a.attisdropped ORDER BY 1,2,a.attnum").fetchall()
     return rows, columns
 
 def create_publication(conn, name):
