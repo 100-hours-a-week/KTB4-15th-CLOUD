@@ -44,9 +44,10 @@ module "dev_v2_sqs" {
 module "dev_v2_iam" {
   source = "./dev/v2/iam"
 
-  ecs_cluster_arn = module.dev_v2_ecs_cluster.cluster_arn
-  log_group_arns  = values(module.dev_v2_logging.log_group_arns)
-  sqs_queue_arns  = module.dev_v2_sqs.queue_arns
+  ecs_cluster_arn            = module.dev_v2_ecs_cluster.cluster_arn
+  log_group_arns             = values(module.dev_v2_logging.log_group_arns)
+  sqs_queue_arns             = module.dev_v2_sqs.queue_arns
+  mq_test_trusted_user_names = ["ktb15", "lookddak-ai-local-test"]
 }
 
 module "dev_v2_database" {
@@ -202,6 +203,11 @@ output "dev_v2_sqs_task_role_arns" {
     spring  = module.dev_v2_iam.task_role_arns["spring"]
     fastapi = module.dev_v2_iam.task_role_arns["fastapi"]
   }
+}
+
+output "dev_v2_mq_local_test_role_arn" {
+  description = "IAM Role ARN for BE and AI developers to test the V2 dev SQS flow locally"
+  value       = module.dev_v2_iam.mq_local_test_role_arn
 }
 
 output "dev_v2_task_definition_template_s3_keys" {
