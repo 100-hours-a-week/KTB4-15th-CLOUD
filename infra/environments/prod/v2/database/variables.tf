@@ -31,8 +31,3 @@ variable "mysql_security_group_id" {
   description = "V2 Prod MySQL security group ID"
   type        = string
 }
-
-variable "v1_mysql_identifier" {
-  description = "V1 prod RDS MySQL identifier (read replica source)"
-  type        = string
-}

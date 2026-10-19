@@ -6,10 +6,9 @@
 module "prod_v2_network" {
   source = "./prod/v2/network"
 
-  vpc_id                       = module.prod_v1_network.vpc_id
-  existing_public_subnet_id    = module.prod_v1_network.public_subnet_ids[0]
-  prod_app_security_group_id   = module.prod_v1_network.app_security_group_id
-  prod_mysql_security_group_id = module.prod_v1_network.db_security_group_id
+  vpc_id                     = module.prod_v1_network.vpc_id
+  existing_public_subnet_id  = module.prod_v1_network.public_subnet_ids[0]
+  prod_app_security_group_id = module.prod_v1_network.app_security_group_id
 }
 
 module "prod_v2_edge" {
@@ -53,7 +52,6 @@ module "prod_v2_database" {
   db_subnet_ids                = module.prod_v1_network.db_subnet_ids
   postgresql_security_group_id = module.prod_v2_network.security_group_ids["postgresql"]
   mysql_security_group_id      = module.prod_v2_network.security_group_ids["mysql"]
-  v1_mysql_identifier          = module.prod_v1_database.mysql_identifier
 
   read_admin_password_from_ssm = var.prod_v2_postgresql_read_admin_password_from_ssm
   admin_password_wo            = var.prod_v2_postgresql_admin_password_wo
