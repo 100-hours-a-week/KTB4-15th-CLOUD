@@ -37,7 +37,7 @@ module "mysql" {
   backup_retention_period  = 7
   backup_window            = "18:00-18:30"
   maintenance_window       = "sun:19:00-sun:19:30"
-  deletion_protection      = true
+  deletion_protection      = false # 2026-10-19: V2 prod MySQL 컷오버 완료, 삭제 전 해제 (최종 스냅샷 lookddak-prod-mysql-final-20261019)
   skip_final_snapshot      = true
   delete_automated_backups = true
 }
