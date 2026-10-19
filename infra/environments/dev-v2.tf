@@ -55,7 +55,6 @@ module "dev_v2_database" {
   db_subnet_ids                = module.dev_v1_network.db_subnet_ids
   postgresql_security_group_id = module.dev_v2_network.security_group_ids["postgresql"]
   mysql_security_group_id      = module.dev_v2_network.security_group_ids["mysql"]
-  v1_mysql_identifier          = module.dev_v1_database.mysql_identifier
 
   read_admin_password_from_ssm = var.dev_v2_postgresql_read_admin_password_from_ssm
   admin_password_wo            = var.dev_v2_postgresql_admin_password_wo
@@ -81,11 +80,6 @@ module "dev_v2_task_definitions" {
   log_group_names         = module.dev_v2_logging.log_group_names
   images_bucket_name      = module.dev_s3.images_bucket_name
 
-  # 2026-10-18: V2 Spring이 컷오버 전 V2 Dev MySQL에 직접 써서 split-brain이 생겨 v1으로 돌렸다.
-  # 2026-10-19: V2 Dev MySQL 재구축 완료. 컷오버 후 쓰기 대상(신 DB)에 붙도록 v2로 바꾼다.
-  # Spring은 0(dev_v2_spring_tasks_enabled = false)이며, 컷오버 전에는 켜지 않는다.
-  # 롤백: Spring 0 -> "v1" -> DB 롤백 -> Spring 켜기
-  spring_mysql_target = "v2"
 }
 
 module "dev_v2_ecs_services" {
@@ -143,8 +137,7 @@ variable "dev_v2_create_services" {
   default     = true
 }
 
-# 2026-10-19: MySQL 컷오버 완료(쓰기 대상 = V2 Dev MySQL). spring_mysql_target = "v2" revision(spring:6)으로 다시 켠다.
-# 롤백 시: false(Spring 0) -> spring_mysql_target = "v1" -> cutover.sh로 구 DB 전환 -> true
+# 2026-10-19: MySQL 컷오버 완료(쓰기 대상 = V2 Dev MySQL) 후 다시 켰다 (spring:6).
 variable "dev_v2_spring_tasks_enabled" {
   description = "Run V2 dev Spring tasks (false clamps the service to 0 through Auto Scaling min/max)"
   type        = bool

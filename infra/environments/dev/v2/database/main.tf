@@ -105,13 +105,27 @@ module "postgresql" {
 # - dev rebuild (2026-10-19): V2 Spring wrote to this DB directly while read_only = 0 (split-brain).
 #   1) mysql_enabled = false -> apply (delete, #199)  2) mysql_enabled = true -> apply (new read replica)
 #   then steps 2)-4) above (start position mysql-bin-changelog.002235:158).
-#   read_only = 0 again for the dev cutover rehearsals. ProxySQL is not the only writer:
-#   keep V2 ECS Spring on the old DB (spring_mysql_target = "v1") until the cutover.
+#   read_only = 0 again for the dev cutover rehearsals.
+# - dev cutover (2026-10-19): this DB is the write target. The old DB (lookddak-dev-mysql) was deleted
+#   after a final snapshot, so the read-replica source is gone (replicate_source_db removed).
+#   Recreating this DB (mysql_enabled false -> true) now needs a snapshot restore, not a replica.
 # ---------------------------------------------------------------
 locals {
   mysql_enabled   = true  # false: V2 MySQL deleted, true: created
-  mysql_promote   = true  # true: promoted to a standalone instance (start position recorded before promotion)
-  mysql_read_only = false # false: writes allowed (dev cutover rehearsals; replication threads ignore read_only)
+  mysql_read_only = false # false: writes allowed (write target since the 2026-10-19 cutover)
+}
+
+# Created by the old DB module (lookddak-dev-db-subnet-group) and inherited by the read replica.
+# Moved here when the old DB was deleted (root main.tf moved block). Same values, no change.
+resource "aws_db_subnet_group" "mysql" {
+  name        = "lookddak-dev-db-subnet-group"
+  description = "LookDDak dev RDS private subnets"
+  subnet_ids  = var.db_subnet_ids
+
+  tags = {
+    Name        = "lookddak-dev-db-subnet-group"
+    Environment = "dev"
+  }
 }
 
 moved {
@@ -126,10 +140,7 @@ module "mysql" {
   name_prefix = "lookddak-dev-v2"
   environment = "dev"
 
-  # Read replica of the existing dev RDS. Becomes standalone when mysql_promote = true.
-  replicate_source_db = local.mysql_promote ? null : var.v1_mysql_identifier
-
-  # Same-region replicas use the source Subnet Group (lookddak-dev-db-subnet-group).
+  # Uses lookddak-dev-db-subnet-group (aws_db_subnet_group.mysql above), inherited from the old DB.
   create_subnet_group = false
   security_group_ids  = [var.mysql_security_group_id]
   availability_zone   = "ap-northeast-2a"

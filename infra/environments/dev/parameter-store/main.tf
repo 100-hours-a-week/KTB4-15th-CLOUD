@@ -41,24 +41,6 @@ resource "aws_ssm_parameter" "rds_app_username" {
   }
 }
 
-# V2 dev Spring(ECS)이 V1 dev 구 DB에 연결할 때 쓰는 JDBC URL.
-# V1 EC2는 host/port/database로 직접 조합하므로 이 값을 쓰지 않는다.
-# 경로를 rds/app/ 아래에 둬서 V2 Task Execution Role의 기존 읽기 권한으로 읽힌다.
-resource "aws_ssm_parameter" "rds_app_jdbc_url" {
-  name        = "/lookddak/dev/rds/app/jdbc-url"
-  description = "LookDDak dev Spring JDBC URL for the V1 dev MySQL instance"
-  type        = "String"
-  value       = "jdbc:mysql://${var.rds_host}:${var.rds_port}/${var.rds_database}?sslMode=REQUIRED&serverTimezone=UTC&characterEncoding=UTF-8"
-  tier        = "Standard"
-  data_type   = "text"
-
-  tags = {
-    CredentialType = "app"
-    Environment    = "dev"
-    Service        = "rds"
-  }
-}
-
 resource "aws_ssm_parameter" "rds_database" {
   name        = "/lookddak/dev/rds/database"
   description = "LookDDak dev RDS database name"
