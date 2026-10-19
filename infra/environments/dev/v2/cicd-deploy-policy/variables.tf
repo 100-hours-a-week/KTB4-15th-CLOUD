@@ -1,10 +1,6 @@
 variable "deploy_role_names" {
-  description = "dev 앱 배포 Role 이름 (fe, be, ai => Role 이름)"
-  type = object({
-    fe = string
-    be = string
-    ai = string
-  })
+  description = "dev 앱 배포 Role 이름 (fe, be, ai, crawler => Role 이름)"
+  type        = map(string)
 }
 
 variable "template_bucket_arn" {

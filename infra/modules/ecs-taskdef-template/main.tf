@@ -44,6 +44,9 @@ locals {
         for name in sort(keys(var.secrets)) : { name = name, valueFrom = var.secrets[name] }
       ]
     },
+    var.command == null ? {} : {
+      command = var.command
+    },
     var.health_check == null ? {} : {
       healthCheck = {
         command     = var.health_check.command
