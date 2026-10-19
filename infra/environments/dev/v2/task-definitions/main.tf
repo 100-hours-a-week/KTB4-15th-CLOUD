@@ -16,7 +16,8 @@ locals {
       cpu    = 512
       memory = 1024
       environment = {
-        API_BASE_URL = "http://spring:8080"
+        # FE serverApi가 new URL("members/me", API_BASE_URL)로 경로를 붙이므로 /api/v1/ 과 끝 슬래시가 필요하다.
+        API_BASE_URL = "http://spring:8080/api/v1/"
         NODE_ENV     = "production"
         NODE_OPTIONS = "--max-old-space-size=384"
         TZ           = "Asia/Seoul"

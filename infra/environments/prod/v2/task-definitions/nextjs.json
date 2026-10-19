@@ -11,7 +11,7 @@
       "environment": [
         {
           "name": "API_BASE_URL",
-          "value": "http://spring:8080"
+          "value": "http://spring:8080/api/v1/"
         },
         {
           "name": "NODE_ENV",
