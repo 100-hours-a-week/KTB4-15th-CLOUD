@@ -2,7 +2,7 @@
 # SecureString password parameters are intentionally not created here because
 # Parameter Store does not support value-less parameters.
 locals {
-  string_parameters = {
+  string_parameters = merge({
     admin_username = {
       name        = local.parameter_paths.admin_username
       description = "LookDDak dev V2 PostgreSQL administrator username"
@@ -39,14 +39,15 @@ locals {
       value       = local.migration_username
       credential  = "migration"
     }
+  }, local.mysql_enabled ? {
     mysql_jdbc_url = {
       name        = local.parameter_paths.mysql_jdbc_url
       description = "LookDDak dev V2 Spring JDBC URL for the promoted MySQL instance"
-      value       = "jdbc:mysql://${module.mysql.address}:3306/lookddak?sslMode=REQUIRED&serverTimezone=UTC&characterEncoding=UTF-8"
+      value       = "jdbc:mysql://${module.mysql[0].address}:3306/lookddak?sslMode=REQUIRED&serverTimezone=UTC&characterEncoding=UTF-8"
       credential  = "connection"
       service     = "mysql"
     }
-  }
+  } : {})
 }
 
 resource "aws_ssm_parameter" "postgresql" {

@@ -38,10 +38,10 @@ output "secure_parameter_arns" {
 
 output "mysql_identifier" {
   description = "V2 dev MySQL RDS identifier"
-  value       = module.mysql.identifier
+  value       = one(module.mysql[*].identifier)
 }
 
 output "mysql_address" {
   description = "V2 dev MySQL endpoint address"
-  value       = module.mysql.address
+  value       = one(module.mysql[*].address)
 }
