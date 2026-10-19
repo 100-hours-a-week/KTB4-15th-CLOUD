@@ -87,6 +87,12 @@ variable "log_region" {
   default     = "ap-northeast-2"
 }
 
+variable "command" {
+  description = "컨테이너 command (null이면 넣지 않고 이미지의 CMD를 쓴다). 예: 스케줄 작업의 실행 모드"
+  type        = list(string)
+  default     = null
+}
+
 variable "health_check" {
   description = "컨테이너 헬스 체크 (null이면 넣지 않음). 시간 단위는 초"
   type = object({

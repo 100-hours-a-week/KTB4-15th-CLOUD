@@ -4,7 +4,8 @@
 # - revision 등록은 앱 레포 CI가 한다 (템플릿 + 이미지 digest).
 # - 이 값을 바꾸고 apply하면 다음 배포부터 반영된다.
 #   실행 중인 Task를 바로 바꾸려면 현재 태그로 재배포한다.
-# - crawler는 아직 dev/v2/task-definitions/crawler.json 사용 (마지막에 옮김)
+# - crawler(가격 갱신)는 서비스가 아니라 EventBridge Scheduler가 RunTask로 실행한다.
+#   Scheduler가 family ARN으로 최신 ACTIVE revision을 실행하므로 CI는 revision 등록만 한다.
 # ---------------------------------------------------------------
 locals {
   ssm = "/lookddak/dev"
@@ -22,6 +23,7 @@ locals {
       }
       secrets       = {}
       port_mappings = [{ name = "nextjs-http", container_port = 3000 }]
+      command       = null
       health_check  = null
     }
 
@@ -51,6 +53,7 @@ locals {
         SENTRY_DSN          = "${local.ssm}/spring/sentry_dsn"
       }
       port_mappings = [{ name = "spring-http", container_port = 8080 }]
+      command       = null
       health_check  = null
     }
 
@@ -88,6 +91,7 @@ locals {
         BODY_IMAGE_REMOTE_API_KEY           = "${local.ssm}/fastapi/body-image-validation/api-key"
       }
       port_mappings = [{ name = "fastapi-http", container_port = 8000 }]
+      command       = null
 
       # V1 compose와 같은 방식: /health 라우트가 없어 8000 포트 TCP 연결만 확인한다.
       # ALB가 없어 이 헬스 체크가 배포 중 비정상 Task 판단 기준이 된다.
@@ -98,6 +102,26 @@ locals {
         retries      = 3
         start_period = 180
       }
+    }
+
+    # 가격 갱신 크롤러 (KTB4-15th-Crawler/price-refresh-crawler)
+    # - 29CM 가격 수집 → V2 PostgreSQL products.price 갱신 → 추천된 상품만 BE에 PATCH /api/v1/internal/products
+    # - BE는 Service Connect(HTTP namespace) 밖이라 ALB 주소로 호출한다.
+    # - 스펙은 기존 crawler.json 값 유지 (실측 후 조정)
+    crawler = {
+      cpu    = 1024
+      memory = 2048
+      environment = {
+        PRICE_REFRESH_BACKEND_BASE_URL = "https://v2-dev.lookddak.com"
+        TZ                             = "Asia/Seoul"
+      }
+      secrets = {
+        DATABASE_URL                            = "${local.ssm}/v2/postgresql/app/database-url"
+        PRICE_REFRESH_BACKEND_AUTH_HEADERS_JSON = "${local.ssm}/internal/price-refresh-backend-auth-headers"
+      }
+      port_mappings = []
+      command       = ["--apply"]
+      health_check  = null
     }
   }
 }
@@ -121,6 +145,7 @@ module "template" {
   secrets              = each.value.secrets
   port_mappings        = each.value.port_mappings
   log_group_name       = var.log_group_names[each.key]
+  command              = each.value.command
   health_check         = each.value.health_check
 
   tags = {

@@ -1,5 +1,5 @@
 # ---------------------------------------------------------------
-# 앱 레포(FE/BE/AI) dev CD용 GitHub Actions OIDC Role
+# 앱 레포(FE/BE/AI/Crawler) dev CD용 GitHub Actions OIDC Role
 # - prod Role(prod/v1/iam/cicd.tf)과 분리: develop 브랜치 코드가 prod 권한을 얻지 않게 한다.
 # - 신뢰 조건: 각 앱 레포의 develop·hotfix/* 브랜치 또는 develop Environment에서 실행된 워크플로만 허용
 #   · develop: 평소 dev 배포
@@ -19,9 +19,10 @@ locals {
 
   # 서비스 키 => 앱 레포, 이미지 저장소 서비스 이름
   cicd_services = {
-    fe = { repository = "KTB4-15th-FE@1344806631", ecr_service = "nextjs" }
-    be = { repository = "KTB4-15th-BE@1344807089", ecr_service = "spring" }
-    ai = { repository = "KTB4-15th-AI@1344805395", ecr_service = "fastapi" }
+    fe      = { repository = "KTB4-15th-FE@1344806631", ecr_service = "nextjs" }
+    be      = { repository = "KTB4-15th-BE@1344807089", ecr_service = "spring" }
+    ai      = { repository = "KTB4-15th-AI@1344805395", ecr_service = "fastapi" }
+    crawler = { repository = "KTB4-15th-Crawler@1372591446", ecr_service = "crawler" }
   }
 
   cicd_assume_role_policies = {
