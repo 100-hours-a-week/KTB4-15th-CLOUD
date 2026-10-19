@@ -60,6 +60,18 @@ module "dev_v2_database" {
   admin_password_wo            = var.dev_v2_postgresql_admin_password_wo
 }
 
+module "dev_v2_db_access" {
+  source = "./dev/v2/db-access"
+
+  vpc_id                       = module.dev_v1_network.vpc_id
+  subnet_id                    = module.dev_v2_network.private_app_subnet_ids[0]
+  mysql_security_group_id      = module.dev_v2_network.security_group_ids["mysql"]
+  postgresql_security_group_id = module.dev_v2_network.security_group_ids["postgresql"]
+  mysql_endpoint               = module.dev_v2_database.mysql_address
+  postgresql_endpoint          = module.dev_v2_database.rds_address
+  tunnel_user_name             = module.dev_v2_iam.mq_local_test_user_name
+}
+
 module "dev_v2_crawler" {
   source = "./dev/v2/crawler"
 
@@ -201,6 +213,26 @@ output "dev_v2_sqs_task_role_arns" {
 output "dev_v2_mq_local_test_user_arn" {
   description = "IAM User ARN for BE and AI developers to test the V2 dev SQS flow locally"
   value       = module.dev_v2_iam.mq_local_test_user_arn
+}
+
+output "dev_v2_db_access_instance_id" {
+  description = "Private EC2 instance used only for Dev RDS SSM port forwarding"
+  value       = module.dev_v2_db_access.instance_id
+}
+
+output "dev_v2_db_access_private_ip" {
+  description = "Private IP of the Dev RDS SSM port-forwarding instance"
+  value       = module.dev_v2_db_access.instance_private_ip
+}
+
+output "dev_v2_mysql_tunnel_command" {
+  description = "SSM command for the shared MQ test user to open the Dev MySQL tunnel"
+  value       = module.dev_v2_db_access.mysql_port_forward_command
+}
+
+output "dev_v2_postgresql_tunnel_command" {
+  description = "SSM command for the shared MQ test user to open the Dev PostgreSQL tunnel"
+  value       = module.dev_v2_db_access.postgresql_port_forward_command
 }
 
 output "dev_v2_task_definition_template_s3_keys" {
