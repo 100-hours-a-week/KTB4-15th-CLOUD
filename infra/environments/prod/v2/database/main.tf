@@ -106,8 +106,8 @@ module "postgresql" {
 #   so read_only must stay on until the cutover.
 # ---------------------------------------------------------------
 locals {
-  mysql_promote   = true  # true: promoted to a standalone instance (start position recorded before promotion)
-  mysql_read_only = true  # true: application writes blocked (replication threads ignore read_only)
+  mysql_promote   = true # true: promoted to a standalone instance (start position recorded before promotion)
+  mysql_read_only = true # true: application writes blocked (replication threads ignore read_only)
 }
 
 module "mysql" {
