@@ -1,7 +1,7 @@
 # ---------------------------------------------------------------
 # V2 prod security groups
 # - Rules are managed separately in security-group-rules.tf.
-# - MySQL security groups and rules are outside this work scope.
+# - MySQL: V1 MySQL zero-downtime migration target (read replica of the V1 prod RDS).
 # ---------------------------------------------------------------
 locals {
   security_groups = {
@@ -33,6 +33,11 @@ locals {
     postgresql = {
       name        = "lookddak-prod-v2-postgresql-sg"
       description = "LookDDak prod V2 PostgreSQL security group"
+      tier        = "db"
+    }
+    mysql = {
+      name        = "lookddak-prod-v2-mysql-sg"
+      description = "LookDDak prod V2 MySQL security group"
       tier        = "db"
     }
   }

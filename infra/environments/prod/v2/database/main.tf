@@ -20,6 +20,7 @@ locals {
     app_checkpoint_dsn = "/lookddak/prod/v2/postgresql/app/checkpoint-dsn"
     migration_username = "/lookddak/prod/v2/postgresql/migration/username"
     migration_password = "/lookddak/prod/v2/postgresql/migration/password"
+    mysql_jdbc_url     = "/lookddak/prod/v2/mysql/jdbc-url"
   }
 
   secure_parameter_paths = {
@@ -85,4 +86,68 @@ module "postgresql" {
   final_snapshot_identifier = "lookddak-prod-v2-postgresql-final"
 
   enabled_cloudwatch_logs_exports = ["postgresql", "upgrade"]
+}
+
+# ---------------------------------------------------------------
+# V2 prod MySQL (V1 MySQL zero-downtime migration target)
+# - Created as a same-region read replica of the V1 prod RDS (lookddak-prod-mysql).
+#   Data, engine version, DB name, master user and encryption come from the source.
+#   Snapshot start briefly pauses I/O on the Single-AZ source.
+# - Steps (same as dev, lookddak_infra/work/v1-mysql-migration/진행기록.md)
+#   0) on the source: binlog retention hours 72 (before apply)
+#   1) apply as is -> read replica
+#   2) on V2 MySQL: init-replication.sh prod stop -> record the start position
+#   3) mysql_promote = true -> apply (promote only; no other RDS change in the same apply)
+#   4) init-replication.sh prod start -> external replication from the source
+#   5) mysql_read_only = false right before the cutover (separate apply)
+# - read_only = 1 is pinned because the replica default (on only while it is a replica)
+#   would open writes at promotion. V2 prod Spring already points at this DB's JDBC URL,
+#   so read_only must stay on until the cutover.
+# ---------------------------------------------------------------
+locals {
+  mysql_promote   = false # true: promoted to a standalone instance (start position recorded before promotion)
+  mysql_read_only = true  # true: application writes blocked (replication threads ignore read_only)
+}
+
+module "mysql" {
+  source = "../../../../modules/rds-mysql"
+
+  name_prefix = "lookddak-prod-v2"
+  environment = "prod"
+
+  # Read replica of the V1 prod RDS. Becomes standalone when mysql_promote = true.
+  replicate_source_db = local.mysql_promote ? null : var.v1_mysql_identifier
+
+  # Same-region replicas use the source Subnet Group (lookddak-prod-db-subnet-group).
+  # When the V1 prod RDS is deleted, move that Subnet Group here (see dev cutover, #216).
+  create_subnet_group = false
+  security_group_ids  = [var.mysql_security_group_id]
+  multi_az            = true
+
+  parameter_group_family      = "mysql8.4"
+  parameter_group_description = "LookDDak prod V2 MySQL 8.4 parameter group"
+  parameters = [
+    # Same values as the V1 prod RDS (prod/v1/database)
+    { name = "character_set_server", value = "utf8mb4" },
+    { name = "collation_server", value = "utf8mb4_0900_ai_ci" },
+    { name = "log_output", value = "FILE" },
+    { name = "long_query_time", value = "2" },
+    { name = "require_secure_transport", value = "1" },
+    { name = "slow_query_log", value = "1" },
+    { name = "time_zone", value = "UTC" },
+    # Block application writes until the cutover
+    { name = "read_only", value = local.mysql_read_only ? "1" : "0" },
+  ]
+
+  instance_class        = "db.t4g.medium"
+  allocated_storage     = 20
+  max_allocated_storage = 50
+
+  # Keep automated backups so binlog stays on after promotion (rollback replication source).
+  backup_retention_period  = 7
+  backup_window            = "18:00-18:30"
+  maintenance_window       = "sun:19:00-sun:19:30"
+  deletion_protection      = true
+  skip_final_snapshot      = true
+  delete_automated_backups = true
 }

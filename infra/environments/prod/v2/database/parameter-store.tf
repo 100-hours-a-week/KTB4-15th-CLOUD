@@ -42,8 +42,21 @@ locals {
   }
 }
 
+# V2 MySQL JDBC URL read by V2 prod Spring (task definition DB_URL).
+locals {
+  mysql_string_parameters = {
+    mysql_jdbc_url = {
+      name        = local.parameter_paths.mysql_jdbc_url
+      description = "LookDDak prod V2 Spring JDBC URL for the V2 MySQL instance"
+      value       = "jdbc:mysql://${module.mysql.address}:3306/lookddak?sslMode=REQUIRED&serverTimezone=UTC&characterEncoding=UTF-8"
+      credential  = "connection"
+      service     = "mysql"
+    }
+  }
+}
+
 resource "aws_ssm_parameter" "postgresql" {
-  for_each = local.string_parameters
+  for_each = merge(local.string_parameters, local.mysql_string_parameters)
 
   name        = each.value.name
   description = each.value.description
@@ -55,7 +68,7 @@ resource "aws_ssm_parameter" "postgresql" {
   tags = {
     CredentialType = each.value.credential
     Environment    = "prod"
-    Service        = "postgresql"
+    Service        = try(each.value.service, "postgresql")
     Version        = "v2"
   }
 }
