@@ -9,13 +9,6 @@
 locals {
   ssm = "/lookddak/dev"
 
-  # V2 Spring이 쓰는 MySQL JDBC URL (var.spring_mysql_target). 둘 다 SSM에서 읽는다.
-  # - v1: V1 dev 구 DB(lookddak-dev-mysql) → /lookddak/dev/rds/app/jdbc-url
-  # - v2: V2 Dev MySQL                    → /lookddak/dev/v2/mysql/jdbc-url
-  spring_db_url_parameter = {
-    v1 = "${local.ssm}/rds/app/jdbc-url"
-    v2 = "${local.ssm}/v2/mysql/jdbc-url"
-  }
 
   services = {
     nextjs = {
@@ -50,7 +43,7 @@ locals {
         TZ                              = "Asia/Seoul"
       }
       secrets = {
-        DB_URL              = local.spring_db_url_parameter[var.spring_mysql_target]
+        DB_URL              = "${local.ssm}/v2/mysql/jdbc-url"
         DB_USERNAME         = "${local.ssm}/rds/app/username"
         DB_PASSWORD         = "${local.ssm}/rds/app/password"
         JWT_SECRET          = "${local.ssm}/spring/jwt-secret"
