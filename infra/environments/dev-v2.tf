@@ -143,14 +143,12 @@ variable "dev_v2_create_services" {
   default     = true
 }
 
-# 2026-10-18: Spring revision이 V1 dev 구 DB를 가리키는 spring:2로 바뀌어(spring_mysql_target = "v1")
-# V2 Dev MySQL 복제 상태와 관계없이 split-brain 없이 실행할 수 있다.
-# 2026-10-19: MySQL 컷오버 준비. V2 Spring이 구 DB에 직접 연결돼 있으면 cutover.sh [2]가
-# 진행되지 않으므로 0으로 내린 뒤 spring_mysql_target = "v2" revision을 등록하고, 컷오버 후 다시 켠다.
+# 2026-10-19: MySQL 컷오버 완료(쓰기 대상 = V2 Dev MySQL). spring_mysql_target = "v2" revision(spring:6)으로 다시 켠다.
+# 롤백 시: false(Spring 0) -> spring_mysql_target = "v1" -> cutover.sh로 구 DB 전환 -> true
 variable "dev_v2_spring_tasks_enabled" {
   description = "Run V2 dev Spring tasks (false clamps the service to 0 through Auto Scaling min/max)"
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "dev_v2_fastapi_tasks_enabled" {
