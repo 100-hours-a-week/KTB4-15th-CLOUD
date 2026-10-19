@@ -60,8 +60,10 @@ module "spring" {
   service_connect_discovery_name = "spring"
   service_connect_dns_name       = "spring"
 
+  # min/max=0 makes Application Auto Scaling clamp an already-running
+  # service to zero even though the shared ECS module ignores desired_count.
   autoscaling_min_capacity = var.spring_tasks_enabled ? 1 : 0
-  autoscaling_max_capacity = 5
+  autoscaling_max_capacity = var.spring_tasks_enabled ? 5 : 0
   autoscaling_suspended    = !var.spring_tasks_enabled
   cpu_target_value         = 60
   cpu_scale_out_cooldown   = 120
