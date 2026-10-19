@@ -104,10 +104,12 @@ module "postgresql" {
 # - read_only = 1 is pinned because the replica default (on only while it is a replica)
 #   would open writes at promotion. V2 prod Spring already points at this DB's JDBC URL,
 #   so read_only must stay on until the cutover.
+# - 2026-10-19: read_only = 0 before the cutover (cutover.sh pre-check). V2 prod Spring is off
+#   (prod_v2_activate_services = false) and V1 reaches MySQL only through ProxySQL (still the old DB).
 # ---------------------------------------------------------------
 locals {
-  mysql_promote   = true # true: promoted to a standalone instance (start position recorded before promotion)
-  mysql_read_only = true # true: application writes blocked (replication threads ignore read_only)
+  mysql_promote   = true  # true: promoted to a standalone instance (start position recorded before promotion)
+  mysql_read_only = false # false: writes allowed (cutover target; replication threads ignore read_only)
 }
 
 module "mysql" {
