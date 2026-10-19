@@ -183,6 +183,89 @@ resource "aws_vpc_security_group_ingress_rule" "v1_prod_app_from_postgresql" {
 }
 
 # ---------------------------------------------------------------
+# MySQL (V1 MySQL migration target, read replica of the V1 prod RDS)
+# - V1 prod EC2 (ProxySQL) and V2 Spring connect to it after the cutover.
+#   V2 Spring is not given access to the V1 prod RDS (single write path, dev split-brain lesson).
+# - Replication between the V1 prod RDS and V2 MySQL:
+#   forward (V1 -> V2) is opened by V2 MySQL, rollback (V2 -> V1)
+#   is opened by the V1 RDS, so each side needs its own egress rule.
+#   Terraform-managed security groups have no default egress.
+# ---------------------------------------------------------------
+resource "aws_vpc_security_group_ingress_rule" "mysql_v2_from_v1_prod_app" {
+  security_group_id            = aws_security_group.v2["mysql"].id
+  description                  = "MySQL traffic from V1 prod EC2 (ProxySQL)"
+  ip_protocol                  = "tcp"
+  from_port                    = 3306
+  to_port                      = 3306
+  referenced_security_group_id = var.prod_app_security_group_id
+}
+
+resource "aws_vpc_security_group_egress_rule" "v1_prod_app_to_mysql_v2" {
+  security_group_id            = var.prod_app_security_group_id
+  description                  = "MySQL traffic to V2 prod RDS"
+  ip_protocol                  = "tcp"
+  from_port                    = 3306
+  to_port                      = 3306
+  referenced_security_group_id = aws_security_group.v2["mysql"].id
+}
+
+resource "aws_vpc_security_group_ingress_rule" "mysql_v2_from_spring" {
+  security_group_id            = aws_security_group.v2["mysql"].id
+  description                  = "MySQL traffic from V2 Spring"
+  ip_protocol                  = "tcp"
+  from_port                    = 3306
+  to_port                      = 3306
+  referenced_security_group_id = aws_security_group.v2["spring"].id
+}
+
+resource "aws_vpc_security_group_egress_rule" "spring_to_mysql_v2" {
+  security_group_id            = aws_security_group.v2["spring"].id
+  description                  = "MySQL traffic to V2 prod RDS"
+  ip_protocol                  = "tcp"
+  from_port                    = 3306
+  to_port                      = 3306
+  referenced_security_group_id = aws_security_group.v2["mysql"].id
+}
+
+# Forward replication: V2 MySQL -> V1 prod RDS
+resource "aws_vpc_security_group_egress_rule" "mysql_v2_to_existing_mysql" {
+  security_group_id            = aws_security_group.v2["mysql"].id
+  description                  = "MySQL replication to V1 prod RDS"
+  ip_protocol                  = "tcp"
+  from_port                    = 3306
+  to_port                      = 3306
+  referenced_security_group_id = var.prod_mysql_security_group_id
+}
+
+resource "aws_vpc_security_group_ingress_rule" "existing_mysql_from_mysql_v2" {
+  security_group_id            = var.prod_mysql_security_group_id
+  description                  = "MySQL replication from V2 prod RDS"
+  ip_protocol                  = "tcp"
+  from_port                    = 3306
+  to_port                      = 3306
+  referenced_security_group_id = aws_security_group.v2["mysql"].id
+}
+
+# Rollback replication: V1 prod RDS -> V2 MySQL
+resource "aws_vpc_security_group_egress_rule" "existing_mysql_to_mysql_v2" {
+  security_group_id            = var.prod_mysql_security_group_id
+  description                  = "MySQL rollback replication to V2 prod RDS"
+  ip_protocol                  = "tcp"
+  from_port                    = 3306
+  to_port                      = 3306
+  referenced_security_group_id = aws_security_group.v2["mysql"].id
+}
+
+resource "aws_vpc_security_group_ingress_rule" "mysql_v2_from_existing_mysql" {
+  security_group_id            = aws_security_group.v2["mysql"].id
+  description                  = "MySQL rollback replication from V1 prod RDS"
+  ip_protocol                  = "tcp"
+  from_port                    = 3306
+  to_port                      = 3306
+  referenced_security_group_id = var.prod_mysql_security_group_id
+}
+
+# ---------------------------------------------------------------
 # ECS task outbound HTTPS
 # - ECR image pull, Parameter Store, KMS, SQS, and other AWS APIs
 # - FastAPI external APIs and crawler target websites
