@@ -102,15 +102,15 @@ module "postgresql" {
 # - read_only = 1 is pinned in the parameter group because the replica default
 #   (on only while it is a replica) would open writes at promotion.
 #   Set mysql_read_only = false right before the cutover.
-#   dev: kept false during cutover/rollback rehearsals (2026-10-14~). Application writes reach
-#   this DB only when ProxySQL routes to it; replication threads ignore read_only.
+# - dev rebuild (2026-10-19): V2 Spring wrote to this DB directly while read_only = 0 (split-brain).
+#   1) mysql_enabled = false -> apply (delete, #199)  2) mysql_enabled = true -> apply (new read replica)
+#   then steps 2)-4) above. read_only stays 1 until the cutover: ProxySQL is not the only
+#   writer (V2 ECS Spring), so writes are blocked on the DB itself.
 # ---------------------------------------------------------------
-# - dev rebuild (2026-10-19): V2 Spring wrote to this DB directly (split-brain).
-#   1) mysql_enabled = false -> apply (delete)  2) mysql_enabled = true -> apply (new read replica)
 locals {
-  mysql_enabled   = false # false: V2 MySQL deleted (rebuild step 1), true: created
-  mysql_promote   = true  # true: promote the read replica (after recording the start position)
-  mysql_read_only = false # false: writes allowed (kept 0 during dev cutover rehearsals; ProxySQL decides the write target)
+  mysql_enabled   = true  # false: V2 MySQL deleted, true: created
+  mysql_promote   = false # false: read replica of the existing dev RDS (step 1); true after recording the start position (step 3)
+  mysql_read_only = true  # true: block application writes until the cutover (replication threads ignore read_only)
 }
 
 moved {
