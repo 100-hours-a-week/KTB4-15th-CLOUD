@@ -81,10 +81,11 @@ module "dev_v2_task_definitions" {
   log_group_names         = module.dev_v2_logging.log_group_names
   images_bucket_name      = module.dev_s3.images_bucket_name
 
-  # 임시 (2026-10-18): V2 Spring이 V2 Dev MySQL에 직접 써서 V1과 split-brain이 생겼다
-  # (refresh_token PK 충돌로 V2 Dev MySQL 복제 SQL Thread 중단).
-  # V2 Dev MySQL 재구축과 쓰기 경로 단일화(ProxySQL 경유 등)가 끝날 때까지 V1 구 DB를 쓴다.
-  spring_mysql_target = "v1"
+  # 2026-10-18: V2 Spring이 컷오버 전 V2 Dev MySQL에 직접 써서 split-brain이 생겨 v1으로 돌렸다.
+  # 2026-10-19: V2 Dev MySQL 재구축 완료. 컷오버 후 쓰기 대상(신 DB)에 붙도록 v2로 바꾼다.
+  # Spring은 0(dev_v2_spring_tasks_enabled = false)이며, 컷오버 전에는 켜지 않는다.
+  # 롤백: Spring 0 -> "v1" -> DB 롤백 -> Spring 켜기
+  spring_mysql_target = "v2"
 }
 
 module "dev_v2_ecs_services" {
