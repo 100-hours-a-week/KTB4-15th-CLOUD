@@ -105,13 +105,22 @@ module "postgresql" {
 #   dev: kept false during cutover/rollback rehearsals (2026-10-14~). Application writes reach
 #   this DB only when ProxySQL routes to it; replication threads ignore read_only.
 # ---------------------------------------------------------------
+# - dev rebuild (2026-10-19): V2 Spring wrote to this DB directly (split-brain).
+#   1) mysql_enabled = false -> apply (delete)  2) mysql_enabled = true -> apply (new read replica)
 locals {
+  mysql_enabled   = false # false: V2 MySQL deleted (rebuild step 1), true: created
   mysql_promote   = true  # true: promote the read replica (after recording the start position)
   mysql_read_only = false # false: writes allowed (kept 0 during dev cutover rehearsals; ProxySQL decides the write target)
 }
 
+moved {
+  from = module.mysql
+  to   = module.mysql[0]
+}
+
 module "mysql" {
   source = "../../../../modules/rds-mysql"
+  count  = local.mysql_enabled ? 1 : 0
 
   name_prefix = "lookddak-dev-v2"
   environment = "dev"

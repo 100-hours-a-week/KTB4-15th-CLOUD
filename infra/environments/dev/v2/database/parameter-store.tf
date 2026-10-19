@@ -39,18 +39,22 @@ locals {
       value       = local.migration_username
       credential  = "migration"
     }
+  }
+
+  # V2 MySQL JDBC URL: only while the V2 MySQL instance exists (the value contains its endpoint).
+  mysql_string_parameters = local.mysql_enabled ? {
     mysql_jdbc_url = {
       name        = local.parameter_paths.mysql_jdbc_url
       description = "LookDDak dev V2 Spring JDBC URL for the promoted MySQL instance"
-      value       = "jdbc:mysql://${module.mysql.address}:3306/lookddak?sslMode=REQUIRED&serverTimezone=UTC&characterEncoding=UTF-8"
+      value       = "jdbc:mysql://${module.mysql[0].address}:3306/lookddak?sslMode=REQUIRED&serverTimezone=UTC&characterEncoding=UTF-8"
       credential  = "connection"
       service     = "mysql"
     }
-  }
+  } : {}
 }
 
 resource "aws_ssm_parameter" "postgresql" {
-  for_each = local.string_parameters
+  for_each = merge(local.string_parameters, local.mysql_string_parameters)
 
   name        = each.value.name
   description = each.value.description
