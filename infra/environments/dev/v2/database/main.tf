@@ -104,13 +104,14 @@ module "postgresql" {
 #   Set mysql_read_only = false right before the cutover.
 # - dev rebuild (2026-10-19): V2 Spring wrote to this DB directly while read_only = 0 (split-brain).
 #   1) mysql_enabled = false -> apply (delete, #199)  2) mysql_enabled = true -> apply (new read replica)
-#   then steps 2)-4) above. read_only stays 1 until the cutover: ProxySQL is not the only
-#   writer (V2 ECS Spring), so writes are blocked on the DB itself.
+#   then steps 2)-4) above (start position mysql-bin-changelog.002235:158).
+#   read_only = 0 again for the dev cutover rehearsals. ProxySQL is not the only writer:
+#   keep V2 ECS Spring on the old DB (spring_mysql_target = "v1") until the cutover.
 # ---------------------------------------------------------------
 locals {
   mysql_enabled   = true  # false: V2 MySQL deleted, true: created
-  mysql_promote   = false # false: read replica of the existing dev RDS (step 1); true after recording the start position (step 3)
-  mysql_read_only = true  # true: block application writes until the cutover (replication threads ignore read_only)
+  mysql_promote   = true  # true: promoted to a standalone instance (start position recorded before promotion)
+  mysql_read_only = false # false: writes allowed (dev cutover rehearsals; replication threads ignore read_only)
 }
 
 moved {
