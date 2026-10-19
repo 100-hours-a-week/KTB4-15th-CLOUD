@@ -1,5 +1,5 @@
 // PostgreSQL 전환 중 V1 Prod 읽기 요청이 끊기지 않는지 10 RPS로 관찰한다.
-// 운영 데이터를 만들지 않으며, 기존 사용자 인증정보는 읽기 전용 파일로 주입한다.
+// 기존 운영 테스트 계정으로 한 번 로그인하고 응답 쿠키를 읽기 요청에 자동 사용한다.
 
 import http from 'k6/http';
 import exec from 'k6/execution';
@@ -17,9 +17,8 @@ const RUN_ID = __ENV.RUN_ID || `prod-read-${Date.now()}`;
 const P99_MS = Number.parseInt(__ENV.P99_MS || '5000', 10);
 const PREALLOCATED_VUS = Number.parseInt(__ENV.PREALLOCATED_VUS || String(Math.max(20, RATE)), 10);
 const MAX_VUS = Number.parseInt(__ENV.MAX_VUS || String(Math.max(40, RATE * 2)), 10);
-const AUTH_KIND = (__ENV.AUTH_KIND || 'cookie').toLowerCase();
-const AUTH_SECRET_FILE = __ENV.AUTH_SECRET_FILE || '/run/secrets/k6-auth';
-const AUTH_SECRET = open(AUTH_SECRET_FILE).trim();
+const CREDENTIALS_FILE = __ENV.CREDENTIALS_FILE || '/run/secrets/k6-credentials';
+const CREDENTIALS = JSON.parse(open(CREDENTIALS_FILE));
 
 if (!READ_PATH.startsWith('/')) {
   exec.test.abort('READ_PATH는 /로 시작해야 합니다.');
@@ -30,11 +29,9 @@ if (!Number.isInteger(RATE) || RATE !== 10) {
 if (!Number.isInteger(PREALLOCATED_VUS) || !Number.isInteger(MAX_VUS) || PREALLOCATED_VUS <= 0 || MAX_VUS < PREALLOCATED_VUS) {
   exec.test.abort('PREALLOCATED_VUS와 MAX_VUS 설정을 확인하세요.');
 }
-if (!['bearer', 'cookie'].includes(AUTH_KIND)) {
-  exec.test.abort('AUTH_KIND는 bearer 또는 cookie여야 합니다.');
-}
-if (!AUTH_SECRET) {
-  exec.test.abort('인증정보 파일이 비어 있습니다.');
+if (!CREDENTIALS || typeof CREDENTIALS.email !== 'string' || !CREDENTIALS.email.trim()
+  || typeof CREDENTIALS.password !== 'string' || !CREDENTIALS.password) {
+  exec.test.abort('운영 테스트 계정 email/password를 확인하세요.');
 }
 
 export const options = {
@@ -63,24 +60,40 @@ export const options = {
 const serverErrors = new Counter('server_errors');
 const transportErrors = new Counter('transport_errors');
 
-function requestHeaders(requestId) {
-  const headers = {
-    Accept: 'application/json',
-    'X-Request-ID': requestId,
-  };
-
-  if (AUTH_KIND === 'bearer') {
-    headers.Authorization = AUTH_SECRET.startsWith('Bearer ') ? AUTH_SECRET : `Bearer ${AUTH_SECRET}`;
-  } else {
-    headers.Cookie = AUTH_SECRET;
+function cookieHeader(response) {
+  const parts = [];
+  for (const [name, values] of Object.entries(response.cookies || {})) {
+    if (values && values.length && values[0].value) parts.push(`${name}=${values[0].value}`);
   }
-  return headers;
+  return parts.join('; ');
 }
 
-export default function () {
+export function setup() {
+  const response = http.post(
+    `${BASE_URL}/api/v1/auth/login`,
+    JSON.stringify({ email: CREDENTIALS.email.trim(), password: CREDENTIALS.password }),
+    {
+      headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+      timeout: HTTP_TIMEOUT,
+      redirects: 0,
+      tags: { endpoint: 'auth', name: 'auth_login' },
+    },
+  );
+  const cookie = cookieHeader(response);
+  if (response.status !== 200 || !cookie.includes('accessToken=') || !cookie.includes('refreshToken=')) {
+    exec.test.abort(`운영 테스트 계정 로그인 실패: status=${response.status}`);
+  }
+  return { cookie };
+}
+
+function requestHeaders(requestId, cookie) {
+  return { Accept: 'application/json', Cookie: cookie, 'X-Request-ID': requestId };
+}
+
+export default function (data) {
   const requestId = `pg-cutover-${RUN_ID}-${exec.vu.idInTest}-${exec.scenario.iterationInTest}-${Date.now()}`;
   const response = http.get(`${BASE_URL}${READ_PATH}`, {
-    headers: requestHeaders(requestId),
+    headers: requestHeaders(requestId, data.cookie),
     timeout: HTTP_TIMEOUT,
     redirects: 0,
     tags: { endpoint: 'prod_read', name: 'prod_read' },
