@@ -1,7 +1,8 @@
 # ---------------------------------------------------------------
-# V1 dev 서비스 주소
-# - dev.lookddak.com -> V2 dev ALB -> (host 규칙) V1 dev EC2 nginx
-# - V2 전환 시 ALB 규칙만 바꾸고 이 레코드는 그대로 둔다.
+# Dev 기본 서비스 주소
+# - dev.lookddak.com -> V2 dev ALB
+# - 실제 V1/V2 대상 선택은 ALB host/path 규칙에서 관리한다.
+# - V2 전환 시에도 이 Route53 레코드는 변경하지 않는다.
 # ---------------------------------------------------------------
 resource "aws_route53_record" "dev" {
   zone_id = var.zone_id

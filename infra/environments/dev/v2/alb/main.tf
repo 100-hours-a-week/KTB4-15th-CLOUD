@@ -1,7 +1,6 @@
 # ---------------------------------------------------------------
 # ACM certificate
-# - V1 keeps dev.lookddak.com until the V2 cutover is approved.
-# - V2 uses an isolated test hostname during validation.
+# - dev.lookddak.com and v2-dev.lookddak.com both terminate TLS on this ALB.
 # ---------------------------------------------------------------
 resource "aws_acm_certificate" "dev" {
   domain_name               = var.domain_name
@@ -239,7 +238,10 @@ resource "aws_lb_listener_rule" "spring" {
 
   condition {
     host_header {
-      values = [var.domain_name]
+      values = [
+        var.domain_name,
+        var.v1_domain_name,
+      ]
     }
   }
 
@@ -261,7 +263,10 @@ resource "aws_lb_listener_rule" "nextjs" {
 
   condition {
     host_header {
-      values = [var.domain_name]
+      values = [
+        var.domain_name,
+        var.v1_domain_name,
+      ]
     }
   }
 
@@ -272,7 +277,9 @@ resource "aws_lb_listener_rule" "nextjs" {
   }
 }
 
-# dev.lookddak.com -> V1 dev EC2 nginx (until the V2 cutover)
+# V1 fallback is kept temporarily for rollback.
+# The higher-priority V2 rules now match dev.lookddak.com first, so this rule
+# receives no normal traffic after the cutover.
 resource "aws_lb_listener_rule" "v1" {
   listener_arn = aws_lb_listener.https.arn
   priority     = 30
