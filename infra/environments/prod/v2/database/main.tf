@@ -97,6 +97,7 @@ module "postgresql" {
 #   0) on the source: binlog retention hours 72 (before apply)
 #   1) apply as is -> read replica
 #   2) on V2 MySQL: init-replication.sh prod stop -> record the start position
+#      (2026-10-19 17:03 KST: mysql-bin-changelog.008051:545)
 #   3) mysql_promote = true -> apply (promote only; no other RDS change in the same apply)
 #   4) init-replication.sh prod start -> external replication from the source
 #   5) mysql_read_only = false right before the cutover (separate apply)
@@ -105,7 +106,7 @@ module "postgresql" {
 #   so read_only must stay on until the cutover.
 # ---------------------------------------------------------------
 locals {
-  mysql_promote   = false # true: promoted to a standalone instance (start position recorded before promotion)
+  mysql_promote   = true  # true: promoted to a standalone instance (start position recorded before promotion)
   mysql_read_only = true  # true: application writes blocked (replication threads ignore read_only)
 }
 
