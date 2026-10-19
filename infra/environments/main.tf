@@ -10,20 +10,22 @@ module "prod_v1_network" {
   source = "./prod/v1/network"
 }
 
-module "prod_v1_database" {
-  source = "./prod/v1/database"
-
-  db_subnet_ids        = module.prod_v1_network.db_subnet_ids
-  db_security_group_id = module.prod_v1_network.db_security_group_id
+# 2026-10-19: V1 prod 구 DB(lookddak-prod-mysql) 삭제. 쓰기 대상은 컷오버로 V2 prod MySQL이 됐다.
+# - 최종 스냅샷: lookddak-prod-mysql-final-20261019 (수동)
+# - 구 DB가 만든 DB Subnet Group은 V2 prod MySQL이 쓰고 있어 prod_v2_database로 옮긴다.
+moved {
+  from = module.prod_v1_database.module.mysql.aws_db_subnet_group.this[0]
+  to   = module.prod_v2_database.aws_db_subnet_group.mysql
 }
 
+# rds/* 파라미터는 V1 EC2 Spring 기본 DB_URL과 운영 스크립트가 읽으므로 V2 prod MySQL을 가리킨다.
 module "prod_parameter_store" {
   source = "./prod/parameter-store"
 
-  rds_admin_username = module.prod_v1_database.mysql_master_username
-  rds_database       = module.prod_v1_database.mysql_database_name
-  rds_host           = module.prod_v1_database.mysql_address
-  rds_port           = module.prod_v1_database.mysql_port
+  rds_admin_username = "lookddak_admin"
+  rds_database       = "lookddak"
+  rds_host           = module.prod_v2_database.mysql_address
+  rds_port           = 3306
 }
 
 module "prod_v1_parameter_store" {
@@ -101,7 +103,7 @@ moved {
 module "dev_parameter_store" {
   source = "./dev/parameter-store"
 
-  rds_admin_username = module.prod_v1_database.mysql_master_username
+  rds_admin_username = "lookddak_admin"
   rds_database       = "lookddak"
   rds_host           = module.dev_v2_database.mysql_address
   rds_port           = 3306

@@ -106,10 +106,24 @@ module "postgresql" {
 #   so read_only must stay on until the cutover.
 # - 2026-10-19: read_only = 0 before the cutover (cutover.sh pre-check). V2 prod Spring is off
 #   (prod_v2_activate_services = false) and V1 reaches MySQL only through ProxySQL (still the old DB).
+# - 2026-10-19 cutover: this DB is the write target. The old DB (lookddak-prod-mysql) was deleted
+#   after a final snapshot, so the read-replica source is gone (replicate_source_db removed).
 # ---------------------------------------------------------------
 locals {
-  mysql_promote   = true  # true: promoted to a standalone instance (start position recorded before promotion)
-  mysql_read_only = false # false: writes allowed (cutover target; replication threads ignore read_only)
+  mysql_read_only = false # false: writes allowed (write target since the 2026-10-19 cutover)
+}
+
+# Created by the old DB module (lookddak-prod-db-subnet-group) and inherited by the read replica.
+# Moved here when the old DB was deleted (root main.tf moved block). Same values, no change.
+resource "aws_db_subnet_group" "mysql" {
+  name        = "lookddak-prod-db-subnet-group"
+  description = "LookDDak production RDS private subnets"
+  subnet_ids  = var.db_subnet_ids
+
+  tags = {
+    Name        = "lookddak-prod-db-subnet-group"
+    Environment = "prod"
+  }
 }
 
 module "mysql" {
@@ -118,11 +132,7 @@ module "mysql" {
   name_prefix = "lookddak-prod-v2"
   environment = "prod"
 
-  # Read replica of the V1 prod RDS. Becomes standalone when mysql_promote = true.
-  replicate_source_db = local.mysql_promote ? null : var.v1_mysql_identifier
-
-  # Same-region replicas use the source Subnet Group (lookddak-prod-db-subnet-group).
-  # When the V1 prod RDS is deleted, move that Subnet Group here (see dev cutover, #216).
+  # Uses lookddak-prod-db-subnet-group (aws_db_subnet_group.mysql above), inherited from the old DB.
   create_subnet_group = false
   security_group_ids  = [var.mysql_security_group_id]
   multi_az            = true
