@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # EC2 배치 경로: /opt/lookddak/v1-mysql-migration/init-replication.sh
 # 사용법:
-#   1) 승격 전: sudo ./init-replication.sh <dev|prod> stop  <신 DB(리드 레플리카)>
+#   1) 승격 전: sudo ./init-replication.sh <dev|prod> stop  <신 DB(리드 레플리카)> <구 DB>
 #   2) 승격:    Terraform PR (mysql_promote = true) → apply → replicaOf 없음 확인
 #   3) 승격 후: sudo ./init-replication.sh <dev|prod> start <신 DB> <구 DB> <① 위치 파일>
 #
@@ -11,11 +11,16 @@
 #
 # stop  (신 DB에서 실행)
 #   - 신 DB가 RDS 리드 레플리카로 복제 중인지 확인 (Source_Host 있음, Yes/Yes)
+#   - 레플리카의 원본이 지정한 구 DB인지 확인: Source_Server_Id = 구 DB @@server_id
+#     (RDS 리드 레플리카의 Source_Host는 원본의 RDS 내부 IP라 호스트 이름과 비교할 수 없고,
+#      승격 후 외부 복제는 그 IP가 아니라 구 DB 엔드포인트로 연결해야 한다)
 #   - CALL mysql.rds_stop_replication → 데이터가 멈춘 시점에 고정
 #   - SHOW REPLICA STATUS에서 ① = Relay_Source_Log_File / Exec_Source_Log_Pos (구 DB binlog 좌표)
 #   - 받았지만 실행 안 한 이벤트가 없어야 함: Source_Log_File = Relay_Source_Log_File, Read_Source_Log_Pos = Exec_Source_Log_Pos
 #     다르면 복제를 다시 켜서 따라잡게 한 뒤 다시 멈춤 (최대 3회)
-#   - ①을 logs/position-1-<시각>.txt에 저장 (승격하면 SHOW REPLICA STATUS 정보가 사라지므로 반드시 승격 전에)
+#   - ①이 구 DB binlog 목록에 있는 파일·위치인지 확인
+#   - ①을 logs/position-1-<시각>.txt에 저장 (원본은 구 DB 엔드포인트로 기록)
+#     승격하면 SHOW REPLICA STATUS 정보가 사라지므로 반드시 승격 전에
 #   ※ 구 DB 쪽은 아무것도 하지 않는다. ① 이후 구 DB binlog는 binlog retention 안에 start로 다시 받아야 한다.
 #
 # start (신 DB에서 실행)
@@ -36,7 +41,7 @@ MODE="${2:-}"
 NEW_HOST="${3:-}"
 
 usage() {
-  echo "usage: init-replication.sh <dev|prod> stop <new-db>"
+  echo "usage: init-replication.sh <dev|prod> stop <new-db> <old-db>"
   echo "       init-replication.sh <dev|prod> start <new-db> <old-db> <position-file>"
   exit 64
 }
@@ -55,8 +60,13 @@ status_line() {
 }
 
 if [[ "$MODE" == "stop" ]]; then
-  SRC="$(replica_field "$NEW_HOST" Source_Host)"
-  [[ -n "$SRC" ]] || die "신 DB에 복제 정보가 없습니다 (리드 레플리카가 아니거나 이미 승격됨)"
+  OLD_HOST="${4:-}"
+  [[ -n "$OLD_HOST" ]] || usage
+  [[ -n "$(replica_field "$NEW_HOST" Source_Host)" ]] || die "신 DB에 복제 정보가 없습니다 (리드 레플리카가 아니거나 이미 승격됨)"
+  SRC_ID="$(replica_field "$NEW_HOST" Source_Server_Id)"
+  OLD_ID="$(q_db "$OLD_HOST" "SELECT @@server_id;")"
+  [[ -n "$SRC_ID" && "$SRC_ID" == "$OLD_ID" ]] || die "레플리카 원본(server_id ${SRC_ID})이 지정한 구 DB(${OLD_HOST}, server_id ${OLD_ID})가 아닙니다"
+  SRC="$OLD_HOST"
   status_line "$NEW_HOST"
 
   for attempt in 1 2 3; do
@@ -82,13 +92,16 @@ if [[ "$MODE" == "stop" ]]; then
     fi
   done
 
+  OLD_SIZE="$(q_db "$OLD_HOST" "SHOW BINARY LOGS;" | awk -F'\t' -v f="$EXEC_FILE" '$1 == f {print $2}')"
+  [[ -n "$OLD_SIZE" && "$EXEC_POS" -le "$OLD_SIZE" ]] || die "① ${EXEC_FILE}:${EXEC_POS}가 구 DB binlog 목록에 없습니다 (복제는 멈춘 상태, 승격하지 말 것)"
+
   status_line "$NEW_HOST"
   POS_FILE="${LOG_DIR}/position-1-$(date '+%Y%m%d-%H%M%S').txt"
-  printf 'SOURCE_HOST %s\nFILE %s\nPOS %s\n' "$SRC" "$EXEC_FILE" "$EXEC_POS" > "$POS_FILE"
+  printf 'SOURCE_HOST %s\nSOURCE_SERVER_ID %s\nFILE %s\nPOS %s\n' "$SRC" "$SRC_ID" "$EXEC_FILE" "$EXEC_POS" > "$POS_FILE"
   cat <<EOM
 
 === ① 복제 시작 위치 (구 DB binlog 좌표)
-원본(구 DB)            ${SRC}
+원본(구 DB)            ${SRC} (server_id ${SRC_ID})
 Relay_Source_Log_File  ${EXEC_FILE}
 Exec_Source_Log_Pos    ${EXEC_POS}
 저장                   ${POS_FILE}
