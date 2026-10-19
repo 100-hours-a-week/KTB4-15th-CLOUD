@@ -29,11 +29,11 @@ output "crawler_scheduler_role_name" {
 }
 
 output "mq_local_test_user_arn" {
-  description = "Shared IAM User ARN for BE and AI local V2 dev MQ testing"
+  description = "Shared IAM User ARN for BE and AI local V2 dev MQ testing and application log viewing"
   value       = aws_iam_user.mq_local_test.arn
 }
 
 output "mq_local_test_user_name" {
-  description = "Shared IAM User name for BE and AI local V2 dev MQ testing"
+  description = "Shared IAM User name for BE and AI local V2 dev MQ testing and application log viewing"
   value       = aws_iam_user.mq_local_test.name
 }
