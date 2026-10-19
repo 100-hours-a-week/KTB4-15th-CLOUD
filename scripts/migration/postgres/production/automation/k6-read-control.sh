@@ -10,8 +10,7 @@ source "${ROOT}/common-functions.sh"
 ACTION="${1:-}"
 RUN_ID="${2:-}"
 readonly K6_IMAGE="${K6_IMAGE:-grafana/k6:1.3.0@sha256:3ddc8b1a33a2c3d8edc6e99b6a762ae36cba08788463458f5e6a7703e14eb77d}"
-readonly K6_AUTH_FILE="${K6_AUTH_FILE:-${APP_DIR}/k6.prod.auth}"
-readonly K6_AUTH_KIND="${K6_AUTH_KIND:-cookie}"
+readonly K6_CREDENTIALS_FILE="${K6_CREDENTIALS_FILE:-${APP_DIR}/k6.prod.credentials.json}"
 readonly K6_BASE_URL="${K6_BASE_URL:-https://lookddak.com}"
 readonly K6_READ_PATH="${K6_READ_PATH:-/api/v1/chat-rooms}"
 readonly K6_DURATION="${K6_DURATION:-10m}"
@@ -34,12 +33,13 @@ require_run_id "$RUN_ID"
 require_root
 require_commands docker find install jq
 
-assert_auth_file() {
-  test -s "$K6_AUTH_FILE" || die "k6 인증정보 파일이 없거나 비어 있습니다: $K6_AUTH_FILE"
-  [[ -z "$(find "$K6_AUTH_FILE" -perm /077 -print -quit)" ]] \
-    || die "k6 인증정보 파일은 group/other 권한이 없어야 합니다: chmod 600 $K6_AUTH_FILE"
-  [[ "$K6_AUTH_KIND" == "cookie" || "$K6_AUTH_KIND" == "bearer" ]] \
-    || die "K6_AUTH_KIND는 cookie 또는 bearer여야 합니다"
+assert_credentials_file() {
+  test -s "$K6_CREDENTIALS_FILE" || die "k6 테스트 계정 파일이 없거나 비어 있습니다: $K6_CREDENTIALS_FILE"
+  [[ -z "$(find "$K6_CREDENTIALS_FILE" -perm /077 -print -quit)" ]] \
+    || die "k6 테스트 계정 파일은 group/other 권한이 없어야 합니다: chmod 600 $K6_CREDENTIALS_FILE"
+  jq -e 'type == "object" and (.email | type == "string" and length > 0) and (.password | type == "string" and length > 0)' \
+    "$K6_CREDENTIALS_FILE" >/dev/null \
+    || die "k6 테스트 계정 파일은 email/password가 있는 JSON이어야 합니다"
 }
 
 container_exists() {
@@ -60,7 +60,7 @@ if [[ "$ACTION" == "prepare" ]]; then
 fi
 
 test -f "$K6_SCRIPT" || die "k6 스크립트가 없습니다: $K6_SCRIPT"
-assert_auth_file
+assert_credentials_file
 
 if [[ "$ACTION" == "check" ]]; then
   docker image inspect "$K6_IMAGE" >/dev/null 2>&1 \
@@ -69,7 +69,7 @@ if [[ "$ACTION" == "check" ]]; then
     || die "운영 전환 검증 대상은 https://lookddak.com 이어야 합니다"
   [[ "$K6_READ_PATH" == /* ]] || die "K6_READ_PATH는 /로 시작해야 합니다"
   [[ "$K6_DURATION" =~ ^[1-9][0-9]*(s|m|h)$ ]] || die "K6_DURATION 형식이 올바르지 않습니다"
-  log "K6_CHECK_SUCCEEDED target=${K6_BASE_URL}${K6_READ_PATH} rate=${K6_RATE} duration=${K6_DURATION} auth_kind=${K6_AUTH_KIND}"
+  log "K6_CHECK_SUCCEEDED target=${K6_BASE_URL}${K6_READ_PATH} rate=${K6_RATE} duration=${K6_DURATION} auth=automatic-login"
   exit 0
 fi
 
@@ -122,15 +122,14 @@ docker run --detach \
   --pids-limit 128 \
   --tmpfs /tmp:size=32m,mode=1777 \
   --volume "${K6_SCRIPT_DIR}:/scripts:ro" \
-  --volume "${K6_AUTH_FILE}:/run/secrets/k6-auth:ro" \
+  --volume "${K6_CREDENTIALS_FILE}:/run/secrets/k6-credentials:ro" \
   --volume "${RESULT_DIR}:/results" \
   --env "BASE_URL=${K6_BASE_URL}" \
   --env "READ_PATH=${K6_READ_PATH}" \
   --env "RATE=${K6_RATE}" \
   --env "DURATION=${K6_DURATION}" \
   --env "RUN_ID=${RUN_ID}" \
-  --env "AUTH_KIND=${K6_AUTH_KIND}" \
-  --env "AUTH_SECRET_FILE=/run/secrets/k6-auth" \
+  --env "CREDENTIALS_FILE=/run/secrets/k6-credentials" \
   "$K6_IMAGE" run --summary-export=/results/summary.json /scripts/read-observer.js >/dev/null
 
 sleep 2

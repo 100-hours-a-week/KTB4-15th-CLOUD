@@ -52,16 +52,25 @@ sudo /opt/lookddak/scripts/migration/postgres/production/automation/prepare-rds-
 
 운영 전환 전부터 전환 후까지 `lookddak.com` 읽기 API를 10 RPS로 호출한다.
 운영 데이터를 만들지 않으며 테스트 계정도 자동 생성하지 않는다.
+기존 운영 테스트 계정 하나로 테스트 시작 시 자동 로그인하고 응답 쿠키를 읽기 요청에 사용한다.
 
-먼저 기존 운영 테스트 계정의 Bearer Token 또는 Cookie 문자열만 들어 있는 파일을 EC2에 준비한다.
+먼저 기존 운영 테스트 계정의 이메일과 비밀번호가 들어 있는 JSON 파일을 EC2에 준비한다.
+k6가 로그인 응답의 `accessToken`, `refreshToken` 쿠키를 자동 추출하므로 Cookie를 직접 복사하지 않는다.
 파일 내용은 로그와 Git에 남기지 않는다.
 
 ```bash
-sudo install -o root -g root -m 0600 /dev/null /opt/lookddak/k6.prod.auth
-sudoedit /opt/lookddak/k6.prod.auth
+sudo install -o root -g root -m 0600 /dev/null /opt/lookddak/k6.prod.credentials.json
+sudoedit /opt/lookddak/k6.prod.credentials.json
 ```
 
-기본 인증 방식은 Cookie이다. Bearer Token 파일이라면 각 명령에 `K6_AUTH_KIND=bearer`를 지정한다.
+파일은 다음 형식으로 작성한다.
+
+```json
+{"email":"운영-테스트-계정@example.com","password":"운영-테스트-계정-비밀번호"}
+```
+
+파일은 root만 읽을 수 있는 `0600` 권한이어야 한다. 테스트 계정은 미리 존재해야 하며,
+k6는 회원가입 API를 호출하거나 새 계정을 만들지 않는다.
 
 ```bash
 RUN_ID="prod-pg-cutover-$(date -u +%Y%m%dT%H%M%SZ)"
