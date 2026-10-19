@@ -263,6 +263,65 @@ resource "aws_iam_user_policy_attachment" "mq_local_test" {
 }
 
 # ---------------------------------------------------------------
+# Shared test user CloudWatch Logs read policy
+# - Preserves the existing V1 dev/prod log viewer scope.
+# - Adds every V2 dev application Log Group, including Spring/FastAPI MQ logs.
+# - Write, retention, subscription, and deletion permissions are excluded.
+# ---------------------------------------------------------------
+resource "aws_iam_policy" "mq_local_test_logs_read" {
+  name        = "lookddak-dev-v2-mq-local-test-logs-read"
+  description = "Read LookDDak dev, V2 dev, and production application logs for MQ testing and troubleshooting"
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Sid = "DiscoverLogGroupsAndQueries"
+      Action = [
+        "logs:DescribeLogGroups",
+        "logs:DescribeQueries",
+        "logs:DescribeQueryDefinitions",
+      ]
+      Effect   = "Allow"
+      Resource = "*"
+      }, {
+      Sid = "ReadLookddakApplicationLogs"
+      Action = [
+        "logs:DescribeLogStreams",
+        "logs:GetLogEvents",
+        "logs:FilterLogEvents",
+        "logs:GetLogGroupFields",
+        "logs:GetLogRecord",
+        "logs:GetQueryResults",
+        "logs:StartQuery",
+        "logs:StopQuery",
+        "logs:StartLiveTail",
+        "logs:StopLiveTail",
+        "logs:ListTagsForResource",
+        "logs:ListTagsLogGroup",
+      ]
+      Effect = "Allow"
+      Resource = distinct(flatten([
+        for arn in local.shared_test_log_group_arns : [
+          arn,
+          "${arn}:*",
+        ]
+      ]))
+    }]
+  })
+
+  tags = {
+    Component   = "cloudwatch-logs"
+    Environment = "shared"
+    Purpose     = "mq-test-troubleshooting"
+    Version     = "v2"
+  }
+}
+
+resource "aws_iam_user_policy_attachment" "mq_local_test_logs_read" {
+  user       = aws_iam_user.mq_local_test.name
+  policy_arn = aws_iam_policy.mq_local_test_logs_read.arn
+}
+
+# ---------------------------------------------------------------
 # Crawler Scheduler policy
 # - The crawler Task Definition is created in a later step.
 # - PassRole is limited to the crawler Task Role and Execution Role.

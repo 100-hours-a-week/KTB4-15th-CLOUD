@@ -25,6 +25,26 @@ locals {
   crawler_task_definition_arn_pattern = "arn:${local.partition}:ecs:${local.region}:${local.account_id}:task-definition/lookddak-dev-v2-crawler:*"
   crawler_schedule_group_arn          = "arn:${local.partition}:scheduler:${local.region}:${local.account_id}:schedule-group/lookddak-dev-v2"
 
+  shared_test_legacy_log_group_names = toset([
+    "/lookddak/dev/fastapi",
+    "/lookddak/dev/nextjs",
+    "/lookddak/dev/nginx",
+    "/lookddak/dev/postgresql",
+    "/lookddak/dev/spring",
+    "/lookddak/prod/fastapi",
+    "/lookddak/prod/nextjs",
+    "/lookddak/prod/nginx",
+    "/lookddak/prod/postgresql",
+    "/lookddak/prod/spring",
+  ])
+  shared_test_log_group_arns = concat(
+    var.log_group_arns,
+    [
+      for name in local.shared_test_legacy_log_group_names :
+      "arn:${local.partition}:logs:${local.region}:${local.account_id}:log-group:${name}"
+    ],
+  )
+
   ecs_tasks_assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{

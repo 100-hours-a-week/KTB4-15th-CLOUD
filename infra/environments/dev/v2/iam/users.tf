@@ -1,5 +1,5 @@
 # ---------------------------------------------------------------
-# Shared local MQ test user for BE and AI developers
+# Shared local MQ test and application log viewer user for BE and AI developers
 # - Access keys are intentionally created outside Terraform so secrets are not
 #   stored in Terraform state.
 # ---------------------------------------------------------------
@@ -8,9 +8,9 @@ resource "aws_iam_user" "mq_local_test" {
   force_destroy = false
 
   tags = {
-    Component   = "sqs"
+    Component   = "sqs-cloudwatch-logs"
     Environment = "dev"
-    Purpose     = "local-mq-test"
+    Purpose     = "local-mq-test-and-log-view"
     Version     = "v2"
   }
 }
