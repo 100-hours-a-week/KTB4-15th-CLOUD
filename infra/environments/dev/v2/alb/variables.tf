@@ -66,3 +66,9 @@ variable "fastapi_webhook_token" {
     error_message = "fastapi_webhook_token must be URL-safe ([A-Za-z0-9_-]); ALB treats * and ? as wildcards."
   }
 }
+
+variable "access_logs_bucket" {
+  description = "S3 bucket for ALB access logs (prefix alb/). null disables access logs"
+  type        = string
+  default     = null
+}

@@ -63,6 +63,17 @@ resource "aws_lb" "dev_v2" {
   subnets            = var.public_subnet_ids
   ip_address_type    = "ipv4"
 
+  # 액세스 로그 → S3 (5분마다 파일). 버킷은 observability 모듈이 만든다.
+  dynamic "access_logs" {
+    for_each = var.access_logs_bucket == null ? [] : [var.access_logs_bucket]
+
+    content {
+      bucket  = access_logs.value
+      prefix  = "alb"
+      enabled = true
+    }
+  }
+
   tags = {
     Name        = "lookddak-dev-v2-alb"
     Environment = "dev"

@@ -32,3 +32,8 @@ output "lambda_promtail_function_name" {
   description = "lambda-promtail function name"
   value       = aws_lambda_function.lambda_promtail.function_name
 }
+
+output "alb_logs_bucket_name" {
+  description = "S3 bucket for dev V2 ALB access logs (bucket policy applied)"
+  value       = aws_s3_bucket_policy.alb_logs.bucket
+}
