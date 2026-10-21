@@ -60,12 +60,23 @@ prometheus.exporter.cloudwatch "aws" {
     scrape_interval = "5m"
   }
 
-  // ALB: 타깃그룹 단위 (요청 수·응답시간은 아래 aws_1m에서 1분 단위로 수집)
+  // ALB: 타깃그룹(서비스)별. Version=v2로 V1 타깃그룹은 제외한다.
   discovery {
     type                        = "AWS/ApplicationELB"
     regions                     = ["ap-northeast-2"]
-    search_tags                 = { "Environment" = "dev" }
+    search_tags                 = { "Environment" = "dev", "Version" = "v2" }
     dimension_name_requirements = ["LoadBalancer", "TargetGroup"]
+
+    metric {
+      name       = "RequestCount"
+      statistics = ["Sum"]
+      period     = "5m"
+    }
+    metric {
+      name       = "TargetResponseTime"
+      statistics = ["Average", "p99"]
+      period     = "5m"
+    }
 
     metric {
       name       = "HTTPCode_Target_4XX_Count"
@@ -93,7 +104,7 @@ prometheus.exporter.cloudwatch "aws" {
   discovery {
     type                        = "AWS/ApplicationELB"
     regions                     = ["ap-northeast-2"]
-    search_tags                 = { "Environment" = "dev" }
+    search_tags                 = { "Environment" = "dev", "Version" = "v2" }
     dimension_name_requirements = ["LoadBalancer"]
 
     metric {
@@ -204,8 +215,10 @@ prometheus.scrape "aws" {
 }
 
 // ---------------------------------------------------------------
-// AWS 인프라 메트릭 (1분): ALB 요청 수, 응답시간
-// - 트래픽 추이를 더 촘촘히 보기 위해 이 3개만 1분 주기로 따로 수집한다.
+// AWS 인프라 메트릭 (1분): ALB 전체 요청 수, 응답시간
+// - 전체 트래픽 변화는 1분 단위로 빠르게 보고,
+//   서비스(타깃그룹)별 추이는 위 5분 묶음에서 본다.
+// - 로드밸런서 단위 1개만 조회해 비용을 줄인다 (타깃그룹별이면 3배).
 // - length 5m: CloudWatch 반영 지연(1~3분)으로 최근 1분 값이 비어도
 //   직전 값을 쓰도록 조회 구간을 넓힌다.
 // - 응답시간은 요청이 없을 때 0으로 채우지 않는다 (nil_to_zero = false).
@@ -221,8 +234,8 @@ prometheus.exporter.cloudwatch "aws_1m" {
   discovery {
     type                        = "AWS/ApplicationELB"
     regions                     = ["ap-northeast-2"]
-    search_tags                 = { "Environment" = "dev" }
-    dimension_name_requirements = ["LoadBalancer", "TargetGroup"]
+    search_tags                 = { "Environment" = "dev", "Version" = "v2" }
+    dimension_name_requirements = ["LoadBalancer"]
 
     metric {
       name       = "RequestCount"
