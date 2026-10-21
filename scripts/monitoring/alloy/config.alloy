@@ -25,14 +25,44 @@ prometheus.remote_write "local" {
 
 // ---------------------------------------------------------------
 // 로그 수신 (Loki push API, :3500) → Loki
-// - 이후 Fluent Bit 사이드카, lambda-promtail이 여기로 보낸다.
+// - Fluent Bit 사이드카, lambda-promtail이 여기로 보낸다.
+// - loki.source.api는 __로 시작하는 레이블을 버리므로, 그 전에
+//   lambda-promtail이 보낸 __aws_cloudwatch_log_group으로 log_group·source를 만든다.
 // ---------------------------------------------------------------
 loki.source.api "push" {
   http {
     listen_address = "0.0.0.0"
     listen_port    = 3500
   }
-  forward_to = [loki.write.local.receiver]
+  relabel_rules = loki.relabel.cloudwatch.rules
+  forward_to    = [loki.write.local.receiver]
+}
+
+loki.relabel "cloudwatch" {
+  forward_to = []
+
+  rule {
+    source_labels = ["__aws_cloudwatch_log_group"]
+    target_label  = "log_group"
+  }
+  rule {
+    source_labels = ["__aws_cloudwatch_log_group"]
+    regex         = "/aws/rds/.*"
+    target_label  = "source"
+    replacement   = "rds"
+  }
+  rule {
+    source_labels = ["__aws_cloudwatch_log_group"]
+    regex         = "/aws/events/.*ecs-task-stopped"
+    target_label  = "source"
+    replacement   = "ecs-event"
+  }
+  rule {
+    source_labels = ["__aws_cloudwatch_log_group"]
+    regex         = ".*/alb/.*"
+    target_label  = "source"
+    replacement   = "alb"
+  }
 }
 
 loki.write "local" {
