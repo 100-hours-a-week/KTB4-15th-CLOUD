@@ -95,6 +95,7 @@ module "dev_v2_monitoring" {
   subnet_id         = module.dev_v2_network.private_app_subnet_ids[0]
   lambda_subnet_ids = module.dev_v2_network.private_app_subnet_ids
   ecs_cluster_arn   = module.dev_v2_ecs_cluster.cluster_arn
+  alb_arn           = module.dev_v2_alb.alb_arn
 }
 
 module "dev_v2_crawler" {

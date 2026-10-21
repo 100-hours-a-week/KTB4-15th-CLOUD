@@ -35,3 +35,8 @@ variable "lambda_subnet_ids" {
   description = "Private App subnet IDs (2a, 2c) for lambda-promtail"
   type        = list(string)
 }
+
+variable "alb_arn" {
+  description = "Dev V2 ALB ARN for access log delivery"
+  type        = string
+}
