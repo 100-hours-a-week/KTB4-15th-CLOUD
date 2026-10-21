@@ -17,7 +17,7 @@ variable "private_ip_host_number" {
 variable "instance_type" {
   description = "Monitoring server instance type"
   type        = string
-  default     = "t4g.large"
+  default     = "t4g.medium"
 }
 
 variable "root_volume_size" {
