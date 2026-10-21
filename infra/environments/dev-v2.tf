@@ -84,6 +84,17 @@ module "dev_v2_db_access" {
   tunnel_user_name             = module.dev_v2_iam.mq_local_test_user_name
 }
 
+# ---------------------------------------------------------------
+# V2 dev monitoring server (Grafana, Prometheus, Loki, Alloy)
+# - Private App 2a, fixed private IP, Session Manager access only.
+# ---------------------------------------------------------------
+module "dev_v2_monitoring" {
+  source = "./dev/v2/observability"
+
+  vpc_id    = module.dev_v1_network.vpc_id
+  subnet_id = module.dev_v2_network.private_app_subnet_ids[0]
+}
+
 module "dev_v2_crawler" {
   source = "./dev/v2/crawler"
 
@@ -273,4 +284,19 @@ output "dev_v2_test_domain_name" {
 output "dev_v2_runtime_secure_parameter_arns" {
   description = "V2 PostgreSQL SecureString ARNs managed manually outside Terraform"
   value       = module.dev_v2_database.secure_parameter_arns
+}
+
+output "dev_v2_monitoring_instance_id" {
+  description = "Dev monitoring server instance ID"
+  value       = module.dev_v2_monitoring.instance_id
+}
+
+output "dev_v2_monitoring_private_ip" {
+  description = "Fixed private IP of the dev monitoring server"
+  value       = module.dev_v2_monitoring.private_ip
+}
+
+output "dev_v2_monitoring_grafana_tunnel_command" {
+  description = "SSM command to open Grafana on localhost:3000"
+  value       = "aws ssm start-session --target ${module.dev_v2_monitoring.instance_id} --document-name AWS-StartPortForwardingSession --parameters portNumber=3000,localPortNumber=3000"
 }
