@@ -27,3 +27,8 @@ output "lambda_artifacts_bucket_name" {
   description = "S3 bucket for dev Lambda deployment packages"
   value       = aws_s3_bucket.lambda_artifacts.bucket
 }
+
+output "lambda_promtail_function_name" {
+  description = "lambda-promtail function name"
+  value       = aws_lambda_function.lambda_promtail.function_name
+}
