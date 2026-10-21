@@ -35,3 +35,33 @@ variable "lambda_subnet_ids" {
   description = "Private App subnet IDs (2a, 2c) for lambda-promtail"
   type        = list(string)
 }
+
+variable "grafana_domain_name" {
+  description = "Public domain for Grafana behind the dev V2 ALB"
+  type        = string
+}
+
+variable "route53_zone_id" {
+  description = "Route53 public hosted zone ID for lookddak.com"
+  type        = string
+}
+
+variable "https_listener_arn" {
+  description = "Dev V2 ALB HTTPS listener ARN"
+  type        = string
+}
+
+variable "alb_security_group_id" {
+  description = "Dev V2 ALB security group ID"
+  type        = string
+}
+
+variable "alb_dns_name" {
+  description = "Dev V2 ALB DNS name"
+  type        = string
+}
+
+variable "alb_zone_id" {
+  description = "Dev V2 ALB canonical hosted zone ID"
+  type        = string
+}
