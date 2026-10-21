@@ -1,4 +1,8 @@
+data "aws_caller_identity" "current" {}
+
 data "aws_partition" "current" {}
+
+data "aws_region" "current" {}
 
 data "aws_subnet" "this" {
   id = var.subnet_id
@@ -50,6 +54,7 @@ resource "aws_vpc_security_group_egress_rule" "https" {
 # - SSM 접속
 # - 읽기 전용 관측 권한: CloudWatch 메트릭(YACE), 리소스 태그 탐색,
 #   ECS task 조회(Prometheus ECS 서비스 디스커버리), CloudWatch Logs 조회(Grafana)
+# - /lookddak/dev/monitoring/* 파라미터 읽기 (Grafana 관리자 비밀번호 등, 콘솔에서 수동 생성)
 # ---------------------------------------------------------------
 resource "aws_iam_role" "instance" {
   name        = "${local.name}-instance-role"
@@ -115,6 +120,11 @@ resource "aws_iam_role_policy" "observability_read" {
         "logs:FilterLogEvents",
       ]
       Resource = "*"
+      }, {
+      Sid      = "MonitoringParameters"
+      Effect   = "Allow"
+      Action   = "ssm:GetParameter"
+      Resource = "arn:${data.aws_partition.current.partition}:ssm:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:parameter/lookddak/dev/monitoring/*"
     }]
   })
 }
