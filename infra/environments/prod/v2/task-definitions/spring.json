@@ -81,6 +81,10 @@
           "valueFrom": "/lookddak/prod/internal/ai-api-key"
         },
         {
+          "name": "INTERNAL_API_KEY",
+          "valueFrom": "/lookddak/prod/spring/internal-api-key"
+        },
+        {
           "name": "SENTRY_DSN",
           "valueFrom": "/lookddak/prod/spring/sentry_dsn"
         }
