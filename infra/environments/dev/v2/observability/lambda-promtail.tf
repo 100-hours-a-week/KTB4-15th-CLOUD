@@ -111,21 +111,25 @@ resource "aws_lambda_function" "lambda_promtail" {
   handler       = "bootstrap"
   architectures = ["x86_64"]
 
-  memory_size                    = 128
-  timeout                        = 60
-  reserved_concurrent_executions = 5
+  # reserved_concurrent_executions는 두지 않는다: 계정 동시 실행 한도가 10이라
+  # 예약하면 다른 함수가 쓸 수 있는 몫(최소 10)이 부족해져 AWS가 거부한다.
+  memory_size = 128
+  timeout     = 60
 
   vpc_config {
     subnet_ids         = var.lambda_subnet_ids
     security_group_ids = [aws_security_group.lambda_promtail.id]
   }
 
-  # 시스템 로그 WARN: 호출마다 찍히는 START·END·REPORT 줄을 남기지 않는다.
-  # 함수 자체 로그 수준은 LOG_LEVEL 환경변수로 줄인다.
+  # lambda-promtail 자체 로그(/aws/lambda/...) 설정. 전달하는 로그와는 무관하다.
+  # - system_log_level WARN: 호출마다 찍히는 START·END·REPORT 줄을 남기지 않는다.
+  # - application_log_level INFO: JSON 형식이면 AWS가 INFO로 채우는 기본값을 그대로 적어
+  #   plan에 매번 변경이 보이지 않게 한다. 함수 로그를 실제로 줄이는 건 LOG_LEVEL이다.
   logging_config {
-    log_format       = "JSON"
-    log_group        = aws_cloudwatch_log_group.lambda_promtail.name
-    system_log_level = "WARN"
+    log_format            = "JSON"
+    log_group             = aws_cloudwatch_log_group.lambda_promtail.name
+    application_log_level = "INFO"
+    system_log_level      = "WARN"
   }
 
   environment {
