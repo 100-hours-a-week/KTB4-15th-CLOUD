@@ -30,3 +30,8 @@ variable "ecs_cluster_arn" {
   description = "Dev V2 ECS cluster ARN for task stopped events"
   type        = string
 }
+
+variable "lambda_subnet_ids" {
+  description = "Private App subnet IDs (2a, 2c) for lambda-promtail"
+  type        = list(string)
+}
