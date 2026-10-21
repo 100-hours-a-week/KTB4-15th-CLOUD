@@ -97,6 +97,13 @@ module "dev_v2_monitoring" {
   subnet_id         = module.dev_v2_network.private_app_subnet_ids[0]
   lambda_subnet_ids = module.dev_v2_network.private_app_subnet_ids
   ecs_cluster_arn   = module.dev_v2_ecs_cluster.cluster_arn
+
+  grafana_domain_name   = "grafana.dev.lookddak.com"
+  route53_zone_id       = module.shared_core.route53_zone_id
+  https_listener_arn    = module.dev_v2_alb.https_listener_arn
+  alb_security_group_id = module.dev_v2_network.security_group_ids["alb"]
+  alb_dns_name          = module.dev_v2_alb.alb_dns_name
+  alb_zone_id           = module.dev_v2_alb.alb_zone_id
 }
 
 module "dev_v2_crawler" {
