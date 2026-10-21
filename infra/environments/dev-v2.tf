@@ -10,6 +10,7 @@ module "dev_v2_network" {
   existing_public_subnet_id   = module.dev_v1_network.public_subnet_ids[0]
   dev_mysql_security_group_id = module.dev_v1_network.db_security_group_id
   dev_app_security_group_id   = module.dev_v1_network.app_security_group_id
+  fastapi_alb_enabled         = var.dev_v2_fastapi_alb_enabled
 }
 
 module "dev_v2_alb" {
@@ -27,6 +28,8 @@ module "dev_v2_alb" {
   v1_domain_name       = "dev.lookddak.com"
   v1_instance_id       = module.dev_v1_compute.instance_id
   v1_health_check_path = var.dev_v1_alb_health_check_path
+
+  fastapi_enabled = var.dev_v2_fastapi_alb_enabled
 }
 
 module "dev_v2_ecs_cluster" {
@@ -152,6 +155,13 @@ variable "dev_v2_create_services" {
 # 2026-10-19: MySQL 컷오버 완료(쓰기 대상 = V2 Dev MySQL) 후 다시 켰다 (spring:6).
 variable "dev_v2_spring_tasks_enabled" {
   description = "Run V2 dev Spring tasks (false clamps the service to 0 through Auto Scaling min/max)"
+  type        = bool
+  default     = true
+}
+
+# 임시: dev.lookddak.com/api/v2/* -> FastAPI (경로 그대로 전달). 닫을 때 false로 바꿔 apply.
+variable "dev_v2_fastapi_alb_enabled" {
+  description = "Temporarily expose /api/v2/* on the dev ALB to the V2 FastAPI service"
   type        = bool
   default     = true
 }

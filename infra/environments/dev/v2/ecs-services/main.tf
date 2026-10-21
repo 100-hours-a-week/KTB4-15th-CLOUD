@@ -87,6 +87,10 @@ module "fastapi" {
   container_name     = "fastapi"
   container_port     = 8000
 
+  # Temporary /api/v2/* ALB route (dev_v2_fastapi_alb_enabled). Model loading takes up to ~180s.
+  target_group_arn                  = lookup(var.target_group_arns, "fastapi", null)
+  health_check_grace_period_seconds = 240
+
   service_connect_namespace_arn  = aws_service_discovery_http_namespace.service_connect.arn
   service_connect_mode           = "client-server"
   service_connect_port_name      = "fastapi-http"

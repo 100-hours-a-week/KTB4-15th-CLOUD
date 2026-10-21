@@ -160,3 +160,9 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
+
+variable "health_check_grace_period_seconds" {
+  description = "Seconds ECS ignores failing load balancer health checks after a task starts (null: not set)"
+  type        = number
+  default     = null
+}

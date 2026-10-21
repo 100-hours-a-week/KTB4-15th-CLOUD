@@ -30,10 +30,13 @@ output "certificate_arn" {
 
 output "target_group_arns" {
   description = "V2 dev target group ARNs for future ECS services"
-  value = {
-    nextjs = aws_lb_target_group.nextjs.arn
-    spring = aws_lb_target_group.spring.arn
-  }
+  value = merge(
+    {
+      nextjs = aws_lb_target_group.nextjs.arn
+      spring = aws_lb_target_group.spring.arn
+    },
+    var.fastapi_enabled ? { fastapi = aws_lb_target_group.fastapi[0].arn } : {},
+  )
 }
 
 output "v1_target_group_arn" {

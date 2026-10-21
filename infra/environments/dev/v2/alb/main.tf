@@ -130,6 +130,38 @@ resource "aws_lb_target_group" "spring" {
   }
 }
 
+# FastAPI (temporary, var.fastapi_enabled)
+# - /api/v2/* is forwarded as-is (no path rewrite).
+resource "aws_lb_target_group" "fastapi" {
+  count = var.fastapi_enabled ? 1 : 0
+
+  name             = "lookddak-dev-v2-fastapi-tg"
+  port             = 8000
+  protocol         = "HTTP"
+  protocol_version = "HTTP1"
+  target_type      = "ip"
+  vpc_id           = var.vpc_id
+
+  health_check {
+    enabled             = true
+    path                = "/health"
+    port                = "traffic-port"
+    protocol            = "HTTP"
+    matcher             = "200"
+    interval            = 30
+    timeout             = 5
+    healthy_threshold   = 2
+    unhealthy_threshold = 3
+  }
+
+  tags = {
+    Name        = "lookddak-dev-v2-fastapi-tg"
+    Environment = "dev"
+    Version     = "v2"
+    Service     = "fastapi"
+  }
+}
+
 # V1 dev EC2 nginx
 # - HTTPS to nginx so the existing nginx HTTP->HTTPS redirect is not hit.
 # - ALB does not validate the backend certificate, so the V1 Let's Encrypt
@@ -247,6 +279,40 @@ resource "aws_lb_listener_rule" "spring" {
 
   tags = {
     Name        = "lookddak-dev-v2-spring"
+    Environment = "dev"
+    Version     = "v2"
+  }
+}
+
+# Temporary: /api/v2/* -> FastAPI. Priority 5 so it wins over the Spring /api/* rule (10).
+resource "aws_lb_listener_rule" "fastapi" {
+  count = var.fastapi_enabled ? 1 : 0
+
+  listener_arn = aws_lb_listener.https.arn
+  priority     = 5
+
+  action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.fastapi[0].arn
+  }
+
+  condition {
+    path_pattern {
+      values = ["/api/v2/*"]
+    }
+  }
+
+  condition {
+    host_header {
+      values = [
+        var.domain_name,
+        var.v1_domain_name,
+      ]
+    }
+  }
+
+  tags = {
+    Name        = "lookddak-dev-v2-fastapi"
     Environment = "dev"
     Version     = "v2"
   }
