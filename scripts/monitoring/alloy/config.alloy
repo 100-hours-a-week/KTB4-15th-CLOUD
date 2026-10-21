@@ -1,0 +1,44 @@
+// dev 모니터링 서버 수집기
+
+// ---------------------------------------------------------------
+// 호스트 메트릭 (CPU, 메모리, 디스크, 네트워크) → Prometheus
+// ---------------------------------------------------------------
+prometheus.exporter.unix "host" {
+  procfs_path = "/host/proc"
+  sysfs_path  = "/host/sys"
+  rootfs_path = "/host/root"
+}
+
+prometheus.scrape "host" {
+  targets         = prometheus.exporter.unix.host.targets
+  scrape_interval = "15s"
+  forward_to      = [prometheus.remote_write.local.receiver]
+}
+
+prometheus.remote_write "local" {
+  external_labels = { env = "dev" }
+
+  endpoint {
+    url = "http://prometheus:9090/api/v1/write"
+  }
+}
+
+// ---------------------------------------------------------------
+// 로그 수신 (Loki push API, :3500) → Loki
+// - 이후 Fluent Bit 사이드카, lambda-promtail이 여기로 보낸다.
+// ---------------------------------------------------------------
+loki.source.api "push" {
+  http {
+    listen_address = "0.0.0.0"
+    listen_port    = 3500
+  }
+  forward_to = [loki.write.local.receiver]
+}
+
+loki.write "local" {
+  external_labels = { env = "dev" }
+
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}
