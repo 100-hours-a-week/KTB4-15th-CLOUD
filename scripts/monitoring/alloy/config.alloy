@@ -34,8 +34,11 @@ loki.source.api "push" {
     listen_address = "0.0.0.0"
     listen_port    = 3500
   }
-  relabel_rules = loki.relabel.cloudwatch.rules
-  forward_to    = [loki.write.local.receiver]
+  // 보낸 쪽 타임스탬프(로그 줄의 요청 시각 등)를 그대로 쓴다.
+  // 기본값(false)이면 Alloy가 받은 시각으로 덮어써서 ALB 로그가 최대 5분 늦게 찍힌다.
+  use_incoming_timestamp = true
+  relabel_rules          = loki.relabel.cloudwatch.rules
+  forward_to             = [loki.write.local.receiver]
 }
 
 loki.relabel "cloudwatch" {
