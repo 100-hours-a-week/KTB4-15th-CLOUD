@@ -307,6 +307,16 @@ output "dev_v2_monitoring_private_ip" {
   value       = module.dev_v2_monitoring.private_ip
 }
 
+output "dev_v2_grafana_url" {
+  description = "Grafana public URL (Cognito login)"
+  value       = module.dev_v2_monitoring.grafana_url
+}
+
+output "dev_v2_grafana_user_pool_id" {
+  description = "Cognito user pool ID for Grafana users"
+  value       = module.dev_v2_monitoring.grafana_user_pool_id
+}
+
 output "dev_v2_monitoring_grafana_tunnel_command" {
   description = "SSM command to open Grafana on localhost:3000"
   value       = "aws ssm start-session --target ${module.dev_v2_monitoring.instance_id} --document-name AWS-StartPortForwardingSession --parameters portNumber=3000,localPortNumber=3000"
