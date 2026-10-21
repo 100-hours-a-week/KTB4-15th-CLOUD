@@ -109,12 +109,13 @@ locals {
     # 가격 갱신 크롤러 (KTB4-15th-Crawler/price-refresh-crawler)
     # - 29CM 가격 수집 → V2 PostgreSQL products.price 갱신 → 추천된 상품만 BE에 PATCH /api/v1/internal/products
     # - BE는 Service Connect(HTTP namespace) 밖이라 ALB 주소로 호출한다.
+    # - BE 인증: X-Internal-Api-Key 헤더, 값은 Spring INTERNAL_API_KEY(/lookddak/dev/spring/internal-api-key)와 같다.
     # - 스펙은 기존 crawler.json 값 유지 (실측 후 조정)
     crawler = {
       cpu    = 1024
       memory = 2048
       environment = {
-        PRICE_REFRESH_BACKEND_BASE_URL = "https://v2-dev.lookddak.com"
+        PRICE_REFRESH_BACKEND_BASE_URL = "https://dev.lookddak.com"
         TZ                             = "Asia/Seoul"
       }
       secrets = {
