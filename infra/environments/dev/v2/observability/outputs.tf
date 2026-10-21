@@ -22,3 +22,8 @@ output "ecs_task_stopped_log_group_name" {
   description = "CloudWatch log group receiving dev V2 ECS task stopped events"
   value       = aws_cloudwatch_log_group.ecs_task_stopped.name
 }
+
+output "lambda_artifacts_bucket_name" {
+  description = "S3 bucket for dev Lambda deployment packages"
+  value       = aws_s3_bucket.lambda_artifacts.bucket
+}
