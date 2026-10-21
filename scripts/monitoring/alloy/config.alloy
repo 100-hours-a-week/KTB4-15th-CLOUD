@@ -42,3 +42,207 @@ loki.write "local" {
     url = "http://loki:3100/loki/api/v1/push"
   }
 }
+
+// ---------------------------------------------------------------
+// AWS 인프라 메트릭 (YACE) → Prometheus
+// - Environment=dev 태그가 붙은 ALB·타깃그룹, ECS 서비스, RDS, SQS를 찾는다.
+// - CloudWatch 조회는 5분마다 한 번만 하고(decoupled_scraping),
+//   Prometheus 쪽 scrape는 1분마다 캐시된 값을 읽는다.
+//   GetMetricData 비용은 조회 횟수에 비례하므로 5분 주기로 고정한다.
+// - 통계 기간(period)도 5분: 5분 동안의 합계·최대·최소를 가져온다.
+// - 핵심 알람(5xx, Unhealthy, DLQ 등)은 CloudWatch 알람에서 1분 단위로 평가한다.
+// ---------------------------------------------------------------
+prometheus.exporter.cloudwatch "aws" {
+  sts_region = "ap-northeast-2"
+
+  decoupled_scraping {
+    enabled         = true
+    scrape_interval = "5m"
+  }
+
+  // ALB: 타깃그룹 단위 (요청 수·응답시간은 아래 aws_1m에서 1분 단위로 수집)
+  discovery {
+    type                        = "AWS/ApplicationELB"
+    regions                     = ["ap-northeast-2"]
+    search_tags                 = { "Environment" = "dev" }
+    dimension_name_requirements = ["LoadBalancer", "TargetGroup"]
+
+    metric {
+      name       = "HTTPCode_Target_4XX_Count"
+      statistics = ["Sum"]
+      period     = "5m"
+    }
+    metric {
+      name       = "HTTPCode_Target_5XX_Count"
+      statistics = ["Sum"]
+      period     = "5m"
+    }
+    metric {
+      name       = "HealthyHostCount"
+      statistics = ["Minimum"]
+      period     = "5m"
+    }
+    metric {
+      name       = "UnHealthyHostCount"
+      statistics = ["Maximum"]
+      period     = "5m"
+    }
+  }
+
+  // ALB: 로드밸런서 단위 (앱까지 도달하지 못한 요청)
+  discovery {
+    type                        = "AWS/ApplicationELB"
+    regions                     = ["ap-northeast-2"]
+    search_tags                 = { "Environment" = "dev" }
+    dimension_name_requirements = ["LoadBalancer"]
+
+    metric {
+      name       = "HTTPCode_ELB_4XX_Count"
+      statistics = ["Sum"]
+      period     = "5m"
+    }
+    metric {
+      name       = "HTTPCode_ELB_5XX_Count"
+      statistics = ["Sum"]
+      period     = "5m"
+    }
+  }
+
+  // ECS: 서비스 평균 (오토스케일링이 쓰는 값)
+  discovery {
+    type                        = "AWS/ECS"
+    regions                     = ["ap-northeast-2"]
+    search_tags                 = { "Environment" = "dev" }
+    dimension_name_requirements = ["ClusterName", "ServiceName"]
+
+    metric {
+      name       = "CPUUtilization"
+      statistics = ["Average"]
+      period     = "5m"
+    }
+    metric {
+      name       = "MemoryUtilization"
+      statistics = ["Average"]
+      period     = "5m"
+    }
+  }
+
+  // RDS
+  discovery {
+    type                        = "AWS/RDS"
+    regions                     = ["ap-northeast-2"]
+    search_tags                 = { "Environment" = "dev" }
+    dimension_name_requirements = ["DBInstanceIdentifier"]
+
+    metric {
+      name       = "CPUUtilization"
+      statistics = ["Average"]
+      period     = "5m"
+    }
+    metric {
+      name       = "DatabaseConnections"
+      statistics = ["Maximum"]
+      period     = "5m"
+    }
+    metric {
+      name       = "FreeableMemory"
+      statistics = ["Minimum"]
+      period     = "5m"
+    }
+    metric {
+      name       = "FreeStorageSpace"
+      statistics = ["Minimum"]
+      period     = "5m"
+    }
+  }
+
+  // SQS: 가상피팅 큐와 DLQ
+  discovery {
+    type                        = "AWS/SQS"
+    regions                     = ["ap-northeast-2"]
+    search_tags                 = { "Environment" = "dev" }
+    dimension_name_requirements = ["QueueName"]
+
+    metric {
+      name       = "ApproximateNumberOfMessagesVisible"
+      statistics = ["Maximum"]
+      period     = "5m"
+    }
+    metric {
+      name       = "ApproximateNumberOfMessagesNotVisible"
+      statistics = ["Maximum"]
+      period     = "5m"
+    }
+    metric {
+      name       = "ApproximateAgeOfOldestMessage"
+      statistics = ["Maximum"]
+      period     = "5m"
+    }
+    metric {
+      name       = "NumberOfMessagesSent"
+      statistics = ["Sum"]
+      period     = "5m"
+    }
+    metric {
+      name       = "NumberOfMessagesReceived"
+      statistics = ["Sum"]
+      period     = "5m"
+    }
+    metric {
+      name       = "NumberOfMessagesDeleted"
+      statistics = ["Sum"]
+      period     = "5m"
+    }
+  }
+}
+
+prometheus.scrape "aws" {
+  targets         = prometheus.exporter.cloudwatch.aws.targets
+  scrape_interval = "1m"
+  scrape_timeout  = "50s"
+  forward_to      = [prometheus.remote_write.local.receiver]
+}
+
+// ---------------------------------------------------------------
+// AWS 인프라 메트릭 (1분): ALB 요청 수, 응답시간
+// - 트래픽 추이를 더 촘촘히 보기 위해 이 3개만 1분 주기로 따로 수집한다.
+// - length 5m: CloudWatch 반영 지연(1~3분)으로 최근 1분 값이 비어도
+//   직전 값을 쓰도록 조회 구간을 넓힌다.
+// - 응답시간은 요청이 없을 때 0으로 채우지 않는다 (nil_to_zero = false).
+// ---------------------------------------------------------------
+prometheus.exporter.cloudwatch "aws_1m" {
+  sts_region = "ap-northeast-2"
+
+  decoupled_scraping {
+    enabled         = true
+    scrape_interval = "1m"
+  }
+
+  discovery {
+    type                        = "AWS/ApplicationELB"
+    regions                     = ["ap-northeast-2"]
+    search_tags                 = { "Environment" = "dev" }
+    dimension_name_requirements = ["LoadBalancer", "TargetGroup"]
+
+    metric {
+      name       = "RequestCount"
+      statistics = ["Sum"]
+      period     = "1m"
+      length     = "5m"
+    }
+    metric {
+      name        = "TargetResponseTime"
+      statistics  = ["Average", "p99"]
+      period      = "1m"
+      length      = "5m"
+      nil_to_zero = false
+    }
+  }
+}
+
+prometheus.scrape "aws_1m" {
+  targets         = prometheus.exporter.cloudwatch.aws_1m.targets
+  scrape_interval = "1m"
+  scrape_timeout  = "50s"
+  forward_to      = [prometheus.remote_write.local.receiver]
+}

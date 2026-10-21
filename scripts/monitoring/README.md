@@ -10,7 +10,7 @@ EC2는 Terraform(`infra/environments/dev/v2/observability`)으로 관리하고, 
 | `docker-compose.yaml` | `/opt/monitoring/docker-compose.yaml` | Prometheus, Loki, Alloy, Grafana |
 | `prometheus/prometheus.yml` | `/opt/monitoring/prometheus/prometheus.yml` | 모니터링 구성요소 scrape |
 | `loki/config.yaml` | `/opt/monitoring/loki/config.yaml` | 단일 바이너리, 파일시스템 저장, 보존 7일 |
-| `alloy/config.alloy` | `/opt/monitoring/alloy/config.alloy` | 호스트 메트릭 → Prometheus, Loki push 수신(:3500) → Loki |
+| `alloy/config.alloy` | `/opt/monitoring/alloy/config.alloy` | 호스트 메트릭·AWS 메트릭(YACE) → Prometheus, Loki push 수신(:3500) → Loki |
 | `grafana/provisioning/datasources/datasources.yaml` | `/opt/monitoring/grafana/provisioning/datasources/datasources.yaml` | Prometheus, Loki, CloudWatch 데이터소스 |
 
 `/opt/monitoring/.env`는 저장소에 두지 않습니다. 배포할 때 Parameter Store에서 만듭니다.
