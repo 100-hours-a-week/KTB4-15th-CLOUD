@@ -23,6 +23,17 @@ variable "route53_zone_id" {
   type        = string
 }
 
+variable "fastapi_webhook_token" {
+  description = "Runware webhook token required in the query string (?token=) for the FastAPI route"
+  type        = string
+  sensitive   = true
+
+  validation {
+    condition     = can(regex("^[A-Za-z0-9_-]+$", var.fastapi_webhook_token))
+    error_message = "fastapi_webhook_token must be URL-safe ([A-Za-z0-9_-]); ALB treats * and ? as wildcards."
+  }
+}
+
 variable "origin_domain_name" {
   description = "Regional ALB origin hostname"
   type        = string

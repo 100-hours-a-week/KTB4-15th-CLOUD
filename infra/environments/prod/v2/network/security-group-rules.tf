@@ -33,6 +33,15 @@ resource "aws_vpc_security_group_egress_rule" "alb_to_spring" {
   referenced_security_group_id = aws_security_group.v2["spring"].id
 }
 
+resource "aws_vpc_security_group_egress_rule" "alb_to_fastapi" {
+  security_group_id            = aws_security_group.v2["alb"].id
+  description                  = "Runware webhook traffic to FastAPI"
+  ip_protocol                  = "tcp"
+  from_port                    = 8000
+  to_port                      = 8000
+  referenced_security_group_id = aws_security_group.v2["fastapi"].id
+}
+
 # ---------------------------------------------------------------
 # Next.js
 # ---------------------------------------------------------------
@@ -96,6 +105,15 @@ resource "aws_vpc_security_group_ingress_rule" "fastapi_from_spring" {
   from_port                    = 8000
   to_port                      = 8000
   referenced_security_group_id = aws_security_group.v2["spring"].id
+}
+
+resource "aws_vpc_security_group_ingress_rule" "fastapi_from_alb" {
+  security_group_id            = aws_security_group.v2["fastapi"].id
+  description                  = "Runware webhook traffic from ALB"
+  ip_protocol                  = "tcp"
+  from_port                    = 8000
+  to_port                      = 8000
+  referenced_security_group_id = aws_security_group.v2["alb"].id
 }
 
 resource "aws_vpc_security_group_egress_rule" "fastapi_to_postgresql" {
