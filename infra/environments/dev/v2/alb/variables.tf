@@ -54,3 +54,15 @@ variable "fastapi_enabled" {
   type        = bool
   default     = false
 }
+
+variable "fastapi_webhook_token" {
+  description = "Runware webhook token required in the query string (?token=) for the FastAPI route"
+  type        = string
+  default     = null
+  sensitive   = true
+
+  validation {
+    condition     = var.fastapi_webhook_token == null || can(regex("^[A-Za-z0-9_-]+$", var.fastapi_webhook_token))
+    error_message = "fastapi_webhook_token must be URL-safe ([A-Za-z0-9_-]); ALB treats * and ? as wildcards."
+  }
+}
