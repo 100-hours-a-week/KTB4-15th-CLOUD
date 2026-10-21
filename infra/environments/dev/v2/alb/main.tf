@@ -284,7 +284,13 @@ resource "aws_lb_listener_rule" "spring" {
   }
 }
 
-# Temporary: /api/v2/* -> FastAPI. Priority 5 so it wins over the Spring /api/* rule (10).
+# Temporary: Runware webhook -> FastAPI. Priority 5 so it wins over the Spring /api/* rule (10).
+# - Only /api/v2/webhooks/runware with ?token=<SSM /lookddak/dev/fastapi/webhook-token> is forwarded.
+#   Anything else falls through to the Spring /api/* rule (404 there).
+# - The token is a rule condition, so it is stored in plain text in Terraform state,
+#   the ELB console, and CloudTrail (CreateRule/ModifyRule). Plan output hides it (sensitive).
+# - ALB matches query values case-insensitively and treats * and ? as wildcards;
+#   the token must be URL-safe [A-Za-z0-9_-]. Rotating the token requires a new apply.
 resource "aws_lb_listener_rule" "fastapi" {
   count = var.fastapi_enabled ? 1 : 0
 
@@ -298,7 +304,14 @@ resource "aws_lb_listener_rule" "fastapi" {
 
   condition {
     path_pattern {
-      values = ["/api/v2/*"]
+      values = ["/api/v2/webhooks/runware"]
+    }
+  }
+
+  condition {
+    query_string {
+      key   = "token"
+      value = var.fastapi_webhook_token
     }
   }
 

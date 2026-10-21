@@ -29,7 +29,16 @@ module "dev_v2_alb" {
   v1_instance_id       = module.dev_v1_compute.instance_id
   v1_health_check_path = var.dev_v1_alb_health_check_path
 
-  fastapi_enabled = var.dev_v2_fastapi_alb_enabled
+  fastapi_enabled       = var.dev_v2_fastapi_alb_enabled
+  fastapi_webhook_token = var.dev_v2_fastapi_alb_enabled ? data.aws_ssm_parameter.dev_fastapi_webhook_token[0].value : null
+}
+
+# Runware webhook token (FastAPI WEBHOOK_TOKEN). Used as the ALB query string condition.
+data "aws_ssm_parameter" "dev_fastapi_webhook_token" {
+  count = var.dev_v2_fastapi_alb_enabled ? 1 : 0
+
+  name            = "/lookddak/dev/fastapi/webhook-token"
+  with_decryption = true
 }
 
 module "dev_v2_ecs_cluster" {
@@ -159,7 +168,8 @@ variable "dev_v2_spring_tasks_enabled" {
   default     = true
 }
 
-# 임시: dev.lookddak.com/api/v2/* -> FastAPI (경로 그대로 전달). 닫을 때 false로 바꿔 apply.
+# 임시: dev.lookddak.com/api/v2/webhooks/runware?token=<webhook-token> -> FastAPI (경로 그대로 전달).
+# 닫을 때 false로 바꿔 apply.
 variable "dev_v2_fastapi_alb_enabled" {
   description = "Temporarily expose /api/v2/* on the dev ALB to the V2 FastAPI service"
   type        = bool
