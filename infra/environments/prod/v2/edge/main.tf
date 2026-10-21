@@ -122,6 +122,32 @@ resource "aws_lb_target_group" "spring" {
   })
 }
 
+resource "aws_lb_target_group" "fastapi" {
+  name             = "lookddak-prod-v2-fastapi-tg"
+  port             = 8000
+  protocol         = "HTTP"
+  protocol_version = "HTTP1"
+  target_type      = "ip"
+  vpc_id           = var.vpc_id
+
+  health_check {
+    enabled             = true
+    path                = "/health"
+    port                = "traffic-port"
+    protocol            = "HTTP"
+    matcher             = "200"
+    interval            = 30
+    timeout             = 5
+    healthy_threshold   = 2
+    unhealthy_threshold = 3
+  }
+
+  tags = merge(local.common_tags, {
+    Name    = "lookddak-prod-v2-fastapi-tg"
+    Service = "fastapi"
+  })
+}
+
 resource "aws_lb_listener" "http" {
   load_balancer_arn = aws_lb.this.arn
   port              = 80
@@ -156,6 +182,46 @@ resource "aws_lb_listener" "https" {
 
   tags = merge(local.common_tags, {
     Name = "lookddak-prod-v2-https"
+  })
+}
+
+# Runware webhook -> FastAPI. Priority 5 makes this more specific route win over /api/* -> Spring (10).
+# The token is stored in SSM, but using it as an ALB condition also records it in Terraform state and ELB settings.
+resource "aws_lb_listener_rule" "fastapi_webhook" {
+  listener_arn = aws_lb_listener.https.arn
+  priority     = 5
+
+  action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.fastapi.arn
+  }
+
+  condition {
+    path_pattern {
+      values = ["/api/v2/webhooks/runware"]
+    }
+  }
+
+  condition {
+    query_string {
+      key   = "token"
+      value = var.fastapi_webhook_token
+    }
+  }
+
+  condition {
+    host_header {
+      values = [
+        var.origin_domain_name,
+        var.test_domain_name,
+        var.production_domain_name,
+      ]
+    }
+  }
+
+  tags = merge(local.common_tags, {
+    Name    = "lookddak-prod-v2-fastapi-webhook"
+    Service = "fastapi"
   })
 }
 

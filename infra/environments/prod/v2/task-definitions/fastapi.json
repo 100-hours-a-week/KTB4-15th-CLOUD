@@ -34,6 +34,22 @@
           "value": "https://sqs.ap-northeast-2.amazonaws.com/686496667254/lookddak-prod-v2-be-fitting-response"
         },
         {
+          "name": "VIRTUAL_FITTING_REQUEST_WORKER_ENABLED",
+          "value": "true"
+        },
+        {
+          "name": "VIRTUAL_FITTING_POSTPROCESS_WORKER_ENABLED",
+          "value": "true"
+        },
+        {
+          "name": "VIRTUAL_FITTING_RESULT_PUBLISHER_ENABLED",
+          "value": "true"
+        },
+        {
+          "name": "VIRTUAL_FITTING_WATCHDOG_ENABLED",
+          "value": "true"
+        },
+        {
           "name": "WEB_CONCURRENCY",
           "value": "1"
         },
@@ -59,6 +75,18 @@
           "appProtocol": "http"
         }
       ],
+      "healthCheck": {
+        "command": [
+          "CMD",
+          "python",
+          "-c",
+          "import socket; socket.create_connection(('localhost', 8000), 3).close()"
+        ],
+        "interval": 30,
+        "timeout": 5,
+        "retries": 3,
+        "startPeriod": 180
+      },
       "secrets": [
         {
           "name": "DATABASE_URL",
