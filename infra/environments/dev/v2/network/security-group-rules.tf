@@ -38,6 +38,29 @@ resource "aws_vpc_security_group_egress_rule" "alb_to_spring" {
   referenced_security_group_id = aws_security_group.v2["spring"].id
 }
 
+# Temporary: ALB -> FastAPI for /api/v2/* (var.fastapi_alb_enabled)
+resource "aws_vpc_security_group_egress_rule" "alb_to_fastapi" {
+  count = var.fastapi_alb_enabled ? 1 : 0
+
+  security_group_id            = aws_security_group.v2["alb"].id
+  description                  = "FastAPI /api/v2 traffic (temporary)"
+  ip_protocol                  = "tcp"
+  from_port                    = 8000
+  to_port                      = 8000
+  referenced_security_group_id = aws_security_group.v2["fastapi"].id
+}
+
+resource "aws_vpc_security_group_ingress_rule" "fastapi_from_alb" {
+  count = var.fastapi_alb_enabled ? 1 : 0
+
+  security_group_id            = aws_security_group.v2["fastapi"].id
+  description                  = "FastAPI /api/v2 traffic from ALB (temporary)"
+  ip_protocol                  = "tcp"
+  from_port                    = 8000
+  to_port                      = 8000
+  referenced_security_group_id = aws_security_group.v2["alb"].id
+}
+
 # ALB -> V1 dev EC2 nginx (dev.lookddak.com until the V2 cutover).
 # The V1 app security group already allows 443 from the internet.
 resource "aws_vpc_security_group_egress_rule" "alb_to_v1_dev_app" {

@@ -17,3 +17,9 @@ variable "dev_app_security_group_id" {
   description = "V2 PostgreSQL·MySQL 접근을 허용할 V1 dev EC2 보안 그룹 ID"
   type        = string
 }
+
+variable "fastapi_alb_enabled" {
+  description = "Allow ALB -> FastAPI 8000 (temporary /api/v2/* route)"
+  type        = bool
+  default     = false
+}

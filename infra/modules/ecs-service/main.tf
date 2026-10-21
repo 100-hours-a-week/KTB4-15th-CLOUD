@@ -31,7 +31,11 @@ resource "aws_ecs_service" "this" {
   scheduling_strategy = "REPLICA"
 
   enable_ecs_managed_tags = true
-  enable_execute_command  = var.enable_execute_command
+
+  # Only meaningful with a load balancer. Slow-starting tasks (model loading) need time
+  # before ALB health checks count, or ECS replaces them in a loop.
+  health_check_grace_period_seconds = var.target_group_arn == null ? null : var.health_check_grace_period_seconds
+  enable_execute_command            = var.enable_execute_command
 
   # Rolling update: start new tasks first, stop old tasks only after the new
   # ones are healthy (no capacity drop during deployment).

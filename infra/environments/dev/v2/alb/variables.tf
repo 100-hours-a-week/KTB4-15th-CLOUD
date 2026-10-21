@@ -48,3 +48,9 @@ variable "v1_health_check_path" {
   description = "HTTPS path on the V1 dev nginx that returns 200 for ALB health checks"
   type        = string
 }
+
+variable "fastapi_enabled" {
+  description = "Temporarily route /api/v2/* on the dev domains to the V2 FastAPI service"
+  type        = bool
+  default     = false
+}
