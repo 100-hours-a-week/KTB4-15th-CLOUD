@@ -22,10 +22,10 @@ resource "aws_scheduler_schedule_group" "crawler" {
 resource "aws_scheduler_schedule" "crawler" {
   name        = "lookddak-dev-v2-crawler"
   group_name  = aws_scheduler_schedule_group.crawler.name
-  description = "Run the LookDDak dev V2 crawler every day at 04:00 Asia/Seoul"
-  state       = "DISABLED"
+  description = "Run the LookDDak dev V2 crawler every day at 16:15 Asia/Seoul"
+  state       = "ENABLED"
 
-  schedule_expression          = "cron(0 4 * * ? *)"
+  schedule_expression          = "cron(15 16 * * ? *)"
   schedule_expression_timezone = "Asia/Seoul"
 
   flexible_time_window {
