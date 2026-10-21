@@ -51,6 +51,7 @@ locals {
         DB_PASSWORD         = "${local.ssm}/rds/app/password"
         JWT_SECRET          = "${local.ssm}/spring/jwt-secret"
         AI_INTERNAL_API_KEY = "${local.ssm}/internal/ai-api-key"
+        INTERNAL_API_KEY    = "${local.ssm}/spring/internal-api-key"
         SENTRY_DSN          = "${local.ssm}/spring/sentry_dsn"
       }
       port_mappings = [{ name = "spring-http", container_port = 8080 }]
