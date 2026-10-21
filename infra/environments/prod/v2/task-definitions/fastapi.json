@@ -85,6 +85,14 @@
           "valueFrom": "/lookddak/prod/fastapi/openAI-api-key"
         },
         {
+          "name": "WEBHOOK_TOKEN",
+          "valueFrom": "/lookddak/prod/fastapi/webhook-token"
+        },
+        {
+          "name": "VIRTUAL_FITTING_RUNWARE_WEBHOOK_URL",
+          "valueFrom": "/lookddak/prod/fastapi/virtual-fitting-runware-webhook-url"
+        },
+        {
           "name": "BODY_IMAGE_REMOTE_URL",
           "valueFrom": "/lookddak/prod/fastapi/body-image-validation/url"
         },
