@@ -118,16 +118,6 @@ prometheus.exporter.cloudwatch "aws" {
       statistics = ["Sum"]
       period     = "5m"
     }
-    metric {
-      name       = "HealthyHostCount"
-      statistics = ["Minimum"]
-      period     = "5m"
-    }
-    metric {
-      name       = "UnHealthyHostCount"
-      statistics = ["Maximum"]
-      period     = "5m"
-    }
   }
 
   // ALB: 로드밸런서 단위 (앱까지 도달하지 못한 요청)

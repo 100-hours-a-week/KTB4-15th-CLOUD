@@ -318,7 +318,7 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 8,
+        "w": 12,
         "x": 0,
         "y": 18
       },
@@ -377,8 +377,8 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 8,
-        "x": 8,
+        "w": 12,
+        "x": 12,
         "y": 18
       },
       "targets": [
@@ -408,65 +408,6 @@
             "drawStyle": "bars",
             "lineWidth": 1,
             "fillOpacity": 80,
-            "spanNulls": false,
-            "showPoints": "never"
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      }
-    },
-    {
-      "id": 10,
-      "type": "timeseries",
-      "title": "Healthy / UnHealthy 타깃",
-      "description": "healthy는 5분 중 최솟값, unhealthy는 최댓값",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 16,
-        "y": 18
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "label_replace(max by (dimension_TargetGroup) (aws_applicationelb_healthy_host_count_minimum{dimension_TargetGroup=~\"targetgroup/lookddak-[a-z]+-v2-.*\"}), \"service\", \"$1\", \"dimension_TargetGroup\", \"targetgroup/lookddak-[a-z]+-v2-([a-z]+)-tg/.*\")",
-          "legendFormat": "healthy {{service}}"
-        },
-        {
-          "refId": "B",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "label_replace(max by (dimension_TargetGroup) (aws_applicationelb_un_healthy_host_count_maximum{dimension_TargetGroup=~\"targetgroup/lookddak-[a-z]+-v2-.*\"}), \"service\", \"$1\", \"dimension_TargetGroup\", \"targetgroup/lookddak-[a-z]+-v2-([a-z]+)-tg/.*\")",
-          "legendFormat": "unhealthy {{service}}"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "custom": {
-            "drawStyle": "line",
-            "lineWidth": 1,
-            "fillOpacity": 10,
             "spanNulls": false,
             "showPoints": "never"
           }

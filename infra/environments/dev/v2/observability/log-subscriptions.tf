@@ -4,7 +4,7 @@
 #   MySQL: error, slowquery(long_query_time 2초) / PostgreSQL: postgresql
 #   (PostgreSQL upgrade 로그는 엔진 업그레이드 때만 생겨 제외)
 # - 로그 그룹당 구독 필터는 최대 2개다.
-# - 레이블: Alloy가 로그 그룹 경로로 log_group, source(rds, ecs-event)를 붙인다.
+# - 레이블: Alloy가 로그 그룹 경로로 log_group, source(rds, ecs-event, alb)를 붙인다.
 # ---------------------------------------------------------------
 locals {
   subscribed_log_groups = toset([
@@ -12,6 +12,7 @@ locals {
     "/aws/rds/instance/lookddak-dev-v2-mysql/slowquery",
     "/aws/rds/instance/lookddak-dev-postgresql/postgresql",
     aws_cloudwatch_log_group.ecs_task_stopped.name,
+    aws_cloudwatch_log_group.alb_access.name,
   ])
 }
 
