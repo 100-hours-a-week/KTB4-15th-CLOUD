@@ -17,3 +17,8 @@ output "instance_role_name" {
   description = "Monitoring server IAM role name"
   value       = aws_iam_role.instance.name
 }
+
+output "ecs_task_stopped_log_group_name" {
+  description = "CloudWatch log group receiving dev V2 ECS task stopped events"
+  value       = aws_cloudwatch_log_group.ecs_task_stopped.name
+}
