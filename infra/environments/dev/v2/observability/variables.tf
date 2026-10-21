@@ -25,3 +25,8 @@ variable "root_volume_size" {
   type        = number
   default     = 30
 }
+
+variable "ecs_cluster_arn" {
+  description = "Dev V2 ECS cluster ARN for task stopped events"
+  type        = string
+}
