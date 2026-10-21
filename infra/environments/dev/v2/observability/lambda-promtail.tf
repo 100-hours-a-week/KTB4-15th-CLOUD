@@ -1,9 +1,10 @@
 # ---------------------------------------------------------------
-# lambda-promtail: CloudWatch Logs 구독 → Alloy(:3500) → Loki
+# lambda-promtail: CloudWatch Logs 구독·S3(ALB 로그) → Alloy(:3500) → Loki
 # - Grafana 공식 릴리스 ZIP을 sha256 검증 후 lambda-artifacts 버킷에 올려 참조한다.
 #   (lambda-promtail-v1.0.1.zip, sha256 2a436a30772ac638f715dd240784f787b9f0c745ba292a49cd23d132c477fd13)
-# - VPC 안에서 Monitoring EC2의 고정 IP로 보낸다. 인터넷 출구는 필요 없다.
-# - CloudWatch Logs 구독은 비동기 호출이다. 실패하면 2번 재시도하고,
+# - VPC 안에서 Monitoring EC2의 고정 IP로 보낸다.
+#   ALB 로그 파일은 S3에서 읽는다(NAT 경유, 443만 S3 IP 대역으로 허용).
+# - CloudWatch Logs 구독·S3 이벤트는 비동기 호출이다. 실패하면 2번 재시도하고,
 #   끝내 실패한 이벤트는 SQS(failed)로 보낸다. 설정하지 않으면 조용히 버려진다.
 # - PRINT_LOG_LINE=false: 기본값(true)이면 받은 로그를 자기 로그에 다시 찍어
 #   CloudWatch 수집 비용이 두 배가 된다.
@@ -36,6 +37,19 @@ resource "aws_vpc_security_group_egress_rule" "lambda_promtail_to_alloy" {
   from_port                    = 3500
   to_port                      = 3500
   referenced_security_group_id = aws_security_group.this.id
+}
+
+data "aws_ec2_managed_prefix_list" "s3" {
+  name = "com.amazonaws.${data.aws_region.current.region}.s3"
+}
+
+resource "aws_vpc_security_group_egress_rule" "lambda_promtail_to_s3" {
+  security_group_id = aws_security_group.lambda_promtail.id
+  description       = "Read ALB log files from S3"
+  ip_protocol       = "tcp"
+  from_port         = 443
+  to_port           = 443
+  prefix_list_id    = data.aws_ec2_managed_prefix_list.s3.id
 }
 
 resource "aws_vpc_security_group_ingress_rule" "alloy_from_lambda_promtail" {
@@ -105,7 +119,7 @@ resource "aws_sqs_queue" "lambda_promtail_failed" {
 # --- Function ---
 resource "aws_lambda_function" "lambda_promtail" {
   function_name = local.lambda_promtail_name
-  description   = "CloudWatch Logs subscription to Loki (lambda-promtail ${local.lambda_promtail_version})"
+  description   = "CloudWatch Logs subscription and S3 ALB logs to Loki (lambda-promtail ${local.lambda_promtail_version})"
   role          = aws_iam_role.lambda_promtail.arn
 
   s3_bucket     = aws_s3_bucket.lambda_artifacts.id

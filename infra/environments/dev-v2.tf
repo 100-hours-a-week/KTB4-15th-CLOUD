@@ -29,6 +29,8 @@ module "dev_v2_alb" {
   v1_instance_id       = module.dev_v1_compute.instance_id
   v1_health_check_path = var.dev_v1_alb_health_check_path
 
+  access_logs_bucket = module.dev_v2_monitoring.alb_logs_bucket_name
+
   fastapi_enabled       = var.dev_v2_fastapi_alb_enabled
   fastapi_webhook_token = var.dev_v2_fastapi_alb_enabled ? data.aws_ssm_parameter.dev_fastapi_webhook_token[0].value : null
 }
@@ -95,7 +97,6 @@ module "dev_v2_monitoring" {
   subnet_id         = module.dev_v2_network.private_app_subnet_ids[0]
   lambda_subnet_ids = module.dev_v2_network.private_app_subnet_ids
   ecs_cluster_arn   = module.dev_v2_ecs_cluster.cluster_arn
-  alb_arn           = module.dev_v2_alb.alb_arn
 }
 
 module "dev_v2_crawler" {
