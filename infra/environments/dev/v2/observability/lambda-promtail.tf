@@ -7,6 +7,9 @@
 #   끝내 실패한 이벤트는 SQS(failed)로 보낸다. 설정하지 않으면 조용히 버려진다.
 # - PRINT_LOG_LINE=false: 기본값(true)이면 받은 로그를 자기 로그에 다시 찍어
 #   CloudWatch 수집 비용이 두 배가 된다.
+# - log_group·source 레이블은 Alloy(loki.source.api relabel_rules)에서 만든다.
+#   lambda-promtail은 __aws_cloudwatch_log_group 등 __ 레이블을 그대로 보내고,
+#   Alloy가 이를 변환한 뒤 __ 레이블을 버린다.
 # ---------------------------------------------------------------
 locals {
   lambda_promtail_name    = "lookddak-dev-lambda-promtail"
@@ -140,35 +143,6 @@ resource "aws_lambda_function" "lambda_promtail" {
       KEEP_STREAM              = "false"
       PRINT_LOG_LINE           = "false"
       LOG_LEVEL                = "warn"
-      # 로그 그룹 이름으로 log_group, source 레이블을 만든다.
-      RELABEL_CONFIGS = jsonencode([
-        {
-          source_labels = ["__aws_cloudwatch_log_group"]
-          target_label  = "log_group"
-          action        = "replace"
-        },
-        {
-          source_labels = ["__aws_cloudwatch_log_group"]
-          regex         = "/aws/rds/.*"
-          target_label  = "source"
-          replacement   = "rds"
-          action        = "replace"
-        },
-        {
-          source_labels = ["__aws_cloudwatch_log_group"]
-          regex         = "/aws/events/.*ecs-task-stopped"
-          target_label  = "source"
-          replacement   = "ecs-event"
-          action        = "replace"
-        },
-        {
-          source_labels = ["__aws_cloudwatch_log_group"]
-          regex         = ".*/alb/.*"
-          target_label  = "source"
-          replacement   = "alb"
-          action        = "replace"
-        },
-      ])
     }
   }
 
