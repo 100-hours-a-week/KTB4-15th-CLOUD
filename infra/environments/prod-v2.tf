@@ -11,6 +11,11 @@ module "prod_v2_network" {
   prod_app_security_group_id = module.prod_v1_network.app_security_group_id
 }
 
+data "aws_ssm_parameter" "prod_fastapi_webhook_token" {
+  name            = "/lookddak/prod/fastapi/webhook-token"
+  with_decryption = true
+}
+
 module "prod_v2_edge" {
   source = "./prod/v2/edge"
 
@@ -23,6 +28,7 @@ module "prod_v2_edge" {
   public_subnet_ids     = module.prod_v2_network.alb_public_subnet_ids
   alb_security_group_id = module.prod_v2_network.security_group_ids["alb"]
   route53_zone_id       = module.shared_core.route53_zone_id
+  fastapi_webhook_token = data.aws_ssm_parameter.prod_fastapi_webhook_token.value
 }
 
 module "prod_v2_ecs_cluster" {
@@ -68,6 +74,10 @@ module "prod_v2_crawler" {
 
 module "prod_v2_ecs_services" {
   source = "./prod/v2/ecs-services"
+
+  # The FastAPI target group must be attached to the ALB listener before ECS
+  # updates the service load balancer configuration.
+  depends_on = [module.prod_v2_edge]
 
   create_services        = var.prod_v2_create_services
   activate_services      = var.prod_v2_activate_services

@@ -17,8 +17,9 @@ check "service_creation_prerequisites" {
       contains(keys(var.task_definition_arns), "fastapi"),
       contains(keys(var.target_group_arns), "nextjs"),
       contains(keys(var.target_group_arns), "spring"),
+      contains(keys(var.target_group_arns), "fastapi"),
     ])
-    error_message = "Task definition ARNs for nextjs, spring, and fastapi plus ALB target group ARNs for nextjs and spring are required before prod services can be enabled."
+    error_message = "Task definition ARNs and ALB target group ARNs for nextjs, spring, and fastapi are required before prod services can be enabled."
   }
 }
 
@@ -96,6 +97,9 @@ module "fastapi" {
   security_group_ids = [var.security_group_ids["fastapi"]]
   container_name     = "fastapi"
   container_port     = 8000
+
+  target_group_arn                  = lookup(var.target_group_arns, "fastapi", null)
+  health_check_grace_period_seconds = 240
 
   service_connect_namespace_arn  = aws_service_discovery_http_namespace.service_connect.arn
   service_connect_mode           = "client-server"

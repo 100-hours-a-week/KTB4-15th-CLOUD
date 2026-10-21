@@ -42,6 +42,14 @@
           "value": "https://sqs.ap-northeast-2.amazonaws.com/686496667254/lookddak-prod-v2-be-fitting-response"
         },
         {
+          "name": "FITTING_OUTBOX_ENABLED",
+          "value": "true"
+        },
+        {
+          "name": "FITTING_RESULT_CONSUMER_ENABLED",
+          "value": "true"
+        },
+        {
           "name": "JAVA_TOOL_OPTIONS",
           "value": "-XX:MaxRAMPercentage=75.0 -XX:InitialRAMPercentage=25.0 -XX:MaxMetaspaceSize=192m -XX:+UseContainerSupport -Dnetworkaddress.cache.ttl=10"
         },
