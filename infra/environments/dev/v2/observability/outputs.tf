@@ -39,11 +39,16 @@ output "alb_logs_bucket_name" {
 }
 
 output "grafana_target_group_arn" {
-  description = "Grafana target group ARN (listener rule is added with Cognito auth)"
+  description = "Grafana target group ARN"
   value       = aws_lb_target_group.grafana.arn
 }
 
 output "grafana_url" {
   description = "Grafana public URL"
   value       = "https://${aws_route53_record.grafana.fqdn}"
+}
+
+output "grafana_user_pool_id" {
+  description = "Cognito user pool ID for Grafana users"
+  value       = aws_cognito_user_pool.grafana.id
 }
