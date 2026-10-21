@@ -174,3 +174,8 @@ merge하면 `terraform-apply` workflow가 실행되어 인프라에 반영됩니
 | Plan Role | `gha-terraform-plan-role` | PR 워크플로 (`terraform-pr`) |
 | Apply Role | `gha-terraform-apply-role` | main 워크플로 (`terraform-apply`) |
 | Dev FastAPI 본문 이미지 검증 설정 | `/lookddak/dev/fastapi/body-image-validation/*` | V1/V2 런타임 주입용 SecureString 4개 |
+| Prod V2 MySQL 애플리케이션 사용자명 | `/lookddak/prod/v2/mysql/app/username` | Spring `DB_USERNAME` 주입용 String |
+| Prod V2 MySQL 애플리케이션 비밀번호 | `/lookddak/prod/v2/mysql/app/password` | Spring `DB_PASSWORD` 주입용 SecureString |
+| Prod Spring-FastAPI 내부 인증 키 | `/lookddak/prod/internal/ai-api-key` | Spring과 FastAPI 간 내부 API 인증용 SecureString |
+| Prod FastAPI Runware Webhook 토큰 | `/lookddak/prod/fastapi/webhook-token` | Runware Callback 요청 인증용 SecureString |
+| Prod FastAPI Runware Webhook URL | `/lookddak/prod/fastapi/virtual-fitting-runware-webhook-url` | Runware Callback URL 주입용 SecureString |
