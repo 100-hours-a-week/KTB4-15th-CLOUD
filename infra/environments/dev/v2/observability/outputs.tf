@@ -37,3 +37,13 @@ output "alb_logs_bucket_name" {
   description = "S3 bucket for dev V2 ALB access logs (bucket policy applied)"
   value       = aws_s3_bucket_policy.alb_logs.bucket
 }
+
+output "grafana_target_group_arn" {
+  description = "Grafana target group ARN (listener rule is added with Cognito auth)"
+  value       = aws_lb_target_group.grafana.arn
+}
+
+output "grafana_url" {
+  description = "Grafana public URL"
+  value       = "https://${aws_route53_record.grafana.fqdn}"
+}
