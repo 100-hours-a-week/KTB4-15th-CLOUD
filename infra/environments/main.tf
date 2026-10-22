@@ -61,8 +61,7 @@ module "prod_v1_cicd_deploy_policy" {
 module "prod_v1_edge" {
   source = "./prod/v1/edge"
 
-  zone_id       = module.shared_core.route53_zone_id
-  app_public_ip = module.prod_v1_compute.public_ip
+  zone_id = module.shared_core.route53_zone_id
 }
 
 module "prod_v1_monitoring" {
