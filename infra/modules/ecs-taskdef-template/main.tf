@@ -72,7 +72,9 @@ locals {
       cpuArchitecture       = var.cpu_architecture
     }
 
-    containerDefinitions = [local.container_definition]
+    # 앱 컨테이너가 항상 첫 번째. 사이드카(ecs_exporter, Fluent Bit 등)는 뒤에 붙인다.
+    # 앱 CD는 앱 컨테이너를 이름(container_name)으로 찾아 image digest만 바꾼다.
+    containerDefinitions = concat([local.container_definition], var.sidecars)
 
     tags = [
       for key in sort(keys(var.tags)) : { key = key, value = var.tags[key] }

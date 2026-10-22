@@ -110,3 +110,14 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
+
+variable "sidecars" {
+  description = "앱 컨테이너 뒤에 붙일 사이드카 컨테이너 정의 목록 (ECS containerDefinitions 형식 그대로). 이름이 container_name과 겹치면 안 된다"
+  type        = any
+  default     = []
+
+  validation {
+    condition     = alltrue([for sidecar in var.sidecars : sidecar.name != var.container_name])
+    error_message = "sidecars의 name은 앱 container_name과 달라야 한다 (앱 CD가 이름으로 앱 컨테이너를 찾는다)."
+  }
+}
