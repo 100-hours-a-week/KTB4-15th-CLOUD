@@ -66,10 +66,14 @@ module "prod_v2_database" {
 module "prod_v2_crawler" {
   source = "./prod/v2/crawler"
 
-  ecs_cluster_arn           = module.prod_v2_ecs_cluster.cluster_arn
-  scheduler_role_arn        = module.prod_v2_iam.crawler_scheduler_role_arn
-  private_app_subnet_ids    = module.prod_v2_network.private_app_subnet_ids
-  crawler_security_group_id = module.prod_v2_network.security_group_ids["crawler"]
+  ecs_cluster_arn              = module.prod_v2_ecs_cluster.cluster_arn
+  scheduler_role_arn           = module.prod_v2_iam.crawler_scheduler_role_arn
+  task_execution_role_arn      = module.prod_v2_iam.task_execution_role_arn
+  crawler_task_role_arn        = module.prod_v2_iam.task_role_arns["crawler"]
+  private_app_subnet_ids       = module.prod_v2_network.private_app_subnet_ids
+  crawler_security_group_id    = module.prod_v2_network.security_group_ids["crawler"]
+  database_url_parameter_name  = "/lookddak/prod/v2/postgresql/app/database-url"
+  crawler_cloudwatch_log_group = module.prod_v2_logging.log_group_names["crawler"]
 }
 
 module "prod_v2_task_definitions" {

@@ -332,10 +332,13 @@ resource "aws_iam_policy" "crawler_scheduler" {
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
-      Sid      = "RunCrawlerTask"
-      Action   = "ecs:RunTask"
-      Effect   = "Allow"
-      Resource = local.crawler_task_definition_arn_pattern
+      Sid    = "RunCrawlerTask"
+      Action = "ecs:RunTask"
+      Effect = "Allow"
+      Resource = [
+        local.crawler_task_definition_arn_pattern,
+        local.crawler_cleanup_task_definition_arn_pattern,
+      ]
       Condition = {
         ArnEquals = {
           "ecs:cluster" = var.ecs_cluster_arn
