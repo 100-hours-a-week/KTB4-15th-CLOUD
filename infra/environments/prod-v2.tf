@@ -255,6 +255,16 @@ output "prod_v2_task_role_arns" {
   value       = module.prod_v2_iam.task_role_arns
 }
 
+output "prod_v2_modal_body_image_worker_user_name" {
+  description = "IAM User name used by the production Modal body image worker"
+  value       = module.prod_v2_iam.modal_body_image_worker_user_name
+}
+
+output "prod_v2_modal_body_image_worker_policy_arn" {
+  description = "Upload-only IAM Policy ARN for the production Modal body image worker"
+  value       = module.prod_v2_iam.modal_body_image_worker_policy_arn
+}
+
 output "prod_v2_crawler_schedule_arn" {
   description = "V2 prod crawler schedule ARN"
   value       = module.prod_v2_crawler.schedule_arn
