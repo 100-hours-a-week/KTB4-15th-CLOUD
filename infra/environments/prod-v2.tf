@@ -66,10 +66,26 @@ module "prod_v2_database" {
 module "prod_v2_crawler" {
   source = "./prod/v2/crawler"
 
-  ecs_cluster_arn           = module.prod_v2_ecs_cluster.cluster_arn
-  scheduler_role_arn        = module.prod_v2_iam.crawler_scheduler_role_arn
-  private_app_subnet_ids    = module.prod_v2_network.private_app_subnet_ids
-  crawler_security_group_id = module.prod_v2_network.security_group_ids["crawler"]
+  ecs_cluster_arn              = module.prod_v2_ecs_cluster.cluster_arn
+  scheduler_role_arn           = module.prod_v2_iam.crawler_scheduler_role_arn
+  task_execution_role_arn      = module.prod_v2_iam.task_execution_role_arn
+  crawler_task_role_arn        = module.prod_v2_iam.task_role_arns["crawler"]
+  private_app_subnet_ids       = module.prod_v2_network.private_app_subnet_ids
+  crawler_security_group_id    = module.prod_v2_network.security_group_ids["crawler"]
+  database_url_parameter_name  = "/lookddak/prod/v2/postgresql/app/database-url"
+  crawler_cloudwatch_log_group = module.prod_v2_logging.log_group_names["crawler"]
+}
+
+module "prod_v2_task_definitions" {
+  source = "./prod/v2/task-definitions"
+
+  bucket_name             = module.shared_ecs_taskdef_store.bucket_name
+  ecr_repository_urls     = module.shared_core.ecr_repository_urls
+  task_role_arns          = module.prod_v2_iam.task_role_arns
+  task_execution_role_arn = module.prod_v2_iam.task_execution_role_arn
+  queue_urls              = module.prod_v2_sqs.queue_urls
+  log_group_names         = module.prod_v2_logging.log_group_names
+  images_bucket_name      = module.prod_s3.images_bucket_name
 }
 
 module "prod_v2_ecs_services" {
@@ -88,6 +104,18 @@ module "prod_v2_ecs_services" {
   security_group_ids     = module.prod_v2_network.security_group_ids
   target_group_arns      = module.prod_v2_edge.target_group_arns
   task_definition_arns   = var.prod_v2_task_definition_arns
+}
+
+module "prod_v2_cicd_deploy_policy" {
+  source = "./prod/v2/cicd-deploy-policy"
+
+  deploy_role_names       = module.prod_v1_iam.deploy_role_names
+  template_bucket_arn     = module.shared_ecs_taskdef_store.bucket_arn
+  ecr_repository_arns     = module.shared_core.ecr_repository_arns
+  cluster_name            = module.prod_v2_ecs_cluster.cluster_name
+  service_names           = module.prod_v2_ecs_services.service_names
+  task_role_arns          = module.prod_v2_iam.task_role_arns
+  task_execution_role_arn = module.prod_v2_iam.task_execution_role_arn
 }
 
 # The default path reads the manually-created SecureString with an ephemeral
@@ -153,6 +181,11 @@ variable "prod_v2_task_definition_arns" {
     spring  = "arn:aws:ecs:ap-northeast-2:686496667254:task-definition/lookddak-prod-v2-spring:1"
     fastapi = "arn:aws:ecs:ap-northeast-2:686496667254:task-definition/lookddak-prod-v2-fastapi:1"
   }
+}
+
+output "prod_v2_task_definition_template_s3_keys" {
+  description = "V2 prod Task Definition template S3 keys"
+  value       = module.prod_v2_task_definitions.template_s3_keys
 }
 
 output "prod_v2_postgresql_parameter_paths" {
