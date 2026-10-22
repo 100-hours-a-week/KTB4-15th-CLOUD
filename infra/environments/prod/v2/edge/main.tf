@@ -244,13 +244,14 @@ resource "aws_lb_listener_rule" "fastapi_webhook" {
     }
   }
 
+  # ALB 규칙당 조건 값은 최대 5개 (path 1 + token 1 + host 3).
+  # www.lookddak.com은 넣지 않는다: CloudFront가 Host를 origin 도메인으로 바꿔 보내므로 ALB에는 오지 않는다.
   condition {
     host_header {
       values = [
         var.origin_domain_name,
         var.test_domain_name,
         var.production_domain_name,
-        var.production_www_domain_name,
       ]
     }
   }
