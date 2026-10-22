@@ -111,6 +111,30 @@ variable "service_connect_dns_name" {
   nullable    = true
 }
 
+variable "service_connect_idle_timeout_seconds" {
+  description = "Optional idle timeout for the primary Service Connect service"
+  type        = number
+  default     = null
+  nullable    = true
+
+  validation {
+    condition     = var.service_connect_idle_timeout_seconds == null || var.service_connect_idle_timeout_seconds >= 0
+    error_message = "service_connect_idle_timeout_seconds must be null or zero or greater."
+  }
+}
+
+variable "service_connect_per_request_timeout_seconds" {
+  description = "Optional per-request timeout for the primary Service Connect service"
+  type        = number
+  default     = null
+  nullable    = true
+
+  validation {
+    condition     = var.service_connect_per_request_timeout_seconds == null || var.service_connect_per_request_timeout_seconds >= 0
+    error_message = "service_connect_per_request_timeout_seconds must be null or zero or greater."
+  }
+}
+
 variable "additional_service_connect_services" {
   description = "Additional named ports exposed through ECS Service Connect"
   type = list(object({

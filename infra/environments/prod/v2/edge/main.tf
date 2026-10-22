@@ -64,6 +64,7 @@ resource "aws_lb" "this" {
   security_groups    = [var.alb_security_group_id]
   subnets            = var.public_subnet_ids
   ip_address_type    = "ipv4"
+  idle_timeout       = 120
 
   tags = merge(local.common_tags, {
     Name = "lookddak-prod-v2-alb"
@@ -382,6 +383,7 @@ resource "aws_cloudfront_distribution" "this" {
       https_port             = 443
       origin_protocol_policy = "https-only"
       origin_ssl_protocols   = ["TLSv1.2"]
+      origin_read_timeout    = 120
     }
   }
 
