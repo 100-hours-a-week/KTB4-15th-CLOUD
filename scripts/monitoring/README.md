@@ -22,8 +22,8 @@ EC2는 Terraform(`infra/environments/dev/v2/observability`)으로 관리하고, 
 
 | 포트 | 대상 | 열린 범위 |
 |---|---|---|
-| 3000 | Grafana | 호스트 (SSM 포트포워딩, 이후 ALB) |
-| 3500 | Alloy Loki push 수신 | 호스트 (이후 ECS task, lambda-promtail) |
+| 3000 | Grafana | 호스트 (ALB 보안 그룹, SSM 포트포워딩) |
+| 3500 | Alloy Loki push 수신 | 호스트 (lambda-promtail, 이후 ECS task) |
 | 9090 | Prometheus | 127.0.0.1 |
 | 3100 | Loki | 127.0.0.1 |
 | 12345 | Alloy UI | 127.0.0.1 |
@@ -42,8 +42,14 @@ Docker named volume(`prometheus-data`, `loki-data`, `alloy-data`, `grafana-data`
 
 ## 접속
 
+팀원: `https://grafana.dev.lookddak.com` → Cognito 로그인 → Grafana 자동 로그인 (Editor).
+
+- ALB가 Cognito 인증 후 `X-Amzn-Oidc-Identity`(Cognito 사용자 ID, UUID) 헤더를 붙여 전달하고, Grafana auth proxy가 이 값으로 로그인시킵니다.
+- 헤더는 ALB 서브넷(`10.30.1.0/24`, `10.30.2.0/24`)에서 온 요청만 인정합니다.
+- 계정은 관리자가 Cognito 사용자 풀 `lookddak-dev-grafana`에 만듭니다 (셀프 가입 없음).
+
+관리자(`admin`): SSM 포트포워딩 후 `http://localhost:3000/login` (`admin` / Parameter Store 비밀번호).
+
 ```bash
 aws ssm start-session --target <instance-id> --document-name AWS-StartPortForwardingSession --parameters portNumber=3000,localPortNumber=3000
 ```
-
-브라우저에서 `http://localhost:3000` 접속 (`admin` / Parameter Store 비밀번호).
