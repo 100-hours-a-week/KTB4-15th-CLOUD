@@ -65,3 +65,8 @@ variable "alb_zone_id" {
   description = "Dev V2 ALB canonical hosted zone ID"
   type        = string
 }
+
+variable "ecs_task_security_group_ids" {
+  description = "ECS task security group IDs that run the ecs_exporter sidecar (service => SG ID)"
+  type        = map(string)
+}

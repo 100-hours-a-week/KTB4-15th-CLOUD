@@ -104,6 +104,11 @@ module "dev_v2_monitoring" {
   alb_security_group_id = module.dev_v2_network.security_group_ids["alb"]
   alb_dns_name          = module.dev_v2_alb.alb_dns_name
   alb_zone_id           = module.dev_v2_alb.alb_zone_id
+
+  ecs_task_security_group_ids = {
+    for service in ["nextjs", "spring", "fastapi"] :
+    service => module.dev_v2_network.security_group_ids[service]
+  }
 }
 
 module "dev_v2_crawler" {

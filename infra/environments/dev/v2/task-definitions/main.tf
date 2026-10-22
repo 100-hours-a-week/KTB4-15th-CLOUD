@@ -133,6 +133,48 @@ locals {
   }
 }
 
+# ---------------------------------------------------------------
+# 모니터링 사이드카: ecs_exporter (Task CPU·메모리·네트워크 → :9779/metrics)
+# - 계속 떠 있는 서비스(nextjs, spring, fastapi)에만 붙인다. crawler(배치)는 제외.
+# - essential = false: 죽어도 앱 Task는 계속 돈다.
+# - Task 메타데이터 엔드포인트(169.254.170.2)를 읽으므로 IAM 권한이 필요 없다.
+# - 템플릿은 다음 앱 배포 때 반영된다. 앱 CD가 앱 컨테이너를 이름으로 찾도록
+#   바뀐 뒤에 적용해야 한다 (예전 CD는 컨테이너가 1개가 아니면 배포를 멈춘다).
+# ---------------------------------------------------------------
+locals {
+  ecs_exporter_image    = "quay.io/prometheuscommunity/ecs-exporter:v0.4.0"
+  ecs_exporter_services = ["nextjs", "spring", "fastapi"]
+
+  # 서비스마다 사이드카 목록. 목록 모양이 달라 map 대신 object로 둔다.
+  sidecars = {
+    for service in keys(local.services) : service => (
+      contains(local.ecs_exporter_services, service) ? [
+        {
+          name              = "ecs-exporter"
+          image             = local.ecs_exporter_image
+          essential         = false
+          memory            = 64
+          memoryReservation = 32
+          portMappings = [{
+            containerPort = 9779
+            hostPort      = 9779
+            protocol      = "tcp"
+          }]
+          logConfiguration = {
+            logDriver = "awslogs"
+            options = {
+              "awslogs-group"         = var.log_group_names[service]
+              "awslogs-region"        = "ap-northeast-2"
+              "awslogs-stream-prefix" = "ecs-exporter"
+            }
+          }
+          readonlyRootFilesystem = true
+        },
+      ] : []
+    )
+  }
+}
+
 module "template" {
   source   = "../../../../modules/ecs-taskdef-template"
   for_each = local.services
@@ -154,6 +196,7 @@ module "template" {
   log_group_name       = var.log_group_names[each.key]
   command              = each.value.command
   health_check         = each.value.health_check
+  sidecars             = local.sidecars[each.key]
 
   tags = {
     Environment = "dev"
