@@ -87,6 +87,32 @@ resource "aws_iam_role_policy_attachment" "task_s3_images_rw" {
   policy_arn = aws_iam_policy.task_s3_images_rw.arn
 }
 
+resource "aws_iam_policy" "modal_body_image_put" {
+  name        = "lookddak-prod-modal-body-image-put"
+  description = "Allow the production Modal body image worker to upload processed images"
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Sid      = "UploadProcessedBodyImages"
+      Action   = "s3:PutObject"
+      Effect   = "Allow"
+      Resource = "${local.prod_image_bucket_arn}/body-images/*"
+    }]
+  })
+
+  tags = {
+    Component   = "body-image-validation"
+    Environment = "prod"
+    Service     = "modal"
+    Version     = "v2"
+  }
+}
+
+resource "aws_iam_user_policy_attachment" "modal_body_image_put" {
+  user       = aws_iam_user.modal_body_image_worker.name
+  policy_arn = aws_iam_policy.modal_body_image_put.arn
+}
+
 resource "aws_iam_policy" "spring_sqs_fitting" {
   name        = "lookddak-prod-v2-spring-sqs-fitting"
   description = "Publish fitting requests and consume fitting results in V2 prod"

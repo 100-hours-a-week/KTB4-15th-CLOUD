@@ -27,3 +27,13 @@ output "crawler_scheduler_role_name" {
   description = "V2 prod Crawler EventBridge Scheduler Role name"
   value       = aws_iam_role.crawler_scheduler.name
 }
+
+output "modal_body_image_worker_user_name" {
+  description = "IAM User name used by the production Modal body image worker"
+  value       = aws_iam_user.modal_body_image_worker.name
+}
+
+output "modal_body_image_worker_policy_arn" {
+  description = "Upload-only IAM Policy ARN for the production Modal body image worker"
+  value       = aws_iam_policy.modal_body_image_put.arn
+}
