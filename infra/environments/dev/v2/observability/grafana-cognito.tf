@@ -54,6 +54,8 @@ resource "aws_cognito_user_pool_client" "grafana_alb" {
   allowed_oauth_scopes                 = ["openid", "email"]
   supported_identity_providers         = ["COGNITO"]
   callback_urls                        = ["https://${var.grafana_domain_name}/oauth2/idpresponse"]
+  # Cognito 로그아웃 후 돌아올 주소 (grafana-logout.tf)
+  logout_urls = ["https://${var.grafana_domain_name}/"]
 
   explicit_auth_flows = [
     "ALLOW_REFRESH_TOKEN_AUTH",
