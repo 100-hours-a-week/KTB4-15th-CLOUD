@@ -51,3 +51,9 @@ variable "production_domain_name" {
   type        = string
   default     = "lookddak.com"
 }
+
+variable "production_www_domain_name" {
+  description = "Production www hostname included in the certificate for the later cutover"
+  type        = string
+  default     = "www.lookddak.com"
+}
