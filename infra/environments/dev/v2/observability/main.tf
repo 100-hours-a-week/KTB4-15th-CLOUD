@@ -105,6 +105,8 @@ resource "aws_iam_role_policy" "observability_read" {
         "ecs:DescribeServices",
         "ecs:ListTasks",
         "ecs:DescribeTasks",
+        # Prometheus ECS 디스커버리가 awsvpc Task의 네트워크 정보를 읽을 때 사용
+        "ec2:DescribeNetworkInterfaces",
       ]
       Resource = "*"
       }, {
