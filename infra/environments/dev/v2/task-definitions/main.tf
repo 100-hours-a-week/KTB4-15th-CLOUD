@@ -38,6 +38,7 @@ locals {
         AI_SERVER_URL                   = "http://fastapi:8000"
         CORS_ALLOWED_ORIGINS            = "https://dev.lookddak.com,https://v2-dev.lookddak.com"
         SENTRY_ENVIRONMENT              = "dev"
+        SSE_SERVER_PORT                 = "8081"
         BE_FITTING_REQUEST_QUEUE_URL    = var.queue_urls["be-fitting-request"]
         BE_FITTING_RESPONSE_QUEUE_URL   = var.queue_urls["be-fitting-response"]
         FITTING_OUTBOX_ENABLED          = "true"
@@ -54,9 +55,12 @@ locals {
         INTERNAL_API_KEY    = "${local.ssm}/spring/internal-api-key"
         SENTRY_DSN          = "${local.ssm}/spring/sentry_dsn"
       }
-      port_mappings = [{ name = "spring-http", container_port = 8080 }]
-      command       = null
-      health_check  = null
+      port_mappings = [
+        { name = "spring-http", container_port = 8080 },
+        { name = "spring-sse", container_port = 8081 },
+      ]
+      command      = null
+      health_check = null
     }
 
     fastapi = {

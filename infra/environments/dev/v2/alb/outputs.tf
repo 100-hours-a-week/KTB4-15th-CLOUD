@@ -32,8 +32,9 @@ output "target_group_arns" {
   description = "V2 dev target group ARNs for future ECS services"
   value = merge(
     {
-      nextjs = aws_lb_target_group.nextjs.arn
-      spring = aws_lb_target_group.spring.arn
+      nextjs     = aws_lb_target_group.nextjs.arn
+      spring     = aws_lb_target_group.spring.arn
+      spring_sse = aws_lb_target_group.spring_sse.arn
     },
     var.fastapi_enabled ? { fastapi = aws_lb_target_group.fastapi[0].arn } : {},
   )
