@@ -34,7 +34,7 @@ resource "aws_ecs_service" "this" {
 
   # Only meaningful with a load balancer. Slow-starting tasks (model loading) need time
   # before ALB health checks count, or ECS replaces them in a loop.
-  health_check_grace_period_seconds = var.target_group_arn == null ? null : var.health_check_grace_period_seconds
+  health_check_grace_period_seconds = var.target_group_arn == null && length(var.additional_load_balancers) == 0 ? null : var.health_check_grace_period_seconds
   enable_execute_command            = var.enable_execute_command
 
   # Rolling update: start new tasks first, stop old tasks only after the new
@@ -64,6 +64,16 @@ resource "aws_ecs_service" "this" {
     }
   }
 
+  dynamic "load_balancer" {
+    for_each = var.additional_load_balancers
+
+    content {
+      target_group_arn = load_balancer.value.target_group_arn
+      container_name   = load_balancer.value.container_name
+      container_port   = load_balancer.value.container_port
+    }
+  }
+
   service_connect_configuration {
     enabled   = true
     namespace = var.service_connect_namespace_arn
@@ -78,6 +88,33 @@ resource "aws_ecs_service" "this" {
         client_alias {
           dns_name = var.service_connect_dns_name
           port     = var.container_port
+        }
+      }
+    }
+
+    dynamic "service" {
+      for_each = var.additional_service_connect_services
+
+      content {
+        port_name      = service.value.port_name
+        discovery_name = service.value.discovery_name
+
+        dynamic "client_alias" {
+          for_each = service.value.dns_name == null || service.value.client_alias_port == null ? [] : [1]
+
+          content {
+            dns_name = service.value.dns_name
+            port     = service.value.client_alias_port
+          }
+        }
+
+        dynamic "timeout" {
+          for_each = service.value.idle_timeout_seconds == null && service.value.per_request_timeout_seconds == null ? [] : [1]
+
+          content {
+            idle_timeout_seconds        = service.value.idle_timeout_seconds
+            per_request_timeout_seconds = service.value.per_request_timeout_seconds
+          }
         }
       }
     }

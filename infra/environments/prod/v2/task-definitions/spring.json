@@ -34,6 +34,10 @@
           "value": "prod"
         },
         {
+          "name": "SSE_SERVER_PORT",
+          "value": "8081"
+        },
+        {
           "name": "BE_FITTING_REQUEST_QUEUE_URL",
           "value": "https://sqs.ap-northeast-2.amazonaws.com/686496667254/lookddak-prod-v2-be-fitting-request"
         },
@@ -63,6 +67,13 @@
           "name": "spring-http",
           "containerPort": 8080,
           "hostPort": 8080,
+          "protocol": "tcp",
+          "appProtocol": "http"
+        },
+        {
+          "name": "spring-sse",
+          "containerPort": 8081,
+          "hostPort": 8081,
           "protocol": "tcp",
           "appProtocol": "http"
         }

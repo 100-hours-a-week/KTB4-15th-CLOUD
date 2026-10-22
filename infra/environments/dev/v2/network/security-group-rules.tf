@@ -38,6 +38,15 @@ resource "aws_vpc_security_group_egress_rule" "alb_to_spring" {
   referenced_security_group_id = aws_security_group.v2["spring"].id
 }
 
+resource "aws_vpc_security_group_egress_rule" "alb_to_spring_sse" {
+  security_group_id            = aws_security_group.v2["alb"].id
+  description                  = "Spring notification SSE traffic"
+  ip_protocol                  = "tcp"
+  from_port                    = 8081
+  to_port                      = 8081
+  referenced_security_group_id = aws_security_group.v2["spring"].id
+}
+
 # Temporary: ALB -> FastAPI for /api/v2/* (var.fastapi_alb_enabled)
 resource "aws_vpc_security_group_egress_rule" "alb_to_fastapi" {
   count = var.fastapi_alb_enabled ? 1 : 0
@@ -103,6 +112,15 @@ resource "aws_vpc_security_group_ingress_rule" "spring_from_alb" {
   ip_protocol                  = "tcp"
   from_port                    = 8080
   to_port                      = 8080
+  referenced_security_group_id = aws_security_group.v2["alb"].id
+}
+
+resource "aws_vpc_security_group_ingress_rule" "spring_sse_from_alb" {
+  security_group_id            = aws_security_group.v2["spring"].id
+  description                  = "Notification SSE traffic from ALB"
+  ip_protocol                  = "tcp"
+  from_port                    = 8081
+  to_port                      = 8081
   referenced_security_group_id = aws_security_group.v2["alb"].id
 }
 

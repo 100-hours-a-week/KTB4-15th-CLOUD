@@ -11,9 +11,10 @@ output "alb_dns_name" {
 output "target_group_arns" {
   description = "V2 Prod target group ARNs keyed by service name"
   value = {
-    nextjs  = aws_lb_target_group.nextjs.arn
-    spring  = aws_lb_target_group.spring.arn
-    fastapi = aws_lb_target_group.fastapi.arn
+    nextjs     = aws_lb_target_group.nextjs.arn
+    spring     = aws_lb_target_group.spring.arn
+    spring_sse = aws_lb_target_group.spring_sse.arn
+    fastapi    = aws_lb_target_group.fastapi.arn
   }
 }
 

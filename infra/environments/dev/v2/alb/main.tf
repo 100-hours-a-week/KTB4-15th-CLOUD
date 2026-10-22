@@ -141,6 +141,34 @@ resource "aws_lb_target_group" "spring" {
   }
 }
 
+resource "aws_lb_target_group" "spring_sse" {
+  name             = "lookddak-dev-v2-spring-sse-tg"
+  port             = 8081
+  protocol         = "HTTP"
+  protocol_version = "HTTP1"
+  target_type      = "ip"
+  vpc_id           = var.vpc_id
+
+  health_check {
+    enabled             = true
+    path                = "/actuator/health"
+    port                = "traffic-port"
+    protocol            = "HTTP"
+    matcher             = "200"
+    interval            = 30
+    timeout             = 5
+    healthy_threshold   = 2
+    unhealthy_threshold = 3
+  }
+
+  tags = {
+    Name        = "lookddak-dev-v2-spring-sse-tg"
+    Environment = "dev"
+    Version     = "v2"
+    Service     = "spring-sse"
+  }
+}
+
 # FastAPI (temporary, var.fastapi_enabled)
 # - /api/v2/* is forwarded as-is (no path rewrite).
 resource "aws_lb_target_group" "fastapi" {
@@ -290,6 +318,39 @@ resource "aws_lb_listener_rule" "spring" {
 
   tags = {
     Name        = "lookddak-dev-v2-spring"
+    Environment = "dev"
+    Version     = "v2"
+  }
+}
+
+# Notification SSE uses a dedicated Spring port so only this long-lived route
+# disables the Service Connect per-request timeout.
+resource "aws_lb_listener_rule" "spring_sse" {
+  listener_arn = aws_lb_listener.https.arn
+  priority     = 6
+
+  action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.spring_sse.arn
+  }
+
+  condition {
+    path_pattern {
+      values = ["/api/v1/notifications/stream"]
+    }
+  }
+
+  condition {
+    host_header {
+      values = [
+        var.domain_name,
+        var.v1_domain_name,
+      ]
+    }
+  }
+
+  tags = {
+    Name        = "lookddak-dev-v2-spring-sse"
     Environment = "dev"
     Version     = "v2"
   }
