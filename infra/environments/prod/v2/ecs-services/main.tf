@@ -119,11 +119,12 @@ module "fastapi" {
   target_group_arn                  = lookup(var.target_group_arns, "fastapi", null)
   health_check_grace_period_seconds = 240
 
-  service_connect_namespace_arn  = aws_service_discovery_http_namespace.service_connect.arn
-  service_connect_mode           = "client-server"
-  service_connect_port_name      = "fastapi-http"
-  service_connect_discovery_name = "fastapi"
-  service_connect_dns_name       = "fastapi"
+  service_connect_namespace_arn               = aws_service_discovery_http_namespace.service_connect.arn
+  service_connect_mode                        = "client-server"
+  service_connect_port_name                   = "fastapi-http"
+  service_connect_discovery_name              = "fastapi"
+  service_connect_dns_name                    = "fastapi"
+  service_connect_per_request_timeout_seconds = 120
 
   autoscaling_min_capacity  = local.effective_service_capacity["fastapi"].min_capacity
   autoscaling_max_capacity  = local.effective_service_capacity["fastapi"].max_capacity

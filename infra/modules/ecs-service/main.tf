@@ -89,6 +89,15 @@ resource "aws_ecs_service" "this" {
           dns_name = var.service_connect_dns_name
           port     = var.container_port
         }
+
+        dynamic "timeout" {
+          for_each = var.service_connect_idle_timeout_seconds == null && var.service_connect_per_request_timeout_seconds == null ? [] : [1]
+
+          content {
+            idle_timeout_seconds        = var.service_connect_idle_timeout_seconds
+            per_request_timeout_seconds = var.service_connect_per_request_timeout_seconds
+          }
+        }
       }
     }
 
