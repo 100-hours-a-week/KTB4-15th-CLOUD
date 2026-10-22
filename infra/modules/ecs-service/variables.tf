@@ -55,6 +55,16 @@ variable "target_group_arn" {
   nullable    = true
 }
 
+variable "additional_load_balancers" {
+  description = "Additional ALB target groups attached to the same ECS service"
+  type = list(object({
+    target_group_arn = string
+    container_name   = string
+    container_port   = number
+  }))
+  default = []
+}
+
 variable "container_name" {
   description = "Container name referenced by the ECS service load balancer"
   type        = string
@@ -99,6 +109,19 @@ variable "service_connect_dns_name" {
   type        = string
   default     = null
   nullable    = true
+}
+
+variable "additional_service_connect_services" {
+  description = "Additional named ports exposed through ECS Service Connect"
+  type = list(object({
+    port_name                   = string
+    discovery_name              = optional(string)
+    dns_name                    = optional(string)
+    client_alias_port           = optional(number)
+    idle_timeout_seconds        = optional(number)
+    per_request_timeout_seconds = optional(number)
+  }))
+  default = []
 }
 
 variable "autoscaling_min_capacity" {

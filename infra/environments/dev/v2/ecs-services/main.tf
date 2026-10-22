@@ -53,12 +53,29 @@ module "spring" {
   target_group_arn   = var.target_group_arns["spring"]
   container_name     = "spring"
   container_port     = 8080
+  additional_load_balancers = [
+    {
+      target_group_arn = var.target_group_arns["spring_sse"]
+      container_name   = "spring"
+      container_port   = 8081
+    }
+  ]
 
   service_connect_namespace_arn  = aws_service_discovery_http_namespace.service_connect.arn
   service_connect_mode           = "client-server"
   service_connect_port_name      = "spring-http"
   service_connect_discovery_name = "spring"
   service_connect_dns_name       = "spring"
+  additional_service_connect_services = [
+    {
+      port_name                   = "spring-sse"
+      discovery_name              = "spring-sse"
+      dns_name                    = "spring-sse"
+      client_alias_port           = 8081
+      idle_timeout_seconds        = 60
+      per_request_timeout_seconds = 0
+    }
+  ]
 
   # min/max=0 makes Application Auto Scaling clamp an already-running
   # service to zero even though the shared ECS module ignores desired_count.
