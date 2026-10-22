@@ -60,6 +60,19 @@ loki.relabel "cloudwatch" {
     target_label  = "source"
     replacement   = "ecs-event"
   }
+  // ECS 앱 로그 (awslogs 로그 그룹 구독, 지금은 crawler만). FireLens 앱 로그와 같은 service 레이블을 쓴다.
+  rule {
+    source_labels = ["__aws_cloudwatch_log_group"]
+    regex         = "/lookddak/dev/v2/(nextjs|spring|fastapi|crawler)"
+    target_label  = "service"
+    replacement   = "$1"
+  }
+  rule {
+    source_labels = ["__aws_cloudwatch_log_group"]
+    regex         = "/lookddak/dev/v2/(nextjs|spring|fastapi|crawler)"
+    target_label  = "source"
+    replacement   = "app"
+  }
   // S3의 ALB 액세스 로그 (lambda-promtail이 __aws_log_type="s3_lb"를 붙인다)
   rule {
     source_labels = ["__aws_log_type"]
