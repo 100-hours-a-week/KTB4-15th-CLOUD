@@ -259,3 +259,9 @@ output "prod_v2_crawler_schedule_arn" {
   description = "V2 prod crawler schedule ARN"
   value       = module.prod_v2_crawler.schedule_arn
 }
+
+# 2026-10-22 V1 -> V2 DNS 전환: lookddak.com A 레코드를 V2 edge 모듈로 옮긴다 (값은 CloudFront alias로 변경).
+moved {
+  from = module.prod_v1_edge.aws_route53_record.apex
+  to   = module.prod_v2_edge.aws_route53_record.production_ipv4
+}
