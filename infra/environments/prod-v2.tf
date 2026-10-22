@@ -141,10 +141,12 @@ variable "prod_v2_create_services" {
   default     = true
 }
 
+# 2026-10-22: 2.0.0 배포(템플릿 revision)와 Spring SSE 연결 후 활성화.
+# DNS 전환 전 v2-prod.lookddak.com으로 동작을 확인한다.
 variable "prod_v2_activate_services" {
   description = "Run V2 prod tasks after MySQL and the cutover prerequisites are ready"
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "prod_v2_service_capacity" {
