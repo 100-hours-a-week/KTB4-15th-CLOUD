@@ -65,6 +65,16 @@ services:
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?GRAFANA_ADMIN_PASSWORD is required}
       GF_USERS_ALLOW_SIGN_UP: "false"
       GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_SERVER_ROOT_URL: https://grafana.dev.lookddak.com
+      # 자동 로그인: ALB(Cognito 인증)가 넘기는 사용자 ID(UUID) 헤더로 로그인
+      # - 헤더는 ALB 서브넷(10.30.1.0/24, 10.30.2.0/24)에서 온 요청만 믿는다.
+      # - 처음 들어온 사용자는 Editor로 자동 생성된다.
+      GF_AUTH_PROXY_ENABLED: "true"
+      GF_AUTH_PROXY_HEADER_NAME: X-Amzn-Oidc-Identity
+      GF_AUTH_PROXY_HEADER_PROPERTY: username
+      GF_AUTH_PROXY_AUTO_SIGN_UP: "true"
+      GF_AUTH_PROXY_WHITELIST: 10.30.1.0/24, 10.30.2.0/24
+      GF_USERS_AUTO_ASSIGN_ORG_ROLE: Editor
       GF_ANALYTICS_REPORTING_ENABLED: "false"
       GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
     volumes:
