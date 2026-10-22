@@ -250,6 +250,7 @@ resource "aws_lb_listener_rule" "fastapi_webhook" {
         var.origin_domain_name,
         var.test_domain_name,
         var.production_domain_name,
+        var.production_www_domain_name,
       ]
     }
   }
@@ -317,13 +318,13 @@ resource "aws_route53_record" "origin" {
 
 # -----------------------------------------------------------------------------
 # Global certificate and CloudFront validation hostname
-# - lookddak.com is covered now, but its current DNS record remains untouched.
+# - lookddak.com, www.lookddak.com are covered now, but their current DNS records remain untouched.
 # -----------------------------------------------------------------------------
 resource "aws_acm_certificate" "viewer" {
   provider = aws.us_east_1
 
   domain_name               = var.test_domain_name
-  subject_alternative_names = [var.production_domain_name]
+  subject_alternative_names = [var.production_domain_name, var.production_www_domain_name]
   validation_method         = "DNS"
 
   lifecycle {
@@ -368,6 +369,7 @@ resource "aws_cloudfront_distribution" "this" {
   aliases = [
     var.test_domain_name,
     var.production_domain_name,
+    var.production_www_domain_name,
   ]
 
   origin {
