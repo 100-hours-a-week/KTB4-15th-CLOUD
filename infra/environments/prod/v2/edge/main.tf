@@ -78,13 +78,16 @@ resource "aws_lb_target_group" "nextjs" {
   target_type      = "ip"
   vpc_id           = var.vpc_id
 
+  # Default 300s made ECS rollouts wait ~5 min per deploy.
+  deregistration_delay = 60
+
   health_check {
     enabled             = true
     path                = "/onboarding"
     port                = "traffic-port"
     protocol            = "HTTP"
     matcher             = "200"
-    interval            = 30
+    interval            = 15
     timeout             = 5
     healthy_threshold   = 2
     unhealthy_threshold = 3
@@ -104,13 +107,16 @@ resource "aws_lb_target_group" "spring" {
   target_type      = "ip"
   vpc_id           = var.vpc_id
 
+  # Default 300s made ECS rollouts wait ~5 min per deploy.
+  deregistration_delay = 60
+
   health_check {
     enabled             = true
     path                = "/actuator/health"
     port                = "traffic-port"
     protocol            = "HTTP"
     matcher             = "200"
-    interval            = 30
+    interval            = 15
     timeout             = 5
     healthy_threshold   = 2
     unhealthy_threshold = 3
@@ -130,13 +136,16 @@ resource "aws_lb_target_group" "fastapi" {
   target_type      = "ip"
   vpc_id           = var.vpc_id
 
+  # Default 300s made ECS rollouts wait ~5 min per deploy.
+  deregistration_delay = 60
+
   health_check {
     enabled             = true
     path                = "/health"
     port                = "traffic-port"
     protocol            = "HTTP"
     matcher             = "200"
-    interval            = 30
+    interval            = 15
     timeout             = 5
     healthy_threshold   = 2
     unhealthy_threshold = 3
