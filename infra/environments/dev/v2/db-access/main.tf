@@ -169,6 +169,12 @@ resource "aws_instance" "this" {
     Name = local.name
   })
 
+  # 최신 AL2023 AMI가 나올 때마다 인스턴스가 교체되지 않게 한다.
+  # AMI 갱신이 필요하면 이 줄을 잠시 빼거나 -replace로 교체한다.
+  lifecycle {
+    ignore_changes = [ami]
+  }
+
   depends_on = [aws_iam_role_policy_attachment.ssm_core]
 }
 
