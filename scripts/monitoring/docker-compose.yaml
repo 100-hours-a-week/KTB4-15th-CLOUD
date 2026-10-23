@@ -111,9 +111,8 @@ services:
   postgres-exporter:
     image: prometheuscommunity/postgres-exporter:v0.20.1
     restart: unless-stopped
-    command:
-      - --datasource.uri=${POSTGRES_EXPORTER_HOST:?POSTGRES_EXPORTER_HOST is required}:5432/lookddak?sslmode=verify-full&sslrootcert=/etc/rds-ca/global-bundle.pem
     environment:
+      DATA_SOURCE_URI: ${POSTGRES_EXPORTER_HOST:?POSTGRES_EXPORTER_HOST is required}:5432/lookddak?sslmode=verify-full&sslrootcert=/etc/rds-ca/global-bundle.pem
       DATA_SOURCE_USER: exporter
       DATA_SOURCE_PASS: ${POSTGRES_EXPORTER_PASSWORD:?POSTGRES_EXPORTER_PASSWORD is required}
     volumes:
