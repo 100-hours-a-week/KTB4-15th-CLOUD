@@ -76,11 +76,12 @@ module "spring" {
     }
   ]
 
-  service_connect_namespace_arn  = aws_service_discovery_http_namespace.service_connect.arn
-  service_connect_mode           = "client-server"
-  service_connect_port_name      = "spring-http"
-  service_connect_discovery_name = "spring"
-  service_connect_dns_name       = "spring"
+  service_connect_namespace_arn               = aws_service_discovery_http_namespace.service_connect.arn
+  service_connect_mode                        = "client-server"
+  service_connect_port_name                   = "spring-http"
+  service_connect_discovery_name              = "spring"
+  service_connect_dns_name                    = "spring"
+  service_connect_per_request_timeout_seconds = 120
   additional_service_connect_services = [
     {
       port_name                   = "spring-sse"
