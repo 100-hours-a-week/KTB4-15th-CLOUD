@@ -137,6 +137,10 @@ resource "aws_lb_target_group" "spring_sse" {
   target_type      = "ip"
   vpc_id           = var.vpc_id
 
+  # SSE 연결은 계속 열려 있어 기본값(300초)이면 배포 때 이전 Task를 내리기까지 5분을 기다린다.
+  # API Target Group과 같은 60초로 맞춘다. 끊긴 알림 스트림은 FE가 3초 뒤 새 Task로 재연결한다.
+  deregistration_delay = 60
+
   health_check {
     enabled             = true
     path                = "/actuator/health"
