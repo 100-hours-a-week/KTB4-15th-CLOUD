@@ -47,6 +47,14 @@ locals {
     var.command == null ? {} : {
       command = var.command
     },
+    # 로그 설정을 바꿀 때 (예: FireLens awsfirelens). null이면 위 awslogs 그대로
+    var.log_configuration == null ? {} : {
+      logConfiguration = var.log_configuration
+    },
+    # 다른 컨테이너가 먼저 떠야 할 때 (예: FireLens log-router START)
+    length(var.depends_on_containers) == 0 ? {} : {
+      dependsOn = var.depends_on_containers
+    },
     var.health_check == null ? {} : {
       healthCheck = {
         command     = var.health_check.command
