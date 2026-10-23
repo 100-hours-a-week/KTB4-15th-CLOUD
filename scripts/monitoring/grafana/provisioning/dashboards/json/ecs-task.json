@@ -148,7 +148,24 @@
           "unit": "s",
           "min": 0,
           "color": {
-            "mode": "continuous-GrYlRd"
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 30
+              },
+              {
+                "color": "red",
+                "value": 60
+              }
+            ]
           }
         },
         "overrides": []
@@ -459,7 +476,7 @@
       "id": 11,
       "type": "logs",
       "title": "Task 중지 이벤트 (Loki)",
-      "description": "EventBridge ECS Task State Change(STOPPED). stoppedReason, 종료 코드 확인",
+      "description": "EventBridge ECS Task State Change(STOPPED). 서비스 Task ID | stopCode | stoppedReason. 원본 JSON은 로그 줄을 펼쳐서 확인",
       "datasource": {
         "type": "loki",
         "uid": "loki"
@@ -477,7 +494,7 @@
             "type": "loki",
             "uid": "loki"
           },
-          "expr": "{source=\"ecs-event\"}"
+          "expr": "{source=\"ecs-event\"} | json group=\"detail.group\", code=\"detail.stopCode\", reason=\"detail.stoppedReason\", task=\"detail.taskArn\" | group=~\"service:lookddak-dev-v2-($service)-service\" | line_format \"{{ regexReplaceAll \\\"service:lookddak-dev-v2-|-service\\\" .group \\\"\\\" }} {{ regexReplaceAll \\\".*/\\\" .task \\\"\\\" | trunc 8 }} | {{ .code }} | {{ .reason }}\""
         }
       ],
       "options": {
