@@ -1,7 +1,7 @@
 {
   "uid": "lookddak-database",
   "title": "Database",
-  "description": "dev RDS 내부 지표 (mysqld_exporter, postgres_exporter, 60초 수집)",
+  "description": "dev RDS 내부 지표 (mysqld_exporter, postgres_exporter, 60초 수집)와 쿼리 로그 (db-log-tailer)",
   "tags": [
     "lookddak",
     "database"
@@ -16,7 +16,53 @@
   },
   "refresh": "1m",
   "templating": {
-    "list": []
+    "list": [
+      {
+        "type": "custom",
+        "name": "db",
+        "label": "DB",
+        "query": "mysql,postgresql",
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".*",
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "options": [
+          {
+            "selected": true,
+            "text": "All",
+            "value": "$__all"
+          },
+          {
+            "selected": false,
+            "text": "mysql",
+            "value": "mysql"
+          },
+          {
+            "selected": false,
+            "text": "postgresql",
+            "value": "postgresql"
+          }
+        ]
+      },
+      {
+        "type": "textbox",
+        "name": "search",
+        "label": "쿼리 검색어",
+        "query": "",
+        "current": {
+          "text": "",
+          "value": ""
+        }
+      }
+    ]
   },
   "annotations": {
     "list": []
@@ -1387,6 +1433,361 @@
           "mode": "multi",
           "sort": "desc"
         }
+      }
+    },
+    {
+      "id": 25,
+      "type": "row",
+      "title": "쿼리 로그 (db-log-tailer → Loki, 원문)",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 52
+      },
+      "panels": []
+    },
+    {
+      "id": 26,
+      "type": "stat",
+      "title": "수집 지연",
+      "description": "마지막으로 받은 쿼리 로그 시각과 지금의 차이 (정상 약 15~20초, 쿼리가 없으면 커짐)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 0,
+        "y": 53
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "time() - max by (engine) (db_log_tailer_last_log_timestamp_seconds)",
+          "legendFormat": "{{engine}}",
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 60
+              },
+              {
+                "color": "red",
+                "value": 300
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value_and_name",
+        "orientation": "horizontal"
+      }
+    },
+    {
+      "id": 27,
+      "type": "timeseries",
+      "title": "쿼리 수 (초당, DB·사용자별)",
+      "description": "Loki에 들어온 쿼리 로그 수",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 18,
+        "x": 6,
+        "y": 53
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "sum by (db, db_user) (rate({source=\"db-query\", db=~\"$db\"}[1m]))",
+          "legendFormat": "{{db}} {{db_user}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "spanNulls": false,
+            "showPoints": "never"
+          },
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 28,
+      "type": "logs",
+      "title": "쿼리 로그",
+      "description": "DB·검색어로 거른다 (위 변수). 줄 앞: [실행 시간 ms](PostgreSQL만) DB 사용자. 줄을 펼치면 client_host, connection_id, retcode 등이 보인다. 시각은 초 단위(RDS 로그 형식)",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "h": 14,
+        "w": 24,
+        "x": 0,
+        "y": 61
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "{source=\"db-query\", db=~\"$db\"} |= \"$search\" | line_format \"{{ if .duration_ms }}[{{ .duration_ms }} ms] {{ end }}{{ .db_user }}: {{ __line__ }}\""
+        }
+      ],
+      "options": {
+        "showTime": true,
+        "wrapLogMessage": true,
+        "sortOrder": "Descending",
+        "enableLogDetails": true
+      }
+    },
+    {
+      "id": 29,
+      "type": "logs",
+      "title": "실패한 쿼리: MySQL (retcode ≠ 0)",
+      "description": "감사 로그 결과 코드가 0이 아닌 쿼리·접속",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 0,
+        "y": 75
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "{source=\"db-query\", db=\"mysql\"} | retcode != \"0\" | line_format \"{{ if .duration_ms }}[{{ .duration_ms }} ms] {{ end }}{{ .db_user }}: {{ __line__ }}\""
+        }
+      ],
+      "options": {
+        "showTime": true,
+        "wrapLogMessage": true,
+        "sortOrder": "Descending",
+        "enableLogDetails": true
+      }
+    },
+    {
+      "id": 30,
+      "type": "logs",
+      "title": "실패한 쿼리: PostgreSQL",
+      "description": "실행 후 ERROR가 난 쿼리 (result=error)",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 12,
+        "y": 75
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "{source=\"db-query\", db=\"postgresql\"} | result=\"error\" | line_format \"{{ if .duration_ms }}[{{ .duration_ms }} ms] {{ end }}{{ .db_user }}: {{ __line__ }}\""
+        }
+      ],
+      "options": {
+        "showTime": true,
+        "wrapLogMessage": true,
+        "sortOrder": "Descending",
+        "enableLogDetails": true
+      }
+    },
+    {
+      "id": 31,
+      "type": "logs",
+      "title": "느린 쿼리: PostgreSQL (100ms 이상)",
+      "description": "log_duration 실행 시간 기준",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 0,
+        "y": 85
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "{source=\"db-query\", db=\"postgresql\"} | duration_ms > 100 | line_format \"{{ if .duration_ms }}[{{ .duration_ms }} ms] {{ end }}{{ .db_user }}: {{ __line__ }}\""
+        }
+      ],
+      "options": {
+        "showTime": true,
+        "wrapLogMessage": true,
+        "sortOrder": "Descending",
+        "enableLogDetails": true
+      }
+    },
+    {
+      "id": 32,
+      "type": "logs",
+      "title": "PostgreSQL 오류·경고 로그",
+      "description": "쿼리 외 서버 로그 중 WARNING 이상",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 12,
+        "y": 85
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "{source=\"rds\", log_group=~\".*postgresql\"} | level=~\"WARNING|ERROR|FATAL|PANIC\""
+        }
+      ],
+      "options": {
+        "showTime": true,
+        "wrapLogMessage": true,
+        "sortOrder": "Descending",
+        "enableLogDetails": true
+      }
+    },
+    {
+      "id": 33,
+      "type": "logs",
+      "title": "느린 쿼리: MySQL (2초 이상)",
+      "description": "slowquery 로그 (long_query_time 2초, CloudWatch 경로). Query_time·Rows_examined 포함",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 0,
+        "y": 95
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "{source=\"rds\", log_group=~\".*mysql/slowquery\"}"
+        }
+      ],
+      "options": {
+        "showTime": true,
+        "wrapLogMessage": true,
+        "sortOrder": "Descending",
+        "enableLogDetails": true
+      }
+    },
+    {
+      "id": 34,
+      "type": "logs",
+      "title": "MySQL 오류 로그",
+      "description": "error 로그 (CloudWatch 경로)",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 12,
+        "y": 95
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "{source=\"rds\", log_group=~\".*mysql/error\"}"
+        }
+      ],
+      "options": {
+        "showTime": true,
+        "wrapLogMessage": true,
+        "sortOrder": "Descending",
+        "enableLogDetails": true
       }
     }
   ]
