@@ -5,7 +5,7 @@ global:
     env: dev
 
 # 호스트 메트릭은 Alloy가 수집해 remote write로 넣는다.
-# 여기서는 모니터링 구성요소와 ECS Task(ecs_exporter)를 scrape한다.
+# 여기서는 모니터링 구성요소, ECS Task(ecs_exporter), 앱(Spring·FastAPI)을 scrape한다.
 scrape_configs:
   - job_name: prometheus
     static_configs:
@@ -47,6 +47,65 @@ scrape_configs:
         regex: (.*/)?lookddak-dev-v2-(.+)-service
         target_label: service
         replacement: $2
+      - source_labels: [__meta_ecs_task_arn]
+        regex: .*/([^/]+)
+        target_label: task_id
+      - source_labels: [__meta_ecs_task_definition]
+        regex: .*:([0-9]+)
+        target_label: task_revision
+      - source_labels: [__meta_ecs_availability_zone]
+        target_label: availability_zone
+
+  # 앱 메트릭 (담당자 B). ecs-exporter와 같은 ECS 디스커버리, 서비스별 포트·경로만 다르다.
+  - job_name: spring
+    scrape_interval: 30s
+    metrics_path: /actuator/prometheus
+    aws_sd_configs:
+      - role: ecs
+        region: ap-northeast-2
+        port: 8080
+        refresh_interval: 60s
+    relabel_configs:
+      - source_labels: [__meta_ecs_cluster]
+        regex: (.*/)?lookddak-dev-v2
+        action: keep
+      - source_labels: [__meta_ecs_service]
+        regex: (.*/)?lookddak-dev-v2-spring-service
+        action: keep
+      - source_labels: [__meta_ecs_last_status]
+        regex: RUNNING
+        action: keep
+      - target_label: service
+        replacement: spring
+      - source_labels: [__meta_ecs_task_arn]
+        regex: .*/([^/]+)
+        target_label: task_id
+      - source_labels: [__meta_ecs_task_definition]
+        regex: .*:([0-9]+)
+        target_label: task_revision
+      - source_labels: [__meta_ecs_availability_zone]
+        target_label: availability_zone
+
+  - job_name: fastapi
+    scrape_interval: 30s
+    metrics_path: /metrics
+    aws_sd_configs:
+      - role: ecs
+        region: ap-northeast-2
+        port: 8000
+        refresh_interval: 60s
+    relabel_configs:
+      - source_labels: [__meta_ecs_cluster]
+        regex: (.*/)?lookddak-dev-v2
+        action: keep
+      - source_labels: [__meta_ecs_service]
+        regex: (.*/)?lookddak-dev-v2-fastapi-service
+        action: keep
+      - source_labels: [__meta_ecs_last_status]
+        regex: RUNNING
+        action: keep
+      - target_label: service
+        replacement: fastapi
       - source_labels: [__meta_ecs_task_arn]
         regex: .*/([^/]+)
         target_label: task_id
