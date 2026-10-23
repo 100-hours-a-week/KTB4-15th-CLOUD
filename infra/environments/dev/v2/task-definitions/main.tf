@@ -150,9 +150,11 @@ locals {
     for service in keys(local.services) : service => (
       contains(local.ecs_exporter_services, service) ? [
         {
-          name              = "ecs-exporter"
-          image             = local.ecs_exporter_image
-          essential         = false
+          name      = "ecs-exporter"
+          image     = local.ecs_exporter_image
+          essential = false
+          # exporter 자신의 go_*, process_*, promhttp_* 지표는 내보내지 않는다 (Task 지표만)
+          command           = ["--web.disable-exporter-metrics"]
           memory            = 64
           memoryReservation = 32
           portMappings = [{
