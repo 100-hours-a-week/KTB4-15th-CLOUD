@@ -143,6 +143,7 @@ module "dev_v2_task_definitions" {
   log_group_names         = module.dev_v2_logging.log_group_names
   images_bucket_name      = module.dev_s3.images_bucket_name
   fluent_bit_config_arn   = module.dev_v2_monitoring.fluent_bit_config_arn
+  fluent_bit_parsers_arn  = module.dev_v2_monitoring.fluent_bit_parsers_arn
 
 }
 
