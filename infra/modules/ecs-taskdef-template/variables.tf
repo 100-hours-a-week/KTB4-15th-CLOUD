@@ -121,3 +121,18 @@ variable "sidecars" {
     error_message = "sidecars의 name은 앱 container_name과 달라야 한다 (앱 CD가 이름으로 앱 컨테이너를 찾는다)."
   }
 }
+
+variable "log_configuration" {
+  description = "앱 컨테이너 logConfiguration (ECS 형식 그대로). null이면 log_group_name으로 awslogs를 쓴다"
+  type        = any
+  default     = null
+}
+
+variable "depends_on_containers" {
+  description = "앱 컨테이너 dependsOn (ECS 형식: containerName, condition)"
+  type = list(object({
+    containerName = string
+    condition     = string
+  }))
+  default = []
+}

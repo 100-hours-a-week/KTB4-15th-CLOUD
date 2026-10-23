@@ -109,6 +109,14 @@ module "dev_v2_monitoring" {
     for service in ["nextjs", "spring", "fastapi"] :
     service => module.dev_v2_network.security_group_ids[service]
   }
+
+  taskdef_bucket_name = module.shared_ecs_taskdef_store.bucket_name
+  taskdef_bucket_arn  = module.shared_ecs_taskdef_store.bucket_arn
+  firelens_task_role_names = {
+    for service in ["nextjs", "spring", "fastapi"] :
+    service => module.dev_v2_iam.task_role_names[service]
+  }
+  app_log_group_names = module.dev_v2_logging.log_group_names
 }
 
 module "dev_v2_crawler" {
@@ -134,6 +142,7 @@ module "dev_v2_task_definitions" {
   queue_urls              = module.dev_v2_sqs.queue_urls
   log_group_names         = module.dev_v2_logging.log_group_names
   images_bucket_name      = module.dev_s3.images_bucket_name
+  fluent_bit_config_arn   = module.dev_v2_monitoring.fluent_bit_config_arn
 
 }
 

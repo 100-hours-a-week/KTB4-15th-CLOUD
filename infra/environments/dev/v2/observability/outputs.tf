@@ -52,3 +52,8 @@ output "grafana_user_pool_id" {
   description = "Cognito user pool ID for Grafana users"
   value       = aws_cognito_user_pool.grafana.id
 }
+
+output "fluent_bit_config_arn" {
+  description = "FireLens Loki 출력 설정 파일 S3 객체 ARN"
+  value       = "arn:${data.aws_partition.current.partition}:s3:::${aws_s3_object.fluent_bit_loki.bucket}/${aws_s3_object.fluent_bit_loki.key}"
+}

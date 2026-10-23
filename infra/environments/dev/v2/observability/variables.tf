@@ -70,3 +70,23 @@ variable "ecs_task_security_group_ids" {
   description = "ECS task security group IDs that run the ecs_exporter sidecar (service => SG ID)"
   type        = map(string)
 }
+
+variable "taskdef_bucket_name" {
+  description = "ECS Task Definition 템플릿 버킷 (Fluent Bit 설정 파일도 함께 둔다)"
+  type        = string
+}
+
+variable "taskdef_bucket_arn" {
+  description = "ECS Task Definition 템플릿 버킷 ARN"
+  type        = string
+}
+
+variable "firelens_task_role_names" {
+  description = "FireLens를 쓰는 서비스별 Task Role 이름 (service => role name)"
+  type        = map(string)
+}
+
+variable "app_log_group_names" {
+  description = "서비스별 앱 로그 그룹 이름 (service => log group name)"
+  type        = map(string)
+}
