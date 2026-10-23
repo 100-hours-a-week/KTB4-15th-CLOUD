@@ -67,6 +67,11 @@ module "postgresql" {
     { name = "max_logical_replication_workers", value = "4", apply_method = "pending-reboot" },
     { name = "max_worker_processes", value = "8", apply_method = "pending-reboot" },
     { name = "max_slot_wal_keep_size", value = "2048", apply_method = "immediate" },
+    # 모든 쿼리 기록 (db-log-tailer가 RDS API로 읽어 Loki로 보낸다). 둘 다 동적 파라미터라 재부팅 없음
+    # - log_statement=all: 받은 쿼리 원문과 바인드 값(DETAIL: parameters)
+    # - log_duration=on: 끝난 쿼리마다 실행 시간 (실패하면 ERROR 줄)
+    { name = "log_statement", value = "all", apply_method = "immediate" },
+    { name = "log_duration", value = "1", apply_method = "immediate" },
   ]
 
   instance_class        = "db.t4g.small"
@@ -85,7 +90,9 @@ module "postgresql" {
   skip_final_snapshot       = false
   final_snapshot_identifier = "lookddak-dev-postgresql-final"
 
-  enabled_cloudwatch_logs_exports = ["postgresql", "upgrade"]
+  # postgresql 로그는 CloudWatch로 내보내지 않는다 (모든 쿼리를 기록해서 비용이 크다).
+  # db-log-tailer가 RDS API로 로그 파일을 읽어 Alloy → Loki로 보낸다 (dev/v2/observability/db-query-log.tf).
+  enabled_cloudwatch_logs_exports = ["upgrade"]
 }
 
 # ---------------------------------------------------------------
@@ -133,6 +140,50 @@ moved {
   to   = module.mysql[0]
 }
 
+# 모든 쿼리 기록: MariaDB Audit Plugin (RDS MySQL에서 쓸 수 있는 감사 플러그인)
+# - 감사 로그(audit/server_audit.log*)는 db-log-tailer가 RDS API로 읽어 Loki로 보낸다 (CloudWatch로 내보내지 않음).
+# - 붙일 때 재시작은 없지만 짧은 영향이 있을 수 있다. 떼면 RDS가 재시작한다.
+# - rdsadmin(매초 상태 확인), exporter(mysqld_exporter)는 제외한다. CONNECT는 제외 사용자도 기록된다.
+resource "aws_db_option_group" "mysql_audit" {
+  name                     = "lookddak-dev-v2-mysql84-audit"
+  option_group_description = "LookDDak dev V2 MySQL 8.4 audit log (MariaDB Audit Plugin)"
+  engine_name              = "mysql"
+  major_engine_version     = "8.4"
+
+  option {
+    option_name = "MARIADB_AUDIT_PLUGIN"
+
+    option_settings {
+      name  = "SERVER_AUDIT_EVENTS"
+      value = "CONNECT,QUERY"
+    }
+    option_settings {
+      name  = "SERVER_AUDIT_EXCL_USERS"
+      value = "rdsadmin,exporter"
+    }
+    # 쿼리 원문 길이 상한 (기본 1024자에서 늘림)
+    option_settings {
+      name  = "SERVER_AUDIT_QUERY_LOG_LIMIT"
+      value = "65536"
+    }
+    # 100MB × 10개 (기본 1MB × 9개는 수집기가 따라잡기 전에 회전될 수 있다)
+    option_settings {
+      name  = "SERVER_AUDIT_FILE_ROTATE_SIZE"
+      value = "100000000"
+    }
+    option_settings {
+      name  = "SERVER_AUDIT_FILE_ROTATIONS"
+      value = "10"
+    }
+  }
+
+  tags = {
+    Name        = "lookddak-dev-v2-mysql84-audit"
+    Environment = "dev"
+    Version     = "v2"
+  }
+}
+
 module "mysql" {
   source = "../../../../modules/rds-mysql"
   count  = local.mysql_enabled ? 1 : 0
@@ -148,6 +199,7 @@ module "mysql" {
 
   parameter_group_family      = "mysql8.4"
   parameter_group_description = "LookDDak dev V2 MySQL 8.4 parameter group"
+  option_group_name           = aws_db_option_group.mysql_audit.name
   parameters = [
     # Same values as the existing dev RDS (dev/v1/database)
     { name = "character_set_server", value = "utf8mb4" },

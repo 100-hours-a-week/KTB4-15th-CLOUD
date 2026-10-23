@@ -121,8 +121,31 @@ services:
       - "127.0.0.1:9187:9187"
     mem_limit: 64m
 
+  # DB 쿼리 로그 수집기: RDS 로그 파일을 RDS API로 이어 읽어 Alloy(:3500) → Loki로 보낸다 (CloudWatch 미사용)
+  # - MySQL 감사 로그(audit/), PostgreSQL 로그(error/postgresql.log*)
+  # - 읽은 위치는 db-log-tailer-state 볼륨에 둔다. 인스턴스 역할(IMDS)로 AWS에 접근한다.
+  db-log-tailer:
+    build: ./db-log-tailer
+    image: lookddak/db-log-tailer:local
+    restart: unless-stopped
+    environment:
+      TARGETS: mysql:lookddak-dev-v2-mysql:audit/,postgresql:lookddak-dev-postgresql:error/postgresql.log
+      AWS_REGION: ap-northeast-2
+      POLL_SECONDS: "5"
+      # PostgreSQL 쿼리 외 로그(오류, 체크포인트 등)도 보낸다 (source="rds"). PG CloudWatch 구독은 쓰지 않는다
+      PG_SEND_OTHER: "true"
+      LOKI_URL: http://alloy:3500/loki/api/v1/push
+    volumes:
+      - db-log-tailer-state:/state
+    ports:
+      - "127.0.0.1:9200:9200"
+    mem_limit: 128m
+    depends_on:
+      - alloy
+
 volumes:
   prometheus-data:
   loki-data:
   alloy-data:
   grafana-data:
+  db-log-tailer-state:
