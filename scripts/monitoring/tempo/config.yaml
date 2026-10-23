@@ -1,0 +1,55 @@
+# Tempo 3.1 단일 바이너리 (dev, -target=all, Kafka 없음)
+# - 수신: OTLP gRPC :4317 (compose 내부에서 Alloy만 보낸다. 호스트에 열지 않는다)
+# - 저장: S3 (블록). 로컬 /var/tempo(Docker volume)에는 live-store WAL과 metrics-generator WAL만 둔다
+# - S3 버킷 이름은 -config.expand-env=true로 환경변수 TEMPO_S3_BUCKET에서 읽는다 (서버 .env)
+# - 자격 증명: EC2 인스턴스 역할 (IMDSv2). access_key·secret_key를 쓰지 않는다
+# - 보존: 7일 (backend_worker.compaction.block_retention)
+# - 기준 예시: grafana/tempo v3.1.1 example/docker-compose/single-binary/tempo.yaml
+stream_over_http_enabled: true
+
+server:
+  http_listen_port: 3200
+  log_level: info
+
+distributor:
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+          endpoint: "0.0.0.0:4317"
+
+live_store:
+  wal:
+    path: /var/tempo/live-store/traces
+
+storage:
+  trace:
+    backend: s3
+    s3:
+      bucket: ${TEMPO_S3_BUCKET}
+      endpoint: s3.ap-northeast-2.amazonaws.com
+      region: ap-northeast-2
+
+backend_worker:
+  compaction:
+    block_retention: 168h
+
+# 트레이스로 지표 생성 → Prometheus remote write (서비스 그래프, 스팬 지표)
+metrics_generator:
+  registry:
+    external_labels:
+      source: tempo
+  storage:
+    path: /var/tempo/generator/wal
+    remote_write:
+      - url: http://prometheus:9090/api/v1/write
+        send_exemplars: false
+
+overrides:
+  defaults:
+    metrics_generator:
+      processors: ["service-graphs", "span-metrics"]
+      generate_native_histograms: classic
+
+usage_report:
+  reporting_enabled: false
