@@ -1,18 +1,27 @@
 # ---------------------------------------------------------------
 # FireLens(앱 로그 → Loki) 지원 리소스
-# - Fluent Bit init 이미지가 시작할 때 읽을 Loki 출력 설정(fluent-bit/loki.conf)을 S3에 둔다.
+# - Fluent Bit init 이미지가 시작할 때 읽을 설정(fluent-bit/loki.conf)과 여러 줄 규칙(fluent-bit/parsers.conf)을 S3에 둔다.
 #   (Fargate는 이미지 밖 설정 파일을 직접 못 쓰고, 커스텀 이미지 빌드를 피하려고 init 이미지를 쓴다)
 # - Task Role: 설정 파일 읽기 + 기존 앱 로그 그룹 쓰기 (FireLens에서는 ECS가 아니라 Fluent Bit가 CloudWatch에 쓴다)
 # - Task SG → Alloy :3500
 # ---------------------------------------------------------------
 locals {
-  fluent_bit_config_key = "dev/v2/fluent-bit/loki.conf"
+  fluent_bit_prefix      = "dev/v2/fluent-bit"
+  fluent_bit_config_key  = "${local.fluent_bit_prefix}/loki.conf"
+  fluent_bit_parsers_key = "${local.fluent_bit_prefix}/parsers.conf"
 }
 
 resource "aws_s3_object" "fluent_bit_loki" {
   bucket       = var.taskdef_bucket_name
   key          = local.fluent_bit_config_key
   content      = replace(file("${path.module}/fluent-bit/loki.conf"), "$${LOKI_HOST}", aws_instance.this.private_ip)
+  content_type = "text/plain"
+}
+
+resource "aws_s3_object" "fluent_bit_parsers" {
+  bucket       = var.taskdef_bucket_name
+  key          = local.fluent_bit_parsers_key
+  content      = file("${path.module}/fluent-bit/parsers.conf")
   content_type = "text/plain"
 }
 
@@ -29,7 +38,7 @@ resource "aws_iam_role_policy" "firelens" {
         Sid      = "ReadFluentBitConfig"
         Effect   = "Allow"
         Action   = "s3:GetObject"
-        Resource = "${var.taskdef_bucket_arn}/${local.fluent_bit_config_key}"
+        Resource = "${var.taskdef_bucket_arn}/${local.fluent_bit_prefix}/*"
       },
       {
         Sid      = "ReadFluentBitConfigBucketLocation"
