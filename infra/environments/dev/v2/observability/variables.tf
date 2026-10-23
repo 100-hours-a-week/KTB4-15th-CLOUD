@@ -71,6 +71,16 @@ variable "ecs_task_security_group_ids" {
   type        = map(string)
 }
 
+variable "mysql_security_group_id" {
+  description = "Dev V2 MySQL security group ID (mysqld_exporter 접속)"
+  type        = string
+}
+
+variable "postgresql_security_group_id" {
+  description = "Dev V2 PostgreSQL security group ID (postgres_exporter 접속)"
+  type        = string
+}
+
 variable "taskdef_bucket_name" {
   description = "ECS Task Definition 템플릿 버킷 (Fluent Bit 설정 파일도 함께 둔다)"
   type        = string
