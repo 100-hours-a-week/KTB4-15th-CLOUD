@@ -7,9 +7,9 @@ EC2는 Terraform(`infra/environments/dev/v2/observability`)으로 관리하고, 
 
 | 저장소 | 서버 | 역할 |
 |---|---|---|
-| `docker-compose.yaml` | `/opt/monitoring/docker-compose.yaml` | Prometheus, Loki, Alloy, Grafana |
-| `prometheus/prometheus.yml` | `/opt/monitoring/prometheus/prometheus.yml` | 모니터링 구성요소 scrape |
-| `loki/config.yaml` | `/opt/monitoring/loki/config.yaml` | 단일 바이너리, 파일시스템 저장, 보존 7일 |
+| `docker-compose.yaml` | `/opt/monitoring/docker-compose.yaml` | Prometheus, Loki, Alloy, Grafana, DB exporter (MySQL, PostgreSQL) |
+| `prometheus/prometheus.yml` | `/opt/monitoring/prometheus/prometheus.yml` | 모니터링 구성요소, ECS Task, 앱, DB exporter scrape |
+| `loki/config.yaml` | `/opt/monitoring/loki/config.yaml` | 단일 바이너리, S3 저장, 보존 7일 |
 | `alloy/config.alloy` | `/opt/monitoring/alloy/config.alloy` | 호스트 메트릭·AWS 메트릭(YACE) → Prometheus, Loki push 수신(:3500) → Loki |
 | `grafana/provisioning/datasources/datasources.yaml` | `/opt/monitoring/grafana/provisioning/datasources/datasources.yaml` | Prometheus, Loki, CloudWatch 데이터소스 |
 | `grafana/provisioning/dashboards/dashboards.yaml` | `/opt/monitoring/grafana/provisioning/dashboards/dashboards.yaml` | 대시보드 JSON 폴더를 읽는 provider (UI 수정 불가, 파일이 원본) |
@@ -25,6 +25,15 @@ EC2는 Terraform(`infra/environments/dev/v2/observability`)으로 관리하고, 
 |---|---|
 | `GRAFANA_ADMIN_PASSWORD` | Parameter Store `/lookddak/dev/monitoring/grafana-admin-password` |
 | `LOKI_S3_BUCKET` | `lookddak-dev-loki-<계정 ID>-ap-northeast-2` (Terraform 출력 `loki_bucket_name`) |
+| `POSTGRES_EXPORTER_HOST` | Parameter Store `/lookddak/dev/v2/postgresql/host` |
+| `POSTGRES_EXPORTER_PASSWORD` | Parameter Store `/lookddak/dev/monitoring/postgres-exporter/password` |
+
+서버에서만 만드는 파일 (저장소에 두지 않음):
+
+| 서버 | 내용 |
+|---|---|
+| `/opt/monitoring/rds-ca/global-bundle.pem` | RDS CA 인증서 (`https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem`) |
+| `/opt/monitoring/mysqld-exporter/my.cnf` | `[client]` host, port, user(`exporter`), password(`/lookddak/dev/monitoring/mysql-exporter/password`), `ssl-ca`. 소유자 65534, 권한 0400 |
 
 ## 포트
 
@@ -35,6 +44,8 @@ EC2는 Terraform(`infra/environments/dev/v2/observability`)으로 관리하고, 
 | 9090 | Prometheus | 127.0.0.1 |
 | 3100 | Loki (저장소: S3) | 127.0.0.1 |
 | 12345 | Alloy UI | 127.0.0.1 |
+| 9104 | mysqld-exporter | 127.0.0.1 |
+| 9187 | postgres-exporter | 127.0.0.1 |
 
 보안 그룹 인바운드는 별도 PR에서 필요한 포트만 엽니다.
 
@@ -43,10 +54,12 @@ EC2는 Terraform(`infra/environments/dev/v2/observability`)으로 관리하고, 
 | 이름 | 타입 | 용도 |
 |---|---|---|
 | `/lookddak/dev/monitoring/grafana-admin-password` | SecureString | Grafana `admin` 비밀번호 |
+| `/lookddak/dev/monitoring/mysql-exporter/password` | SecureString | MySQL `exporter` 계정 (`PROCESS, REPLICATION CLIENT`, `performance_schema` 읽기, `REQUIRE SSL`, 접속 호스트 `10.30.21.250`) |
+| `/lookddak/dev/monitoring/postgres-exporter/password` | SecureString | PostgreSQL `exporter` 계정 (`pg_monitor`) |
 
 ## 데이터
 
-Docker named volume(`prometheus-data`, `loki-data`, `alloy-data`, `grafana-data`)에 저장합니다. 루트 디스크(30GB) 하나만 쓰므로 Prometheus는 `retention.size=10GB`, Loki는 7일 보존으로 제한합니다. 인스턴스를 교체하면 데이터는 사라집니다 (dev).
+Docker named volume(`prometheus-data`, `loki-data`, `alloy-data`, `grafana-data`)에 저장합니다. 루트 디스크(30GB) 하나만 쓰므로 Prometheus는 `retention.size=10GB`로 제한합니다. Loki 로그는 S3에 7일 보존하고, 로컬 볼륨에는 WAL·캐시만 둡니다. 인스턴스를 교체하면 메트릭은 사라집니다 (dev).
 
 ## 접속
 

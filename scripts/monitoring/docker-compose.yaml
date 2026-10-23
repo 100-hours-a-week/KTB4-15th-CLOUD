@@ -92,6 +92,36 @@ services:
       - prometheus
       - loki
 
+  # DB exporter: RDS에는 설치할 수 없어 이 서버에서 RDS로 접속해 지표를 읽는다.
+  # - 계정은 읽기 전용(exporter), 비밀번호는 Parameter Store에만 둔다.
+  # - TLS는 RDS CA(rds-ca/global-bundle.pem)로 인증서와 호스트 이름까지 검증한다.
+  # - mysqld-exporter/my.cnf, rds-ca/는 저장소에 두지 않고 서버에서 만든다 (README).
+  mysqld-exporter:
+    image: prom/mysqld-exporter:v0.20.0
+    restart: unless-stopped
+    command:
+      - --config.my-cnf=/etc/mysqld-exporter/my.cnf
+    volumes:
+      - ./mysqld-exporter:/etc/mysqld-exporter:ro
+      - ./rds-ca:/etc/rds-ca:ro
+    ports:
+      - "127.0.0.1:9104:9104"
+    mem_limit: 64m
+
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:v0.20.1
+    restart: unless-stopped
+    command:
+      - --datasource.uri=${POSTGRES_EXPORTER_HOST:?POSTGRES_EXPORTER_HOST is required}:5432/lookddak?sslmode=verify-full&sslrootcert=/etc/rds-ca/global-bundle.pem
+    environment:
+      DATA_SOURCE_USER: exporter
+      DATA_SOURCE_PASS: ${POSTGRES_EXPORTER_PASSWORD:?POSTGRES_EXPORTER_PASSWORD is required}
+    volumes:
+      - ./rds-ca:/etc/rds-ca:ro
+    ports:
+      - "127.0.0.1:9187:9187"
+    mem_limit: 64m
+
 volumes:
   prometheus-data:
   loki-data:
