@@ -1570,7 +1570,7 @@
       "id": 28,
       "type": "logs",
       "title": "쿼리 로그",
-      "description": "DB·검색어로 거른다 (위 변수). 줄을 펼치면 client_host, connection_id, duration_ms, retcode 등이 보인다",
+      "description": "DB·검색어로 거른다 (위 변수). 줄 앞: [실행 시간 ms](PostgreSQL만) DB 사용자. 줄을 펼치면 client_host, connection_id, retcode 등이 보인다. 시각은 초 단위(RDS 로그 형식)",
       "datasource": {
         "type": "loki",
         "uid": "loki"
@@ -1588,7 +1588,7 @@
             "type": "loki",
             "uid": "loki"
           },
-          "expr": "{source=\"db-query\", db=~\"$db\"} |= \"$search\""
+          "expr": "{source=\"db-query\", db=~\"$db\"} |= \"$search\" | line_format \"{{ if .duration_ms }}[{{ .duration_ms }} ms] {{ end }}{{ .db_user }}: {{ __line__ }}\""
         }
       ],
       "options": {
@@ -1620,7 +1620,7 @@
             "type": "loki",
             "uid": "loki"
           },
-          "expr": "{source=\"db-query\", db=\"mysql\"} | retcode != \"0\""
+          "expr": "{source=\"db-query\", db=\"mysql\"} | retcode != \"0\" | line_format \"{{ if .duration_ms }}[{{ .duration_ms }} ms] {{ end }}{{ .db_user }}: {{ __line__ }}\""
         }
       ],
       "options": {
@@ -1652,7 +1652,7 @@
             "type": "loki",
             "uid": "loki"
           },
-          "expr": "{source=\"db-query\", db=\"postgresql\"} | result=\"error\""
+          "expr": "{source=\"db-query\", db=\"postgresql\"} | result=\"error\" | line_format \"{{ if .duration_ms }}[{{ .duration_ms }} ms] {{ end }}{{ .db_user }}: {{ __line__ }}\""
         }
       ],
       "options": {
@@ -1684,7 +1684,7 @@
             "type": "loki",
             "uid": "loki"
           },
-          "expr": "{source=\"db-query\", db=\"postgresql\"} | duration_ms > 100"
+          "expr": "{source=\"db-query\", db=\"postgresql\"} | duration_ms > 100 | line_format \"{{ if .duration_ms }}[{{ .duration_ms }} ms] {{ end }}{{ .db_user }}: {{ __line__ }}\""
         }
       ],
       "options": {
@@ -1717,6 +1717,70 @@
             "uid": "loki"
           },
           "expr": "{source=\"rds\", log_group=~\".*postgresql\"} | level=~\"WARNING|ERROR|FATAL|PANIC\""
+        }
+      ],
+      "options": {
+        "showTime": true,
+        "wrapLogMessage": true,
+        "sortOrder": "Descending",
+        "enableLogDetails": true
+      }
+    },
+    {
+      "id": 33,
+      "type": "logs",
+      "title": "느린 쿼리: MySQL (2초 이상)",
+      "description": "slowquery 로그 (long_query_time 2초, CloudWatch 경로). Query_time·Rows_examined 포함",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 0,
+        "y": 95
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "{source=\"rds\", log_group=~\".*mysql/slowquery\"}"
+        }
+      ],
+      "options": {
+        "showTime": true,
+        "wrapLogMessage": true,
+        "sortOrder": "Descending",
+        "enableLogDetails": true
+      }
+    },
+    {
+      "id": 34,
+      "type": "logs",
+      "title": "MySQL 오류 로그",
+      "description": "error 로그 (CloudWatch 경로)",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 12,
+        "y": 95
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "{source=\"rds\", log_group=~\".*mysql/error\"}"
         }
       ],
       "options": {
