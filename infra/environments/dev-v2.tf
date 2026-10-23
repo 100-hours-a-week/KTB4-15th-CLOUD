@@ -109,6 +109,8 @@ module "dev_v2_monitoring" {
     for service in ["nextjs", "spring", "fastapi"] :
     service => module.dev_v2_network.security_group_ids[service]
   }
+  mysql_security_group_id      = module.dev_v2_network.security_group_ids["mysql"]
+  postgresql_security_group_id = module.dev_v2_network.security_group_ids["postgresql"]
 
   taskdef_bucket_name = module.shared_ecs_taskdef_store.bucket_name
   taskdef_bucket_arn  = module.shared_ecs_taskdef_store.bucket_arn
