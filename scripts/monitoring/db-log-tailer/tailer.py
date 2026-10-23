@@ -8,8 +8,6 @@ RDS API(DescribeDBLogFiles, DownloadDBLogFilePortion)로 DB 로그 파일을 이
 - 파일별 읽은 위치(Marker)를 STATE_FILE에 저장해 재시작해도 이어 읽는다.
 - /metrics: Prometheus 지표 (마지막 성공 시각, 보낸 줄 수, 오류 수, 지연)
 """
-import csv
-import io
 import json
 import os
 import re
@@ -53,13 +51,45 @@ def setm(name, key, v):
 
 
 # ---------------------------------------------------------------- parsers
+MYSQL_UNESCAPE = {"n": "\n", "r": "\r", "t": "\t", "\\": "\\", "'": "'", "0": "\0"}
+
+
+def split_mysql_audit_line(line):
+    """감사 로그 한 줄을 필드로 나눈다.
+    object(쿼리) 필드만 작은따옴표로 감싸고, 안의 ' 줄바꿈 등은 \\' \\n 처럼 백슬래시로 이스케이프된다."""
+    fields, buf, i, n = [], [], 0, len(line)
+    while i < n:
+        c = line[i]
+        if c == "'" and not buf:
+            i += 1
+            while i < n:
+                c = line[i]
+                if c == "\\" and i + 1 < n:
+                    buf.append(MYSQL_UNESCAPE.get(line[i + 1], line[i + 1]))
+                    i += 2
+                    continue
+                if c == "'":
+                    i += 1
+                    break
+                buf.append(c)
+                i += 1
+            continue
+        if c == ",":
+            fields.append("".join(buf))
+            buf = []
+        else:
+            buf.append(c)
+        i += 1
+    fields.append("".join(buf))
+    return fields
+
+
 def parse_mysql_audit(text):
     """MariaDB Audit Plugin CSV:
-    timestamp,serverhost,username,host,connectionid,queryid,operation,database,object,retcode[,connection_type]
-    object는 작은따옴표로 감싸고 안쪽 작은따옴표는 \\' 로 이스케이프된다."""
+    timestamp,serverhost,username,host,connectionid,queryid,operation,database,object,retcode[,connection_type]"""
     out = []
-    reader = csv.reader(io.StringIO(text), quotechar="'", escapechar="\\", doublequote=False)
-    for row in reader:
+    for raw in text.splitlines():
+        row = split_mysql_audit_line(raw)
         if len(row) < 10:
             continue
         ts_s, _server, user, host, conn, qid, op, db, obj, ret = row[:10]
@@ -123,7 +153,8 @@ def parse_pg(text, log_group):
             rec = [ts, {"source": "db-query", "db": "postgresql", "db_user": user or "unknown"}, qm.group(2), meta]
             last_query_by_pid[pid] = rec
         else:
-            if not PG_SEND_OTHER or (user in EXCLUDE_USERS and level == "LOG"):
+            # 제외 사용자(exporter 등)의 일반 로그·바인드 값(DETAIL)은 버리고, 오류·경고만 남긴다
+            if not PG_SEND_OTHER or (user in EXCLUDE_USERS and level not in ("WARNING", "ERROR", "FATAL", "PANIC")):
                 continue
             rec = [ts, {"source": "rds", "log_group": log_group}, f"{level}: {msg}", meta]
         out.append(rec)

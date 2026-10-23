@@ -44,8 +44,10 @@ loki.source.api "push" {
 loki.relabel "cloudwatch" {
   forward_to = []
 
+  // 값이 있을 때만 바꾼다. 없으면 빈 값으로 덮어써 다른 경로(db-log-tailer)가 붙인 log_group이 지워진다
   rule {
     source_labels = ["__aws_cloudwatch_log_group"]
+    regex         = "(.+)"
     target_label  = "log_group"
   }
   rule {
