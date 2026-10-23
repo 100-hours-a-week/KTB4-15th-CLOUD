@@ -1,6 +1,9 @@
 # Loki 단일 바이너리 (dev)
-# - 저장소: 로컬 파일시스템(/loki, Docker volume). S3 전환은 후속 PR.
-# - 보존: 7일 (compactor가 삭제)
+# - 저장소: S3 (청크·색인). 로컬 /loki(Docker volume)에는 WAL, 색인 캐시, compactor 작업 파일만 둔다.
+#   2026-10-23 전환 때 로컬 파일시스템에 있던 로그는 버렸다 (옮기지 않음).
+# - S3 버킷 이름은 -config.expand-env=true로 환경변수 LOKI_S3_BUCKET에서 읽는다 (서버 .env)
+# - 자격 증명: EC2 인스턴스 역할 (IMDSv2)
+# - 보존: 7일 (compactor가 S3에서 삭제)
 auth_enabled: false
 
 server:
@@ -15,15 +18,15 @@ common:
     kvstore:
       store: inmemory
   storage:
-    filesystem:
-      chunks_directory: /loki/chunks
-      rules_directory: /loki/rules
+    s3:
+      region: ap-northeast-2
+      bucketnames: ${LOKI_S3_BUCKET}
 
 schema_config:
   configs:
     - from: 2026-10-01
       store: tsdb
-      object_store: filesystem
+      object_store: s3
       schema: v13
       index:
         prefix: index_
@@ -39,7 +42,7 @@ limits_config:
 compactor:
   working_directory: /loki/compactor
   retention_enabled: true
-  delete_request_store: filesystem
+  delete_request_store: s3
 
 analytics:
   reporting_enabled: false
