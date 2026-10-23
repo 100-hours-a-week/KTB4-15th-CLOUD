@@ -1,0 +1,491 @@
+{
+  "uid": "lookddak-ecs-task",
+  "title": "ECS Task",
+  "description": "dev V2 ECS Task·컨테이너 리소스 (ecs_exporter 사이드카, 30초 수집). crawler 배치는 제외",
+  "tags": [
+    "lookddak",
+    "ecs"
+  ],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": false,
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "refresh": "1m",
+  "templating": {
+    "list": [
+      {
+        "name": "service",
+        "label": "서비스",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "query": {
+          "query": "label_values(up{job=\"ecs-exporter\"}, service)",
+          "refId": "PrometheusVariableQueryEditor-VariableQuery",
+          "qryType": 1
+        },
+        "definition": "label_values(up{job=\"ecs-exporter\"}, service)",
+        "refresh": 2,
+        "includeAll": true,
+        "multi": true,
+        "allValue": ".*",
+        "current": {
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "sort": 1,
+        "options": []
+      }
+    ]
+  },
+  "annotations": {
+    "list": []
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "row",
+      "title": "Task (서비스 선택)",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "panels": []
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "실행 중 Task",
+      "description": "ecs_exporter 수집이 성공한 Task 수",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 0,
+        "y": 1
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "count by (service) (up{job=\"ecs-exporter\", service=~\"$service\"} == 1)",
+          "legendFormat": "{{service}}",
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "green"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value_and_name",
+        "orientation": "vertical"
+      }
+    },
+    {
+      "id": 3,
+      "type": "bargauge",
+      "title": "이미지 pull 시간 (Task 시작 시)",
+      "description": "Task가 뜰 때 컨테이너 이미지를 받는 데 걸린 시간",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 18,
+        "x": 6,
+        "y": 1
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "label_replace(max by (service, task_id) (ecs_task_image_pull_stop_timestamp_seconds{job=\"ecs-exporter\", service=~\"$service\"} - ecs_task_image_pull_start_timestamp_seconds{job=\"ecs-exporter\", service=~\"$service\"}), \"task\", \"$1\", \"task_id\", \"(.{8}).*\")",
+          "legendFormat": "{{service}} {{task}}",
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "min": 0,
+          "color": {
+            "mode": "continuous-GrYlRd"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal",
+        "displayMode": "basic",
+        "showUnfilled": true
+      }
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "CPU 사용률 (Task, %)",
+      "description": "Task 안 모든 컨테이너 CPU 합 / Task vCPU. 범례: 서비스 Task ID 앞 8자리",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 7
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "label_replace(sum by (service, task_id) (rate(ecs_container_cpu_usage_seconds_total{job=\"ecs-exporter\", service=~\"$service\"}[2m])) / max by (service, task_id) (ecs_task_cpu_limit_vcpus{job=\"ecs-exporter\", service=~\"$service\"}) * 100, \"task\", \"$1\", \"task_id\", \"(.{8}).*\")",
+          "legendFormat": "{{service}} {{task}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "spanNulls": false,
+            "showPoints": "never"
+          },
+          "min": 0,
+          "max": 100
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "메모리 사용률 (Task, %)",
+      "description": "Task 안 모든 컨테이너 메모리(페이지 캐시 제외) 합 / Task 메모리",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 7
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "label_replace(sum by (service, task_id) (ecs_container_memory_usage_bytes{job=\"ecs-exporter\", service=~\"$service\"} - ecs_container_memory_page_cache_size_bytes{job=\"ecs-exporter\", service=~\"$service\"}) / max by (service, task_id) (ecs_task_memory_limit_bytes{job=\"ecs-exporter\", service=~\"$service\"}) * 100, \"task\", \"$1\", \"task_id\", \"(.{8}).*\")",
+          "legendFormat": "{{service}} {{task}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "spanNulls": false,
+            "showPoints": "never"
+          },
+          "min": 0,
+          "max": 100
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 6,
+      "type": "row",
+      "title": "컨테이너별 (Task 평균)",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 15
+      },
+      "panels": []
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "컨테이너별 메모리",
+      "description": "앱, ecs-exporter, service-connect(Envoy 프록시) 컨테이너별 메모리. 페이지 캐시 제외",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 16
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "avg by (service, container) (label_replace(label_replace(ecs_container_memory_usage_bytes{job=\"ecs-exporter\", service=~\"$service\"} - ecs_container_memory_page_cache_size_bytes{job=\"ecs-exporter\", service=~\"$service\"}, \"container\", \"$1\", \"container_name\", \"(.*)\"), \"container\", \"service-connect\", \"container_name\", \"ecs-service-connect-.*\"))",
+          "legendFormat": "{{service}} / {{container}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "spanNulls": false,
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "컨테이너별 CPU (vCPU)",
+      "description": "컨테이너별 CPU 사용량. 1 = vCPU 1개",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 16
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "avg by (service, container) (label_replace(label_replace(rate(ecs_container_cpu_usage_seconds_total{job=\"ecs-exporter\", service=~\"$service\"}[2m]), \"container\", \"$1\", \"container_name\", \"(.*)\"), \"container\", \"service-connect\", \"container_name\", \"ecs-service-connect-.*\"))",
+          "legendFormat": "{{service}} / {{container}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "spanNulls": false,
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 9,
+      "type": "row",
+      "title": "네트워크",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 24
+      },
+      "panels": []
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "네트워크 (서비스 합계)",
+      "description": "Task ENI 기준 수신·송신 바이트/초",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 25
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (service) (rate(ecs_network_receive_bytes_total{job=\"ecs-exporter\", service=~\"$service\"}[2m]))",
+          "legendFormat": "{{service}} 수신"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (service) (rate(ecs_network_transmit_bytes_total{job=\"ecs-exporter\", service=~\"$service\"}[2m]))",
+          "legendFormat": "{{service}} 송신"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "spanNulls": false,
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 11,
+      "type": "logs",
+      "title": "Task 중지 이벤트 (Loki)",
+      "description": "EventBridge ECS Task State Change(STOPPED). stoppedReason, 종료 코드 확인",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 25
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "{source=\"ecs-event\"}"
+        }
+      ],
+      "options": {
+        "showTime": true,
+        "wrapLogMessage": true,
+        "sortOrder": "Descending",
+        "enableLogDetails": true
+      }
+    }
+  ]
+}
