@@ -19,6 +19,7 @@ EC2는 Terraform(`infra/environments/dev/v2/observability`)으로 관리하고, 
 | `grafana/provisioning/dashboards/json/spring-api.json` | `/opt/monitoring/grafana/provisioning/dashboards/json/spring-api.json` | Spring API: HTTP 요청·오류·응답 시간, HikariCP, JVM |
 | `grafana/provisioning/dashboards/json/ai-worker.json` | `/opt/monitoring/grafana/provisioning/dashboards/json/ai-worker.json` | AI Worker: 가상피팅 Worker 상태·처리량, HTTP |
 | `grafana/provisioning/dashboards/json/database.json` | `/opt/monitoring/grafana/provisioning/dashboards/json/database.json` | Database: MySQL·PostgreSQL 연결, 쿼리·트랜잭션, 캐시 적중률, 락, dead tuple, 복제 슬롯 |
+| `db-log-tailer/` (`Dockerfile`, `tailer.py`) | `/opt/monitoring/db-log-tailer/` | DB 쿼리 로그 수집기. RDS 로그 파일(MySQL 감사 로그, PostgreSQL 로그)을 RDS API로 이어 읽어 Alloy(:3500)로 보냄. `docker compose build db-log-tailer` 후 `up -d` |
 
 `/opt/monitoring/.env`는 저장소에 두지 않습니다. 배포할 때 서버에서 만듭니다.
 
@@ -47,6 +48,7 @@ EC2는 Terraform(`infra/environments/dev/v2/observability`)으로 관리하고, 
 | 12345 | Alloy UI | 127.0.0.1 |
 | 9104 | mysqld-exporter | 127.0.0.1 |
 | 9187 | postgres-exporter | 127.0.0.1 |
+| 9200 | db-log-tailer 지표 | 127.0.0.1 |
 
 보안 그룹 인바운드는 별도 PR에서 필요한 포트만 엽니다.
 

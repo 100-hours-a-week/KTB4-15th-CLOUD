@@ -130,3 +130,8 @@ scrape_configs:
       - targets: ["postgres-exporter:9187"]
         labels:
           db: lookddak-dev-postgresql
+
+  # DB 쿼리 로그 수집기 상태 (보낸 줄 수, 오류, 마지막 성공·로그 시각)
+  - job_name: db-log-tailer
+    static_configs:
+      - targets: ["db-log-tailer:9200"]

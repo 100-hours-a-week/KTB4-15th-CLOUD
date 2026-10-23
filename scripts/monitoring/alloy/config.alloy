@@ -25,7 +25,7 @@ prometheus.remote_write "local" {
 
 // ---------------------------------------------------------------
 // 로그 수신 (Loki push API, :3500) → Loki
-// - Fluent Bit 사이드카, lambda-promtail이 여기로 보낸다.
+// - Fluent Bit 사이드카, lambda-promtail, db-log-tailer(DB 쿼리 로그)가 여기로 보낸다.
 // - loki.source.api는 __로 시작하는 레이블을 버리므로, 그 전에
 //   lambda-promtail이 보낸 __aws_cloudwatch_log_group·__aws_log_type으로 log_group·source를 만든다.
 // ---------------------------------------------------------------
