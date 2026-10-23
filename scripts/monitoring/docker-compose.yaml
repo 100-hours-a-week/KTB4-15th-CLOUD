@@ -30,6 +30,9 @@ services:
     restart: unless-stopped
     command:
       - -config.file=/etc/loki/config.yaml
+      - -config.expand-env=true
+    environment:
+      LOKI_S3_BUCKET: ${LOKI_S3_BUCKET:?LOKI_S3_BUCKET is required}
     volumes:
       - ./loki:/etc/loki:ro
       - loki-data:/loki

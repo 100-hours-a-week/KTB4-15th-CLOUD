@@ -19,16 +19,21 @@ EC2는 Terraform(`infra/environments/dev/v2/observability`)으로 관리하고, 
 | `grafana/provisioning/dashboards/json/spring-api.json` | `/opt/monitoring/grafana/provisioning/dashboards/json/spring-api.json` | Spring API: HTTP 요청·오류·응답 시간, HikariCP, JVM |
 | `grafana/provisioning/dashboards/json/ai-worker.json` | `/opt/monitoring/grafana/provisioning/dashboards/json/ai-worker.json` | AI Worker: 가상피팅 Worker 상태·처리량, HTTP |
 
-`/opt/monitoring/.env`는 저장소에 두지 않습니다. 배포할 때 Parameter Store에서 만듭니다.
+`/opt/monitoring/.env`는 저장소에 두지 않습니다. 배포할 때 서버에서 만듭니다.
+
+| 변수 | 값 |
+|---|---|
+| `GRAFANA_ADMIN_PASSWORD` | Parameter Store `/lookddak/dev/monitoring/grafana-admin-password` |
+| `LOKI_S3_BUCKET` | `lookddak-dev-loki-<계정 ID>-ap-northeast-2` (Terraform 출력 `loki_bucket_name`) |
 
 ## 포트
 
 | 포트 | 대상 | 열린 범위 |
 |---|---|---|
 | 3000 | Grafana | 호스트 (ALB 보안 그룹, SSM 포트포워딩) |
-| 3500 | Alloy Loki push 수신 | 호스트 (lambda-promtail, 이후 ECS task) |
+| 3500 | Alloy Loki push 수신 | 호스트 (lambda-promtail, ECS Task FireLens) |
 | 9090 | Prometheus | 127.0.0.1 |
-| 3100 | Loki | 127.0.0.1 |
+| 3100 | Loki (저장소: S3) | 127.0.0.1 |
 | 12345 | Alloy UI | 127.0.0.1 |
 
 보안 그룹 인바운드는 별도 PR에서 필요한 포트만 엽니다.

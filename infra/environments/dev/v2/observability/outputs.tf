@@ -57,3 +57,8 @@ output "fluent_bit_config_arn" {
   description = "FireLens Loki 출력 설정 파일 S3 객체 ARN"
   value       = "arn:${data.aws_partition.current.partition}:s3:::${aws_s3_object.fluent_bit_loki.bucket}/${aws_s3_object.fluent_bit_loki.key}"
 }
+
+output "loki_bucket_name" {
+  description = "Loki S3 bucket (server .env LOKI_S3_BUCKET)"
+  value       = aws_s3_bucket.loki.id
+}
