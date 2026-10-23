@@ -134,46 +134,87 @@ locals {
 }
 
 # ---------------------------------------------------------------
-# 모니터링 사이드카: ecs_exporter (Task CPU·메모리·네트워크 → :9779/metrics)
-# - 계속 떠 있는 서비스(nextjs, spring, fastapi)에만 붙인다. crawler(배치)는 제외.
-# - essential = false: 죽어도 앱 Task는 계속 돈다.
-# - Task 메타데이터 엔드포인트(169.254.170.2)를 읽으므로 IAM 권한이 필요 없다.
-# - 템플릿은 다음 앱 배포 때 반영된다. 앱 CD가 앱 컨테이너를 이름으로 찾도록
-#   바뀐 뒤에 적용해야 한다 (예전 CD는 컨테이너가 1개가 아니면 배포를 멈춘다).
+# 모니터링 사이드카 (nextjs, spring, fastapi에만. crawler 배치는 제외)
+# 1) ecs-exporter: Task CPU·메모리·네트워크 → :9779/metrics
+#    Task 메타데이터 엔드포인트(169.254.170.2)를 읽으므로 IAM 권한이 필요 없다.
+# 2) log-router: FireLens(aws-for-fluent-bit init 이미지)
+#    앱 stdout/stderr → CloudWatch(기존 로그 그룹) + Loki(Alloy :3500)
+#    Loki 출력 설정은 S3(fluent_bit_config_arn)에서 시작할 때 받는다. SERVICE가 Loki service 레이블.
+# - 둘 다 essential = false: 죽어도 앱은 계속 돈다 (로그·지표보다 서비스 가용성 우선).
+# - 템플릿은 다음 앱 배포 때 반영된다. 앱 CD는 앱 컨테이너를 이름으로 찾는다.
 # ---------------------------------------------------------------
 locals {
-  ecs_exporter_image    = "quay.io/prometheuscommunity/ecs-exporter:v0.4.0"
-  ecs_exporter_services = ["nextjs", "spring", "fastapi"]
+  ecs_exporter_image = "quay.io/prometheuscommunity/ecs-exporter:v0.4.0"
+  fluent_bit_image   = "public.ecr.aws/aws-observability/aws-for-fluent-bit:init-2.34.3.20261020"
+  monitored_services = ["nextjs", "spring", "fastapi"]
 
-  # 서비스마다 사이드카 목록. 목록 모양이 달라 map 대신 object로 둔다.
+  # 서비스마다 사이드카 목록 (모니터링 대상이 아닌 서비스는 try로 [])
   sidecars = {
-    for service in keys(local.services) : service => (
-      contains(local.ecs_exporter_services, service) ? [
-        {
-          name      = "ecs-exporter"
-          image     = local.ecs_exporter_image
-          essential = false
-          # exporter 자신의 go_*, process_*, promhttp_* 지표는 내보내지 않는다 (Task 지표만)
-          command           = ["--web.disable-exporter-metrics"]
-          memory            = 64
-          memoryReservation = 32
-          portMappings = [{
-            containerPort = 9779
-            hostPort      = 9779
-            protocol      = "tcp"
-          }]
-          logConfiguration = {
-            logDriver = "awslogs"
-            options = {
-              "awslogs-group"         = var.log_group_names[service]
-              "awslogs-region"        = "ap-northeast-2"
-              "awslogs-stream-prefix" = "ecs-exporter"
-            }
+    for service in local.monitored_services : service => [
+      {
+        name      = "ecs-exporter"
+        image     = local.ecs_exporter_image
+        essential = false
+        # exporter 자신의 go_*, process_*, promhttp_* 지표는 내보내지 않는다 (Task 지표만)
+        command           = ["--web.disable-exporter-metrics"]
+        memory            = 64
+        memoryReservation = 32
+        portMappings = [{
+          containerPort = 9779
+          hostPort      = 9779
+          protocol      = "tcp"
+        }]
+        logConfiguration = {
+          logDriver = "awslogs"
+          options = {
+            "awslogs-group"         = var.log_group_names[service]
+            "awslogs-region"        = "ap-northeast-2"
+            "awslogs-stream-prefix" = "ecs-exporter"
           }
-          readonlyRootFilesystem = true
-        },
-      ] : []
-    )
+        }
+        readonlyRootFilesystem = true
+      },
+      {
+        name              = "log-router"
+        image             = local.fluent_bit_image
+        essential         = false
+        memoryReservation = 50
+        firelensConfiguration = {
+          type = "fluentbit"
+          options = {
+            "enable-ecs-log-metadata" = "true"
+          }
+        }
+        environment = [
+          { name = "SERVICE", value = service },
+          { name = "aws_fluent_bit_init_s3_1", value = var.fluent_bit_config_arn },
+        ]
+        # log-router 자신의 로그는 awslogs로 (FireLens로 보내면 순환)
+        logConfiguration = {
+          logDriver = "awslogs"
+          options = {
+            "awslogs-group"         = var.log_group_names[service]
+            "awslogs-region"        = "ap-northeast-2"
+            "awslogs-stream-prefix" = "log-router"
+          }
+        }
+      },
+    ]
+  }
+
+  # 앱 컨테이너 로그: FireLens. 여기 options가 출력 1(CloudWatch, 기존 로그 그룹)이 된다.
+  # ECS 기본 전달 모드가 non-blocking이라 mode는 따로 두지 않는다 (Fluent Bit 출력 옵션으로 넘어가지 않게).
+  app_log_configuration = {
+    for service in local.monitored_services : service => {
+      logDriver = "awsfirelens"
+      options = {
+        Name              = "cloudwatch_logs"
+        region            = "ap-northeast-2"
+        log_group_name    = var.log_group_names[service]
+        log_stream_prefix = "ecs/"
+        auto_create_group = "false"
+      }
+    }
   }
 }
 
@@ -198,7 +239,11 @@ module "template" {
   log_group_name       = var.log_group_names[each.key]
   command              = each.value.command
   health_check         = each.value.health_check
-  sidecars             = local.sidecars[each.key]
+  sidecars             = try(local.sidecars[each.key], [])
+  log_configuration    = try(local.app_log_configuration[each.key], null)
+  depends_on_containers = contains(local.monitored_services, each.key) ? [
+    { containerName = "log-router", condition = "START" },
+  ] : []
 
   tags = {
     Environment = "dev"

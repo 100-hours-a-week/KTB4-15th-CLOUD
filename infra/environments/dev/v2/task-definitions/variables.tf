@@ -32,3 +32,8 @@ variable "images_bucket_name" {
   description = "dev 이미지 버킷 이름"
   type        = string
 }
+
+variable "fluent_bit_config_arn" {
+  description = "FireLens(Fluent Bit init) 추가 설정 파일 S3 객체 ARN (Loki 출력)"
+  type        = string
+}
