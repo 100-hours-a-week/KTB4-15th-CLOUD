@@ -15,7 +15,9 @@ EC2는 Terraform(`infra/environments/dev/v2/observability`)으로 관리하고, 
 | `grafana/provisioning/dashboards/dashboards.yaml` | `/opt/monitoring/grafana/provisioning/dashboards/dashboards.yaml` | 대시보드 JSON 폴더를 읽는 provider (UI 수정 불가, 파일이 원본) |
 | `grafana/provisioning/dashboards/json/aws-overview.json` | `/opt/monitoring/grafana/provisioning/dashboards/json/aws-overview.json` | AWS Overview: ALB·ECS·RDS |
 | `grafana/provisioning/dashboards/json/queue.json` | `/opt/monitoring/grafana/provisioning/dashboards/json/queue.json` | Queue: SQS·DLQ |
-| `grafana/provisioning/dashboards/json/ecs-task.json` | `/opt/monitoring/grafana/provisioning/dashboards/json/ecs-task.json` | ECS Task: Task·컨테이너 CPU·메모리, 네트워크, 중지 이벤트 |
+| `grafana/provisioning/dashboards/json/ecs-task.json` | `/opt/monitoring/grafana/provisioning/dashboards/json/ecs-task.json` | ECS Task: Task·컨테이너 CPU·메모리, 네트워크, 중지 이벤트, 앱 로그 |
+| `grafana/provisioning/dashboards/json/spring-api.json` | `/opt/monitoring/grafana/provisioning/dashboards/json/spring-api.json` | Spring API: HTTP 요청·오류·응답 시간, HikariCP, JVM |
+| `grafana/provisioning/dashboards/json/ai-worker.json` | `/opt/monitoring/grafana/provisioning/dashboards/json/ai-worker.json` | AI Worker: 가상피팅 Worker 상태·처리량, HTTP |
 
 `/opt/monitoring/.env`는 저장소에 두지 않습니다. 배포할 때 Parameter Store에서 만듭니다.
 
@@ -54,3 +56,16 @@ Docker named volume(`prometheus-data`, `loki-data`, `alloy-data`, `grafana-data`
 ```bash
 aws ssm start-session --target <instance-id> --document-name AWS-StartPortForwardingSession --parameters portNumber=3000,localPortNumber=3000
 ```
+
+## 설정 반영
+
+설정 폴더(`prometheus/`, `loki/`, `alloy/`, `grafana/provisioning/`)는 파일이 아니라 폴더째 컨테이너에 연결한다. 파일을 `install`로 바꿔 넣으면 컨테이너가 바로 새 내용을 본다.
+
+| 바꾼 파일 | 반영 방법 |
+|---|---|
+| `prometheus/prometheus.yml` | `curl -X POST localhost:9090/-/reload` |
+| `alloy/config.alloy` | `curl -X POST localhost:12345/-/reload` |
+| `loki/config.yaml` | `docker compose restart loki` |
+| Grafana 대시보드 JSON | 자동 (60초 안에 다시 읽음) |
+| Grafana 데이터소스, `docker-compose.yaml` | `docker compose up -d` |
+
