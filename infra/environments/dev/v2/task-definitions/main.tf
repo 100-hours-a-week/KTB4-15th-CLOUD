@@ -139,7 +139,8 @@ locals {
 #    Task 메타데이터 엔드포인트(169.254.170.2)를 읽으므로 IAM 권한이 필요 없다.
 # 2) log-router: FireLens(aws-for-fluent-bit init 이미지)
 #    앱 stdout/stderr → CloudWatch(기존 로그 그룹) + Loki(Alloy :3500)
-#    Loki 출력 설정은 S3(fluent_bit_config_arn)에서 시작할 때 받는다. SERVICE가 Loki service 레이블.
+#    Loki 출력·여러 줄 합치기 설정은 S3(fluent_bit_config_arn, fluent_bit_parsers_arn)에서 시작할 때 받는다.
+#    SERVICE가 Loki service 레이블, MULTILINE_PARSER가 여러 줄 규칙 이름.
 # - 둘 다 essential = false: 죽어도 앱은 계속 돈다 (로그·지표보다 서비스 가용성 우선).
 # - 템플릿은 다음 앱 배포 때 반영된다. 앱 CD는 앱 컨테이너를 이름으로 찾는다.
 # ---------------------------------------------------------------
@@ -147,6 +148,14 @@ locals {
   ecs_exporter_image = "quay.io/prometheuscommunity/ecs-exporter:v0.4.0"
   fluent_bit_image   = "public.ecr.aws/aws-observability/aws-for-fluent-bit:init-2.34.3.20261020"
   monitored_services = ["nextjs", "spring", "fastapi"]
+
+  # 여러 줄 합치기 규칙 (observability/fluent-bit/parsers.conf)
+  # spring·fastapi는 줄이 ISO 시각으로 시작, nextjs는 시각 없이 찍혀서 들여쓴 줄(스택)만 합친다
+  multiline_parsers = {
+    nextjs  = "indented_cont"
+    spring  = "ts_start"
+    fastapi = "ts_start"
+  }
 
   # 서비스마다 사이드카 목록 (모니터링 대상이 아닌 서비스는 try로 [])
   sidecars = {
@@ -187,7 +196,9 @@ locals {
         }
         environment = [
           { name = "SERVICE", value = service },
+          { name = "MULTILINE_PARSER", value = local.multiline_parsers[service] },
           { name = "aws_fluent_bit_init_s3_1", value = var.fluent_bit_config_arn },
+          { name = "aws_fluent_bit_init_s3_2", value = var.fluent_bit_parsers_arn },
         ]
         # log-router 자신의 로그는 awslogs로 (FireLens로 보내면 순환)
         logConfiguration = {
@@ -213,6 +224,8 @@ locals {
         log_group_name    = var.log_group_names[service]
         log_stream_prefix = "ecs/"
         auto_create_group = "false"
+        # CloudWatch에는 원문만 (메타데이터 JSON 없이, awslogs 때와 같은 모양)
+        log_key = "log"
       }
     }
   }
