@@ -15,6 +15,7 @@ EC2는 Terraform(`infra/environments/dev/v2/observability`)으로 관리하고, 
 | `grafana/provisioning/dashboards/dashboards.yaml` | `/opt/monitoring/grafana/provisioning/dashboards/dashboards.yaml` | 대시보드 JSON 폴더를 읽는 provider (UI 수정 불가, 파일이 원본) |
 | `grafana/provisioning/dashboards/json/aws-overview.json` | `/opt/monitoring/grafana/provisioning/dashboards/json/aws-overview.json` | AWS Overview: ALB·ECS·RDS |
 | `grafana/provisioning/dashboards/json/queue.json` | `/opt/monitoring/grafana/provisioning/dashboards/json/queue.json` | Queue: SQS·DLQ |
+| `grafana/provisioning/dashboards/json/ecs-task.json` | `/opt/monitoring/grafana/provisioning/dashboards/json/ecs-task.json` | ECS Task: Task·컨테이너 CPU·메모리, 네트워크, 중지 이벤트 |
 
 `/opt/monitoring/.env`는 저장소에 두지 않습니다. 배포할 때 Parameter Store에서 만듭니다.
 
