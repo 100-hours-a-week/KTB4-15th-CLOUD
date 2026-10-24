@@ -214,43 +214,6 @@ resource "aws_lb_target_group" "fastapi" {
   }
 }
 
-# V1 dev EC2 nginx
-# - HTTPS to nginx so the existing nginx HTTP->HTTPS redirect is not hit.
-# - ALB does not validate the backend certificate, so the V1 Let's Encrypt
-#   certificate only encrypts ALB -> nginx. Users see the ACM certificate.
-resource "aws_lb_target_group" "v1" {
-  name             = "lookddak-dev-v1-tg"
-  port             = 443
-  protocol         = "HTTPS"
-  protocol_version = "HTTP1"
-  target_type      = "instance"
-  vpc_id           = var.vpc_id
-
-  health_check {
-    enabled             = true
-    path                = var.v1_health_check_path
-    port                = "traffic-port"
-    protocol            = "HTTPS"
-    matcher             = "200"
-    interval            = 30
-    timeout             = 5
-    healthy_threshold   = 2
-    unhealthy_threshold = 3
-  }
-
-  tags = {
-    Name        = "lookddak-dev-v1-tg"
-    Environment = "dev"
-    Version     = "v1"
-  }
-}
-
-resource "aws_lb_target_group_attachment" "v1" {
-  target_group_arn = aws_lb_target_group.v1.arn
-  target_id        = var.v1_instance_id
-  port             = 443
-}
-
 # ---------------------------------------------------------------
 # Listeners
 # ---------------------------------------------------------------
@@ -441,27 +404,3 @@ resource "aws_lb_listener_rule" "nextjs" {
   }
 }
 
-# V1 fallback is kept temporarily for rollback.
-# The higher-priority V2 rules now match dev.lookddak.com first, so this rule
-# receives no normal traffic after the cutover.
-resource "aws_lb_listener_rule" "v1" {
-  listener_arn = aws_lb_listener.https.arn
-  priority     = 30
-
-  action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.v1.arn
-  }
-
-  condition {
-    host_header {
-      values = [var.v1_domain_name]
-    }
-  }
-
-  tags = {
-    Name        = "lookddak-dev-v1"
-    Environment = "dev"
-    Version     = "v1"
-  }
-}
