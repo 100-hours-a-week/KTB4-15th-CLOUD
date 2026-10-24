@@ -1,8 +1,3 @@
-output "ec2_instance_profile_name" {
-  description = "dev EC2 인스턴스 프로파일 이름"
-  value       = aws_iam_instance_profile.ec2.name
-}
-
 output "deploy_role_names" {
   description = "dev 앱 배포 Role 이름 (서비스 키 => Role 이름)"
   value       = { for k, r in aws_iam_role.deploy : k => r.name }

@@ -84,7 +84,7 @@ module "dev_ecr" {
 }
 
 # ---------------------------------------------------------------
-# V1 dev (dev 전용 VPC)
+# Dev shared network (legacy module address retained for state compatibility)
 # ---------------------------------------------------------------
 module "dev_v1_network" {
   source = "./dev/v1/network"
@@ -98,7 +98,7 @@ moved {
   to   = module.dev_v2_database.aws_db_subnet_group.mysql
 }
 
-# rds/* 파라미터는 V1 EC2 Spring 기본 DB_URL과 운영 스크립트가 읽으므로 V2 Dev MySQL을 가리킨다.
+# rds/* 앱 계정 파라미터는 V2 Dev Spring이 읽으며 V2 Dev MySQL을 가리킨다.
 module "dev_parameter_store" {
   source = "./dev/parameter-store"
 
@@ -116,23 +116,6 @@ module "dev_v1_iam" {
   source = "./dev/v1/iam"
 
   ecr_repository_arns = module.dev_ecr.ecr_repository_arns
-  log_group_arns      = module.dev_v1_logging.log_group_arns
-}
-
-module "dev_v1_compute" {
-  source = "./dev/v1/compute"
-
-  subnet_id                 = module.dev_v1_network.public_subnet_ids[0]
-  security_group_id         = module.dev_v1_network.app_security_group_id
-  iam_instance_profile_name = module.dev_v1_iam.ec2_instance_profile_name
-}
-
-module "dev_v1_cicd_deploy_policy" {
-  source = "./dev/v1/cicd-deploy-policy"
-
-  deploy_role_names   = module.dev_v1_iam.deploy_role_names
-  ecr_repository_arns = module.dev_ecr.ecr_repository_arns
-  ec2_instance_arn    = module.dev_v1_compute.instance_arn
 }
 
 module "dev_v1_edge" {
@@ -143,6 +126,3 @@ module "dev_v1_edge" {
   alb_zone_id  = module.dev_v2_alb.alb_zone_id
 }
 
-module "dev_v1_parameter_store" {
-  source = "./dev/v1/parameter-store"
-}

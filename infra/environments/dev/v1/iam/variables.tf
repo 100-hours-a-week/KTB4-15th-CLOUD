@@ -8,7 +8,3 @@ variable "ecr_repository_arns" {
   })
 }
 
-variable "log_group_arns" {
-  description = "ARNs of the dev log groups the EC2 instance writes to"
-  type        = list(string)
-}

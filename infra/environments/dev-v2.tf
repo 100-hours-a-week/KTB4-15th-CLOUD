@@ -6,11 +6,9 @@
 module "dev_v2_network" {
   source = "./dev/v2/network"
 
-  vpc_id                      = module.dev_v1_network.vpc_id
-  existing_public_subnet_id   = module.dev_v1_network.public_subnet_ids[0]
-  dev_mysql_security_group_id = module.dev_v1_network.db_security_group_id
-  dev_app_security_group_id   = module.dev_v1_network.app_security_group_id
-  fastapi_alb_enabled         = var.dev_v2_fastapi_alb_enabled
+  vpc_id                    = module.dev_v1_network.vpc_id
+  existing_public_subnet_id = module.dev_v1_network.public_subnet_ids[0]
+  fastapi_alb_enabled       = var.dev_v2_fastapi_alb_enabled
 }
 
 module "dev_v2_alb" {
