@@ -26,7 +26,7 @@ prometheus.remote_write "local" {
 // ---------------------------------------------------------------
 // 로그 수신 (Loki push API, :3500) → Loki
 // - Fluent Bit 사이드카, lambda-promtail, db-log-tailer(DB 쿼리 로그)가 여기로 보낸다.
-// - ALB 로그는 loki.process.alb_trace에서 trace_id를 붙인 뒤 Loki로 간다.
+// - ALB 로그는 loki.process.alb_trace에서 alb_trace_id를 붙인 뒤 Loki로 간다.
 // - loki.source.api는 __로 시작하는 레이블을 버리므로, 그 전에
 //   lambda-promtail이 보낸 __aws_cloudwatch_log_group·__aws_log_type으로 log_group·source를 만든다.
 // ---------------------------------------------------------------
@@ -42,21 +42,18 @@ loki.source.api "push" {
   forward_to             = [loki.process.alb_trace.receiver]
 }
 
-// ALB 액세스 로그의 trace_id(X-Ray 형식 "Root=1-6719a3c2-4bd0...")를 OTel 32자리로 바꿔 structured metadata로 붙인다.
-// 앱 에이전트가 X-Ray 전파기로 같은 ID를 트레이스 ID로 쓰므로, Grafana에서 ALB 로그 ↔ Tempo 트레이스로 이동할 수 있다.
+// ALB 액세스 로그의 X-Amzn-Trace-Id Root 값("1-6719a3c2-4bd0...")을 alb_trace_id structured metadata로 붙인다.
+// ALB 헤더에는 Parent가 없어 앱 트레이스 ID와 같아질 수 없다. 대신 spring이 이 헤더를 구간 속성으로 남기므로
+// Grafana에서 alb_trace_id로 Tempo를 TraceQL 검색해 해당 트레이스로 이동한다.
 loki.process "alb_trace" {
   stage.match {
     selector = "{source=\"alb\"}"
 
     stage.regex {
-      expression = "\"Root=1-(?P<xray_time>[0-9a-f]{8})-(?P<xray_id>[0-9a-f]{24})"
-    }
-    stage.template {
-      source   = "trace_id"
-      template = "{{ if .xray_time }}{{ .xray_time }}{{ .xray_id }}{{ end }}"
+      expression = "\"Root=(?P<alb_trace_id>1-[0-9a-f]{8}-[0-9a-f]{24})"
     }
     stage.structured_metadata {
-      values = { trace_id = "" }
+      values = { alb_trace_id = "" }
     }
   }
 
@@ -322,14 +319,19 @@ prometheus.scrape "aws_1m" {
 }
 
 // ---------------------------------------------------------------
-// 트레이스 수신 (OTLP gRPC :4317) → Tempo
+// 트레이스 수신 (OTLP gRPC :4317, OTLP HTTP :4318) → Tempo
 // - 앱(OTel 에이전트·SDK)이 보낸다. 로그(:3500)와 같은 원칙: 받는 곳은 Alloy 하나
+//   spring(Java 에이전트)은 gRPC, nextjs·fastapi(공식 Node·Python 이미지)는 HTTP
 // - memory_limiter: Alloy 메모리가 한도에 가까우면 잠시 받기를 거부한다 (앱은 재시도하거나 버린다)
 // - filter: health·metrics 요청 구간은 버린다
 // ---------------------------------------------------------------
 otelcol.receiver.otlp "default" {
   grpc {
     endpoint = "0.0.0.0:4317"
+  }
+
+  http {
+    endpoint = "0.0.0.0:4318"
   }
 
   output {
