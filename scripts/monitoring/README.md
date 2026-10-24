@@ -45,7 +45,8 @@ EC2는 Terraform(`infra/environments/dev/v2/observability`)으로 관리하고, 
 |---|---|---|
 | 3000 | Grafana | 호스트 (ALB 보안 그룹, SSM 포트포워딩) |
 | 3500 | Alloy Loki push 수신 | 호스트 (lambda-promtail, ECS Task FireLens) |
-| 4317 | Alloy OTLP gRPC 트레이스 수신 | 호스트 (ECS Task, SG로 nextjs·spring·fastapi만) |
+| 4317 | Alloy OTLP gRPC 트레이스 수신 (spring) | 호스트 (ECS Task, SG로 nextjs·spring·fastapi만) |
+| 4318 | Alloy OTLP HTTP 트레이스 수신 (nextjs·fastapi) | 호스트 (ECS Task, SG로 nextjs·spring·fastapi만) |
 | 3200 | Tempo 조회 API | 127.0.0.1 |
 | 9090 | Prometheus | 127.0.0.1 |
 | 3100 | Loki (저장소: S3) | 127.0.0.1 |

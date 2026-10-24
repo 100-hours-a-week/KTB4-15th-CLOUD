@@ -1,6 +1,6 @@
 # ---------------------------------------------------------------
 # 트레이스 (Tempo)
-# - 앱(OTel 에이전트·SDK) → Alloy :4317 (OTLP gRPC) → Tempo(Monitoring EC2 컨테이너) → S3
+# - 앱(OTel 에이전트·SDK) → Alloy :4317 (OTLP gRPC) / :4318 (OTLP HTTP) → Tempo(Monitoring EC2 컨테이너) → S3
 # - 트레이스 블록을 S3에 둔다. 보존(7일)은 Tempo가 지운다. 아래 수명 주기는 놓친 객체용 안전장치.
 # - 버킷 이름에 계정 ID가 들어가서 Tempo 설정 파일에는 쓰지 않는다. 서버 .env의 TEMPO_S3_BUCKET으로 넣는다.
 # - 트래픽은 S3 Gateway Endpoint(dev/v2/network)를 탄다.
@@ -115,7 +115,7 @@ resource "aws_iam_role_policy" "tempo_storage" {
   })
 }
 
-# 앱 Task → Alloy OTLP gRPC (트레이스). 로그(3500)와 같은 방식
+# 앱 Task → Alloy OTLP 트레이스 (4317 gRPC: spring, 4318 HTTP: nextjs·fastapi). 로그(3500)와 같은 방식
 resource "aws_vpc_security_group_egress_rule" "app_to_alloy_otlp" {
   for_each = var.ecs_task_security_group_ids
 
@@ -123,7 +123,7 @@ resource "aws_vpc_security_group_egress_rule" "app_to_alloy_otlp" {
   description                  = "OTLP traces to Alloy on the monitoring server"
   ip_protocol                  = "tcp"
   from_port                    = 4317
-  to_port                      = 4317
+  to_port                      = 4318
   referenced_security_group_id = aws_security_group.this.id
 }
 
@@ -134,6 +134,6 @@ resource "aws_vpc_security_group_ingress_rule" "alloy_otlp_from_app" {
   description                  = "OTLP traces from ${each.key} tasks"
   ip_protocol                  = "tcp"
   from_port                    = 4317
-  to_port                      = 4317
+  to_port                      = 4318
   referenced_security_group_id = each.value
 }

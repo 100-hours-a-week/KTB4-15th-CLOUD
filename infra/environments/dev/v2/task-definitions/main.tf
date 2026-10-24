@@ -10,6 +10,8 @@
 locals {
   ssm = "/lookddak/dev"
 
+  # 모든 앱 트레이스에 붙는 리소스 속성
+  otel_resource_attributes = "deployment.environment.name=dev,service.namespace=lookddak"
 
   services = {
     nextjs = {
@@ -19,8 +21,22 @@ locals {
         # FE serverApi가 new URL("members/me", API_BASE_URL)로 경로를 붙이므로 /api/v1/ 과 끝 슬래시가 필요하다.
         API_BASE_URL = "http://spring:8080/api/v1/"
         NODE_ENV     = "production"
-        NODE_OPTIONS = "--max-old-space-size=384"
+        # --require: init 컨테이너(otel-init)가 복사한 OTel Node 자동 계측 (트레이스)
+        NODE_OPTIONS = "--max-old-space-size=384 --require /otel/autoinstrumentation.js"
         TZ           = "Asia/Seoul"
+        # OTel 트레이스 → Alloy :4318 (OTLP HTTP) → Tempo
+        # - http(서버 요청), undici(fetch, SSR에서 spring 호출)만 계측. Next.js 자체 구간(렌더링 등)은 Next가 만든다
+        # - Sentry는 dev 빌드에 DSN이 없어 꺼져 있다 (prod는 OTel 설정 충돌 확인 필요)
+        OTEL_SERVICE_NAME                  = "nextjs"
+        OTEL_RESOURCE_ATTRIBUTES           = local.otel_resource_attributes
+        OTEL_EXPORTER_OTLP_ENDPOINT        = var.otlp_http_endpoint
+        OTEL_EXPORTER_OTLP_PROTOCOL        = "http/protobuf"
+        OTEL_TRACES_EXPORTER               = "otlp"
+        OTEL_TRACES_SAMPLER                = "always_on"
+        OTEL_PROPAGATORS                   = "tracecontext,baggage"
+        OTEL_METRICS_EXPORTER              = "none"
+        OTEL_LOGS_EXPORTER                 = "none"
+        OTEL_NODE_ENABLED_INSTRUMENTATIONS = "http,undici"
       }
       secrets       = {}
       port_mappings = [{ name = "nextjs-http", container_port = 3000 }]
@@ -47,18 +63,21 @@ locals {
         # MaxMetaspaceSize 192m → 256m: 실사용 132MiB에 에이전트 클래스(수십 MiB)가 더해진다
         JAVA_TOOL_OPTIONS = "-XX:MaxRAMPercentage=75.0 -XX:InitialRAMPercentage=25.0 -XX:MaxMetaspaceSize=256m -XX:+UseContainerSupport -Dnetworkaddress.cache.ttl=10 -javaagent:/otel/javaagent.jar"
         TZ                = "Asia/Seoul"
-        # OTel 트레이스 → Alloy :4317 → Tempo
-        # - 샘플러 always_on: ALB X-Amzn-Trace-Id에는 Sampled 표시가 없어 parentbased면 버려진다
-        # - xray 전파기: ALB가 붙인 ID를 트레이스 ID로 써서 ALB 액세스 로그와 이어진다
+        # OTel 트레이스 → Alloy :4317 (OTLP gRPC) → Tempo
+        # - 샘플러 always_on: dev는 전부 남긴다
+        # - xray 전파기는 쓰지 않는다: ALB X-Amzn-Trace-Id에는 Root만 있고 Parent가 없어 이어 쓸 수 없다
+        # - 대신 X-Amzn-Trace-Id 헤더를 구간 속성(http.request.header.x-amzn-trace-id)으로 남긴다
+        #   Grafana에서 ALB 로그의 alb_trace_id로 이 속성을 TraceQL 검색해 트레이스로 이동한다
         # - 메트릭·로그는 다른 경로(Prometheus, FireLens)로 받으므로 내보내지 않는다
-        OTEL_SERVICE_NAME           = "spring"
-        OTEL_RESOURCE_ATTRIBUTES    = "deployment.environment.name=dev,service.namespace=lookddak"
-        OTEL_EXPORTER_OTLP_ENDPOINT = var.otlp_endpoint
-        OTEL_EXPORTER_OTLP_PROTOCOL = "grpc"
-        OTEL_TRACES_SAMPLER         = "always_on"
-        OTEL_PROPAGATORS            = "tracecontext,baggage,xray"
-        OTEL_METRICS_EXPORTER       = "none"
-        OTEL_LOGS_EXPORTER          = "none"
+        OTEL_SERVICE_NAME                                        = "spring"
+        OTEL_RESOURCE_ATTRIBUTES                                 = local.otel_resource_attributes
+        OTEL_EXPORTER_OTLP_ENDPOINT                              = var.otlp_endpoint
+        OTEL_EXPORTER_OTLP_PROTOCOL                              = "grpc"
+        OTEL_TRACES_SAMPLER                                      = "always_on"
+        OTEL_PROPAGATORS                                         = "tracecontext,baggage"
+        OTEL_INSTRUMENTATION_HTTP_SERVER_CAPTURE_REQUEST_HEADERS = "X-Amzn-Trace-Id"
+        OTEL_METRICS_EXPORTER                                    = "none"
+        OTEL_LOGS_EXPORTER                                       = "none"
         # 로그 줄에 [trace_id,span_id] (에이전트가 MDC에 넣은 값). Grafana에서 로그 → 트레이스 이동
         LOGGING_PATTERN_CORRELATION = "[%X{trace_id:-},%X{span_id:-}] "
       }
@@ -97,6 +116,20 @@ locals {
         MALLOC_ARENA_MAX                           = "2"
         UVICORN_TIMEOUT_GRACEFUL_SHUTDOWN          = "30"
         TZ                                         = "Asia/Seoul"
+        # OTel 트레이스 → Alloy :4318 (OTLP HTTP) → Tempo
+        # - PYTHONPATH: init 컨테이너(otel-init)가 복사한 OTel Python 자동 계측. sitecustomize가 시작 때 계측을 켠다
+        #   계측 패키지가 앱 venv보다 앞에 온다 (protobuf·requests 등 앱과 같은 버전임을 확인, Python 3.12에서 import 확인)
+        # - 공식 이미지는 OTLP HTTP 내보내기만 들어 있다 (gRPC 없음)
+        PYTHONPATH                  = "/otel/opentelemetry/instrumentation/auto_instrumentation:/otel"
+        OTEL_SERVICE_NAME           = "fastapi"
+        OTEL_RESOURCE_ATTRIBUTES    = local.otel_resource_attributes
+        OTEL_EXPORTER_OTLP_ENDPOINT = var.otlp_http_endpoint
+        OTEL_EXPORTER_OTLP_PROTOCOL = "http/protobuf"
+        OTEL_TRACES_EXPORTER        = "otlp"
+        OTEL_TRACES_SAMPLER         = "always_on"
+        OTEL_PROPAGATORS            = "tracecontext,baggage"
+        OTEL_METRICS_EXPORTER       = "none"
+        OTEL_LOGS_EXPORTER          = "none"
       }
       secrets = {
         DATABASE_URL                        = "${local.ssm}/v2/postgresql/app/database-url"
@@ -118,7 +151,8 @@ locals {
       # V1 compose와 같은 방식: /health 라우트가 없어 8000 포트 TCP 연결만 확인한다.
       # ALB가 없어 이 헬스 체크가 배포 중 비정상 Task 판단 기준이 된다.
       health_check = {
-        command      = ["CMD", "python", "-c", "import socket; socket.create_connection(('localhost', 8000), 3).close()"]
+        # PYTHONPATH를 빼고 실행한다: 헬스 체크마다 OTel 계측이 켜지지 않게
+        command      = ["CMD", "env", "-u", "PYTHONPATH", "python", "-c", "import socket; socket.create_connection(('localhost', 8000), 3).close()"]
         interval     = 30
         timeout      = 5
         retries      = 3
@@ -162,10 +196,8 @@ locals {
 # ---------------------------------------------------------------
 locals {
   ecs_exporter_image = "quay.io/prometheuscommunity/ecs-exporter:v0.4.0"
-  # OTel Java 에이전트 2.32.0 (OpenTelemetry Operator 공식 이미지, /javaagent.jar). linux/arm64 digest로 고정
-  otel_java_agent_image = "ghcr.io/open-telemetry/opentelemetry-operator/autoinstrumentation-java:2.32.0@sha256:a36b256a59f03d5a4fbc080ca604ec9e971464e66ab53157f7067cf4a8e3d5f8"
-  fluent_bit_image      = "public.ecr.aws/aws-observability/aws-for-fluent-bit:init-2.34.3.20261020"
-  monitored_services    = ["nextjs", "spring", "fastapi"]
+  fluent_bit_image   = "public.ecr.aws/aws-observability/aws-for-fluent-bit:init-2.34.3.20261020"
+  monitored_services = ["nextjs", "spring", "fastapi"]
 
   # 여러 줄 합치기 규칙 (observability/fluent-bit/parsers.conf)
   # spring·fastapi는 줄이 ISO 시각으로 시작, nextjs는 시각 없이 찍혀서 들여쓴 줄(스택)만 합친다
@@ -231,22 +263,25 @@ locals {
     ]
   }
 
-  # 트레이스 (spring만, 1차): otel-init 컨테이너
-  # - Task 시작 때 한 번 에이전트 jar를 공유 볼륨(otel-agent, Fargate 임시 저장소)에 복사하고 종료한다 (사이드카 아님)
-  # - spring은 otel-init이 SUCCESS로 끝난 뒤 시작하고, 볼륨을 읽기 전용으로 붙여 -javaagent로 적재한다
-  otel_services = ["spring"]
-  otel_init = {
-    name              = "otel-init"
-    image             = local.otel_java_agent_image
-    essential         = false
-    command           = ["cp", "/javaagent.jar", "/otel/javaagent.jar"]
-    memoryReservation = 16
-    mountPoints = [{
-      sourceVolume  = "otel-agent"
-      containerPath = "/otel"
-      readOnly      = false
-    }]
+  # 트레이스: otel-init 컨테이너 (OpenTelemetry Operator 공식 자동 계측 이미지, linux/arm64 digest로 고정)
+  # - Task 시작 때 한 번 계측 파일을 공유 볼륨(otel-agent, Fargate 임시 저장소)에 복사하고 종료한다 (사이드카 아님)
+  # - 앱은 otel-init이 SUCCESS로 끝난 뒤 시작하고, 볼륨을 /otel에 읽기 전용으로 붙여 적재한다
+  #   spring: -javaagent:/otel/javaagent.jar / nextjs: --require /otel/autoinstrumentation.js / fastapi: PYTHONPATH
+  otel_agents = {
+    spring = {
+      image   = "ghcr.io/open-telemetry/opentelemetry-operator/autoinstrumentation-java:2.32.0@sha256:a36b256a59f03d5a4fbc080ca604ec9e971464e66ab53157f7067cf4a8e3d5f8"
+      command = ["cp", "/javaagent.jar", "/otel/javaagent.jar"]
+    }
+    nextjs = {
+      image   = "ghcr.io/open-telemetry/opentelemetry-operator/autoinstrumentation-nodejs:0.81.2@sha256:2f4215e0fa96ba348002f0025d87b4f4d52b1be424c54efc490c7c205f69c4d0"
+      command = ["cp", "-r", "/autoinstrumentation/.", "/otel/"]
+    }
+    fastapi = {
+      image   = "ghcr.io/open-telemetry/opentelemetry-operator/autoinstrumentation-python:0.66b1-3@sha256:c92261b2dbbb0316e0a42a62721c0064ddf47f4090c7744450a9cc87a20ac762"
+      command = ["cp", "-r", "/autoinstrumentation/.", "/otel/"]
+    }
   }
+  otel_services = keys(local.otel_agents)
 
   # 앱 컨테이너 로그: FireLens. 여기 options가 출력 1(CloudWatch, 기존 로그 그룹)이 된다.
   # ECS 기본 전달 모드가 non-blocking이라 mode는 따로 두지 않는다 (Fluent Bit 출력 옵션으로 넘어가지 않게).
@@ -289,7 +324,17 @@ module "template" {
   health_check         = each.value.health_check
   sidecars = concat(
     try(local.sidecars[each.key], []),
-    contains(local.otel_services, each.key) ? [merge(local.otel_init, {
+    contains(local.otel_services, each.key) ? [{
+      name              = "otel-init"
+      image             = local.otel_agents[each.key].image
+      essential         = false
+      command           = local.otel_agents[each.key].command
+      memoryReservation = 16
+      mountPoints = [{
+        sourceVolume  = "otel-agent"
+        containerPath = "/otel"
+        readOnly      = false
+      }]
       logConfiguration = {
         logDriver = "awslogs"
         options = {
@@ -298,7 +343,7 @@ module "template" {
           "awslogs-stream-prefix" = "otel-init"
         }
       }
-    })] : [],
+    }] : [],
   )
   log_configuration = try(local.app_log_configuration[each.key], null)
   depends_on_containers = concat(

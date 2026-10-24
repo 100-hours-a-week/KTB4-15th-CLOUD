@@ -56,8 +56,10 @@ services:
       - /:/host/root:ro,rslave
     ports:
       - "3500:3500"
-      # 앱 Task의 OTLP gRPC 트레이스 수신 (SG로 nextjs·spring·fastapi Task만 허용)
+      # 앱 Task의 OTLP 트레이스 수신 (SG로 nextjs·spring·fastapi Task만 허용)
+      # 4317 gRPC(spring), 4318 HTTP(nextjs·fastapi)
       - "4317:4317"
+      - "4318:4318"
       - "127.0.0.1:12345:12345"
     # 트레이스 수신(otelcol) 추가로 384m → 512m
     mem_limit: 512m

@@ -16,7 +16,9 @@ datasources:
     url: http://loki:3100
     editable: false
     jsonData:
-      # 로그 → 트레이스: structured metadata trace_id(ALB 로그, 이후 앱·쿼리 로그)에서 Tempo로 이동
+      # 로그 → 트레이스
+      # - trace_id: structured metadata trace_id(앱·쿼리 로그)로 Tempo 트레이스를 바로 연다
+      # - alb_trace_id: ALB 로그의 X-Amzn-Trace-Id Root. spring이 이 헤더를 구간 속성으로 남기므로 TraceQL로 찾는다
       derivedFields:
         - name: trace_id
           matcherType: label
@@ -24,6 +26,12 @@ datasources:
           datasourceUid: tempo
           url: "$${__value.raw}"
           urlDisplayLabel: Tempo
+        - name: alb_trace_id
+          matcherType: label
+          matcherRegex: alb_trace_id
+          datasourceUid: tempo
+          url: '{ span."http.request.header.x-amzn-trace-id" =~ ".*$${__value.raw}.*" }'
+          urlDisplayLabel: Tempo (ALB)
 
   # 트레이스 → 로그: 구간의 service.name을 Loki service 레이블로, trace_id로 거른다
   - name: Tempo

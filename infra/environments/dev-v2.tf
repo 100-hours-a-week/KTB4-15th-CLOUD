@@ -143,6 +143,7 @@ module "dev_v2_task_definitions" {
   fluent_bit_config_arn   = module.dev_v2_monitoring.fluent_bit_config_arn
   fluent_bit_parsers_arn  = module.dev_v2_monitoring.fluent_bit_parsers_arn
   otlp_endpoint           = "http://${module.dev_v2_monitoring.private_ip}:4317"
+  otlp_http_endpoint      = "http://${module.dev_v2_monitoring.private_ip}:4318"
 }
 
 module "dev_v2_ecs_services" {
