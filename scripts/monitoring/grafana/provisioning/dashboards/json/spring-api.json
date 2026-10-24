@@ -1,6 +1,6 @@
 {
   "uid": "lookddak-spring-api",
-  "title": "Spring API",
+  "title": "Spring 내부 지표",
   "description": "dev Spring 앱 메트릭 (/actuator/prometheus, 30초 수집). HTTP·HikariCP·JVM",
   "tags": [
     "lookddak",

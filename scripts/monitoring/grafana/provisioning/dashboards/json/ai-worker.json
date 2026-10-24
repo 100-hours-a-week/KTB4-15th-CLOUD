@@ -1,6 +1,6 @@
 {
   "uid": "lookddak-ai-worker",
-  "title": "AI Worker",
+  "title": "FastAPI 내부 지표",
   "description": "dev FastAPI 앱 메트릭 (/metrics, 30초 수집). 가상피팅 Worker·HTTP",
   "tags": [
     "lookddak",

@@ -32,6 +32,12 @@ datasources:
           datasourceUid: tempo
           url: '{ span."http.request.header.x-amzn-trace-id" =~ ".*$${__value.raw}.*" }'
           urlDisplayLabel: Tempo (ALB)
+        # spring 로그 줄 앞의 [trace_id,span_id] (LOGGING_PATTERN_CORRELATION)
+        - name: trace_id_in_line
+          matcherRegex: '\[([0-9a-f]{32}),[0-9a-f]{16}\]'
+          datasourceUid: tempo
+          url: "$${__value.raw}"
+          urlDisplayLabel: Tempo
 
   # 트레이스 → 로그: 구간의 service.name을 Loki service 레이블로, trace_id로 거른다
   - name: Tempo
