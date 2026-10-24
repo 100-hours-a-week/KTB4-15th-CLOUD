@@ -44,6 +44,11 @@ variable "fluent_bit_parsers_arn" {
 }
 
 variable "otlp_endpoint" {
-  description = "OTel 트레이스 수신 주소 (Monitoring EC2 Alloy OTLP gRPC, 예: http://10.30.21.250:4317)"
+  description = "OTel 트레이스 수신 주소 (Monitoring EC2 Alloy OTLP gRPC, 예: http://10.30.21.250:4317). spring(Java 에이전트)"
+  type        = string
+}
+
+variable "otlp_http_endpoint" {
+  description = "OTel 트레이스 수신 주소 (Monitoring EC2 Alloy OTLP HTTP, 예: http://10.30.21.250:4318). nextjs·fastapi(공식 Node·Python 이미지)"
   type        = string
 }
