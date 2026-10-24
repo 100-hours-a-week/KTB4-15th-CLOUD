@@ -136,3 +136,15 @@ variable "depends_on_containers" {
   }))
   default = []
 }
+
+variable "volumes" {
+  description = "Task 볼륨 (ECS 형식 그대로, 예: [{ name = \"otel-agent\" }] = Fargate 임시 볼륨). 비어 있으면 넣지 않는다"
+  type        = any
+  default     = []
+}
+
+variable "mount_points" {
+  description = "앱 컨테이너 mountPoints (ECS 형식: sourceVolume, containerPath, readOnly). 비어 있으면 넣지 않는다"
+  type        = any
+  default     = []
+}
