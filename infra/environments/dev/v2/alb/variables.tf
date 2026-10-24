@@ -39,16 +39,6 @@ variable "v1_domain_name" {
   type        = string
 }
 
-variable "v1_instance_id" {
-  description = "V1 dev EC2 instance ID registered in the V1 target group"
-  type        = string
-}
-
-variable "v1_health_check_path" {
-  description = "HTTPS path on the V1 dev nginx that returns 200 for ALB health checks"
-  type        = string
-}
-
 variable "fastapi_enabled" {
   description = "Temporarily route /api/v2/* on the dev domains to the V2 FastAPI service"
   type        = bool
