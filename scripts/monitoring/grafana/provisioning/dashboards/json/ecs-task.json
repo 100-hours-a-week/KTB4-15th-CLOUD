@@ -1,7 +1,7 @@
 {
   "uid": "lookddak-ecs-task",
-  "title": "ECS Task",
-  "description": "dev V2 ECS Task·컨테이너 리소스 (ecs_exporter 사이드카, 30초 수집). crawler 배치는 제외",
+  "title": "서비스 별 지표 및 로그",
+  "description": "dev V2 서비스별 ECS Task·컨테이너 리소스(ecs_exporter, 30초 수집), 앱 로그(Loki), 트레이스(Tempo). crawler 배치는 제외",
   "tags": [
     "lookddak",
     "ecs"
@@ -548,6 +548,103 @@
         "sortOrder": "Descending",
         "enableLogDetails": true
       }
+    },
+    {
+      "id": 14,
+      "type": "row",
+      "title": "트레이스 (Tempo)",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 48
+      },
+      "panels": []
+    },
+    {
+      "id": 15,
+      "type": "nodeGraph",
+      "title": "서비스 호출 관계",
+      "description": "Tempo metrics-generator 서비스 그래프 (전체 서비스, 선택과 무관). 노드를 누르면 요청 수·에러·지연과 트레이스 검색으로 이동",
+      "datasource": {
+        "type": "tempo",
+        "uid": "tempo"
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 49
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "tempo",
+            "uid": "tempo"
+          },
+          "queryType": "serviceMap"
+        }
+      ]
+    },
+    {
+      "id": 16,
+      "type": "table",
+      "title": "느린 요청 (서버 구간 1초 이상)",
+      "description": "선택한 서비스의 요청 처리 구간 중 1초 이상. Trace ID를 누르면 트레이스 상세. SSE·스트림 요청은 연결 시간만큼 길게 나온다",
+      "datasource": {
+        "type": "tempo",
+        "uid": "tempo"
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 0,
+        "y": 59
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "tempo",
+            "uid": "tempo"
+          },
+          "queryType": "traceql",
+          "query": "{ resource.service.name =~ \"${service:regex}\" && kind = server && duration > 1s }",
+          "limit": 20,
+          "tableType": "traces"
+        }
+      ]
+    },
+    {
+      "id": 17,
+      "type": "table",
+      "title": "에러 트레이스",
+      "description": "선택한 서비스에서 status = error 구간이 있는 트레이스. Trace ID를 누르면 트레이스 상세",
+      "datasource": {
+        "type": "tempo",
+        "uid": "tempo"
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 12,
+        "y": 59
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "tempo",
+            "uid": "tempo"
+          },
+          "queryType": "traceql",
+          "query": "{ resource.service.name =~ \"${service:regex}\" && status = error }",
+          "limit": 20,
+          "tableType": "traces"
+        }
+      ]
     }
   ]
 }
