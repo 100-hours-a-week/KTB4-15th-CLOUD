@@ -3,7 +3,7 @@
 # - 저장: S3 (블록). 로컬 /var/tempo(Docker volume)에는 live-store WAL과 metrics-generator WAL만 둔다
 # - S3 버킷 이름은 -config.expand-env=true로 환경변수 TEMPO_S3_BUCKET에서 읽는다 (서버 .env)
 # - 자격 증명: EC2 인스턴스 역할 (IMDSv2). access_key·secret_key를 쓰지 않는다
-# - 보존: 7일 (backend_worker.compaction.block_retention)
+# - 보존: 7일 (backend_scheduler·backend_worker block_retention)
 # - 기준 예시: grafana/tempo v3.1.1 example/docker-compose/single-binary/tempo.yaml
 stream_over_http_enabled: true
 
@@ -29,6 +29,13 @@ storage:
       bucket: ${TEMPO_S3_BUCKET}
       endpoint: s3.ap-northeast-2.amazonaws.com
       region: ap-northeast-2
+
+# 보존 7일: 3.x는 스케줄러가 삭제 작업을 계획하고 워커가 실행한다. 기본값(336h)이 남지 않게 두 곳 모두 둔다
+backend_scheduler:
+  provider:
+    compaction:
+      compaction:
+        block_retention: 168h
 
 backend_worker:
   compaction:

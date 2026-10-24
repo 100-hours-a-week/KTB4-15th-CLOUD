@@ -43,8 +43,24 @@ locals {
         BE_FITTING_RESPONSE_QUEUE_URL   = var.queue_urls["be-fitting-response"]
         FITTING_OUTBOX_ENABLED          = "true"
         FITTING_RESULT_CONSUMER_ENABLED = "true"
-        JAVA_TOOL_OPTIONS               = "-XX:MaxRAMPercentage=75.0 -XX:InitialRAMPercentage=25.0 -XX:MaxMetaspaceSize=192m -XX:+UseContainerSupport -Dnetworkaddress.cache.ttl=10"
-        TZ                              = "Asia/Seoul"
+        # -javaagent: init 컨테이너(otel-init)가 복사한 OTel Java 에이전트 (트레이스)
+        # MaxMetaspaceSize 192m → 256m: 실사용 132MiB에 에이전트 클래스(수십 MiB)가 더해진다
+        JAVA_TOOL_OPTIONS = "-XX:MaxRAMPercentage=75.0 -XX:InitialRAMPercentage=25.0 -XX:MaxMetaspaceSize=256m -XX:+UseContainerSupport -Dnetworkaddress.cache.ttl=10 -javaagent:/otel/javaagent.jar"
+        TZ                = "Asia/Seoul"
+        # OTel 트레이스 → Alloy :4317 → Tempo
+        # - 샘플러 always_on: ALB X-Amzn-Trace-Id에는 Sampled 표시가 없어 parentbased면 버려진다
+        # - xray 전파기: ALB가 붙인 ID를 트레이스 ID로 써서 ALB 액세스 로그와 이어진다
+        # - 메트릭·로그는 다른 경로(Prometheus, FireLens)로 받으므로 내보내지 않는다
+        OTEL_SERVICE_NAME           = "spring"
+        OTEL_RESOURCE_ATTRIBUTES    = "deployment.environment.name=dev,service.namespace=lookddak"
+        OTEL_EXPORTER_OTLP_ENDPOINT = var.otlp_endpoint
+        OTEL_EXPORTER_OTLP_PROTOCOL = "grpc"
+        OTEL_TRACES_SAMPLER         = "always_on"
+        OTEL_PROPAGATORS            = "tracecontext,baggage,xray"
+        OTEL_METRICS_EXPORTER       = "none"
+        OTEL_LOGS_EXPORTER          = "none"
+        # 로그 줄에 [trace_id,span_id] (에이전트가 MDC에 넣은 값). Grafana에서 로그 → 트레이스 이동
+        LOGGING_PATTERN_CORRELATION = "[%X{trace_id:-},%X{span_id:-}] "
       }
       secrets = {
         DB_URL              = "${local.ssm}/v2/mysql/jdbc-url"
@@ -146,8 +162,10 @@ locals {
 # ---------------------------------------------------------------
 locals {
   ecs_exporter_image = "quay.io/prometheuscommunity/ecs-exporter:v0.4.0"
-  fluent_bit_image   = "public.ecr.aws/aws-observability/aws-for-fluent-bit:init-2.34.3.20261020"
-  monitored_services = ["nextjs", "spring", "fastapi"]
+  # OTel Java 에이전트 2.32.0 (OpenTelemetry Operator 공식 이미지, /javaagent.jar). linux/arm64 digest로 고정
+  otel_java_agent_image = "ghcr.io/open-telemetry/opentelemetry-operator/autoinstrumentation-java:2.32.0@sha256:a36b256a59f03d5a4fbc080ca604ec9e971464e66ab53157f7067cf4a8e3d5f8"
+  fluent_bit_image      = "public.ecr.aws/aws-observability/aws-for-fluent-bit:init-2.34.3.20261020"
+  monitored_services    = ["nextjs", "spring", "fastapi"]
 
   # 여러 줄 합치기 규칙 (observability/fluent-bit/parsers.conf)
   # spring·fastapi는 줄이 ISO 시각으로 시작, nextjs는 시각 없이 찍혀서 들여쓴 줄(스택)만 합친다
@@ -213,6 +231,23 @@ locals {
     ]
   }
 
+  # 트레이스 (spring만, 1차): otel-init 컨테이너
+  # - Task 시작 때 한 번 에이전트 jar를 공유 볼륨(otel-agent, Fargate 임시 저장소)에 복사하고 종료한다 (사이드카 아님)
+  # - spring은 otel-init이 SUCCESS로 끝난 뒤 시작하고, 볼륨을 읽기 전용으로 붙여 -javaagent로 적재한다
+  otel_services = ["spring"]
+  otel_init = {
+    name              = "otel-init"
+    image             = local.otel_java_agent_image
+    essential         = false
+    command           = ["cp", "/javaagent.jar", "/otel/javaagent.jar"]
+    memoryReservation = 16
+    mountPoints = [{
+      sourceVolume  = "otel-agent"
+      containerPath = "/otel"
+      readOnly      = false
+    }]
+  }
+
   # 앱 컨테이너 로그: FireLens. 여기 options가 출력 1(CloudWatch, 기존 로그 그룹)이 된다.
   # ECS 기본 전달 모드가 non-blocking이라 mode는 따로 두지 않는다 (Fluent Bit 출력 옵션으로 넘어가지 않게).
   app_log_configuration = {
@@ -252,11 +287,26 @@ module "template" {
   log_group_name       = var.log_group_names[each.key]
   command              = each.value.command
   health_check         = each.value.health_check
-  sidecars             = try(local.sidecars[each.key], [])
-  log_configuration    = try(local.app_log_configuration[each.key], null)
-  depends_on_containers = contains(local.monitored_services, each.key) ? [
-    { containerName = "log-router", condition = "START" },
-  ] : []
+  sidecars = concat(
+    try(local.sidecars[each.key], []),
+    contains(local.otel_services, each.key) ? [merge(local.otel_init, {
+      logConfiguration = {
+        logDriver = "awslogs"
+        options = {
+          "awslogs-group"         = var.log_group_names[each.key]
+          "awslogs-region"        = "ap-northeast-2"
+          "awslogs-stream-prefix" = "otel-init"
+        }
+      }
+    })] : [],
+  )
+  log_configuration = try(local.app_log_configuration[each.key], null)
+  depends_on_containers = concat(
+    contains(local.monitored_services, each.key) ? [{ containerName = "log-router", condition = "START" }] : [],
+    contains(local.otel_services, each.key) ? [{ containerName = "otel-init", condition = "SUCCESS" }] : [],
+  )
+  volumes      = contains(local.otel_services, each.key) ? [{ name = "otel-agent" }] : []
+  mount_points = contains(local.otel_services, each.key) ? [{ sourceVolume = "otel-agent", containerPath = "/otel", readOnly = true }] : []
 
   tags = {
     Environment = "dev"

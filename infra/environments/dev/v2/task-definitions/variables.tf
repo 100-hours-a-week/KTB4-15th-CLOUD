@@ -42,3 +42,8 @@ variable "fluent_bit_parsers_arn" {
   description = "FireLens(Fluent Bit init) 여러 줄 합치기 규칙 파일 S3 객체 ARN"
   type        = string
 }
+
+variable "otlp_endpoint" {
+  description = "OTel 트레이스 수신 주소 (Monitoring EC2 Alloy OTLP gRPC, 예: http://10.30.21.250:4317)"
+  type        = string
+}

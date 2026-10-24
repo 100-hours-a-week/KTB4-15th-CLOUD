@@ -55,6 +55,10 @@ locals {
     length(var.depends_on_containers) == 0 ? {} : {
       dependsOn = var.depends_on_containers
     },
+    # 공유 볼륨 연결 (예: init 컨테이너가 복사한 OTel 에이전트)
+    length(var.mount_points) == 0 ? {} : {
+      mountPoints = var.mount_points
+    },
     var.health_check == null ? {} : {
       healthCheck = {
         command     = var.health_check.command
@@ -66,28 +70,33 @@ locals {
     },
   )
 
-  task_definition = {
-    family                  = var.family
-    taskRoleArn             = var.task_role_arn
-    executionRoleArn        = var.execution_role_arn
-    networkMode             = "awsvpc"
-    requiresCompatibilities = ["FARGATE"]
-    cpu                     = tostring(var.cpu)
-    memory                  = tostring(var.memory)
+  task_definition = merge(
+    {
+      family                  = var.family
+      taskRoleArn             = var.task_role_arn
+      executionRoleArn        = var.execution_role_arn
+      networkMode             = "awsvpc"
+      requiresCompatibilities = ["FARGATE"]
+      cpu                     = tostring(var.cpu)
+      memory                  = tostring(var.memory)
 
-    runtimePlatform = {
-      operatingSystemFamily = "LINUX"
-      cpuArchitecture       = var.cpu_architecture
-    }
+      runtimePlatform = {
+        operatingSystemFamily = "LINUX"
+        cpuArchitecture       = var.cpu_architecture
+      }
 
-    # 앱 컨테이너가 항상 첫 번째. 사이드카(ecs_exporter, Fluent Bit 등)는 뒤에 붙인다.
-    # 앱 CD는 앱 컨테이너를 이름(container_name)으로 찾아 image digest만 바꾼다.
-    containerDefinitions = concat([local.container_definition], var.sidecars)
+      # 앱 컨테이너가 항상 첫 번째. 사이드카(ecs_exporter, Fluent Bit 등)는 뒤에 붙인다.
+      # 앱 CD는 앱 컨테이너를 이름(container_name)으로 찾아 image digest만 바꾼다.
+      containerDefinitions = concat([local.container_definition], var.sidecars)
 
-    tags = [
-      for key in sort(keys(var.tags)) : { key = key, value = var.tags[key] }
-    ]
-  }
+      tags = [
+        for key in sort(keys(var.tags)) : { key = key, value = var.tags[key] }
+      ]
+    },
+    length(var.volumes) == 0 ? {} : {
+      volumes = var.volumes
+    },
+  )
 }
 
 resource "aws_s3_object" "this" {
