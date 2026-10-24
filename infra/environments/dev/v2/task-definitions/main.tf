@@ -45,22 +45,22 @@ locals {
         FITTING_RESULT_CONSUMER_ENABLED = "true"
         # -javaagent: init 컨테이너(otel-init)가 복사한 OTel Java 에이전트 (트레이스)
         # MaxMetaspaceSize 192m → 256m: 실사용 132MiB에 에이전트 클래스(수십 MiB)가 더해진다
-        JAVA_TOOL_OPTIONS               = "-XX:MaxRAMPercentage=75.0 -XX:InitialRAMPercentage=25.0 -XX:MaxMetaspaceSize=256m -XX:+UseContainerSupport -Dnetworkaddress.cache.ttl=10 -javaagent:/otel/javaagent.jar"
-        TZ                              = "Asia/Seoul"
+        JAVA_TOOL_OPTIONS = "-XX:MaxRAMPercentage=75.0 -XX:InitialRAMPercentage=25.0 -XX:MaxMetaspaceSize=256m -XX:+UseContainerSupport -Dnetworkaddress.cache.ttl=10 -javaagent:/otel/javaagent.jar"
+        TZ                = "Asia/Seoul"
         # OTel 트레이스 → Alloy :4317 → Tempo
         # - 샘플러 always_on: ALB X-Amzn-Trace-Id에는 Sampled 표시가 없어 parentbased면 버려진다
         # - xray 전파기: ALB가 붙인 ID를 트레이스 ID로 써서 ALB 액세스 로그와 이어진다
         # - 메트릭·로그는 다른 경로(Prometheus, FireLens)로 받으므로 내보내지 않는다
-        OTEL_SERVICE_NAME               = "spring"
-        OTEL_RESOURCE_ATTRIBUTES        = "deployment.environment.name=dev,service.namespace=lookddak"
-        OTEL_EXPORTER_OTLP_ENDPOINT     = var.otlp_endpoint
-        OTEL_EXPORTER_OTLP_PROTOCOL     = "grpc"
-        OTEL_TRACES_SAMPLER             = "always_on"
-        OTEL_PROPAGATORS                = "tracecontext,baggage,xray"
-        OTEL_METRICS_EXPORTER           = "none"
-        OTEL_LOGS_EXPORTER              = "none"
+        OTEL_SERVICE_NAME           = "spring"
+        OTEL_RESOURCE_ATTRIBUTES    = "deployment.environment.name=dev,service.namespace=lookddak"
+        OTEL_EXPORTER_OTLP_ENDPOINT = var.otlp_endpoint
+        OTEL_EXPORTER_OTLP_PROTOCOL = "grpc"
+        OTEL_TRACES_SAMPLER         = "always_on"
+        OTEL_PROPAGATORS            = "tracecontext,baggage,xray"
+        OTEL_METRICS_EXPORTER       = "none"
+        OTEL_LOGS_EXPORTER          = "none"
         # 로그 줄에 [trace_id,span_id] (에이전트가 MDC에 넣은 값). Grafana에서 로그 → 트레이스 이동
-        LOGGING_PATTERN_CORRELATION     = "[%X{trace_id:-},%X{span_id:-}] "
+        LOGGING_PATTERN_CORRELATION = "[%X{trace_id:-},%X{span_id:-}] "
       }
       secrets = {
         DB_URL              = "${local.ssm}/v2/mysql/jdbc-url"
@@ -164,8 +164,8 @@ locals {
   ecs_exporter_image = "quay.io/prometheuscommunity/ecs-exporter:v0.4.0"
   # OTel Java 에이전트 2.32.0 (OpenTelemetry Operator 공식 이미지, /javaagent.jar). linux/arm64 digest로 고정
   otel_java_agent_image = "ghcr.io/open-telemetry/opentelemetry-operator/autoinstrumentation-java:2.32.0@sha256:a36b256a59f03d5a4fbc080ca604ec9e971464e66ab53157f7067cf4a8e3d5f8"
-  fluent_bit_image   = "public.ecr.aws/aws-observability/aws-for-fluent-bit:init-2.34.3.20261020"
-  monitored_services = ["nextjs", "spring", "fastapi"]
+  fluent_bit_image      = "public.ecr.aws/aws-observability/aws-for-fluent-bit:init-2.34.3.20261020"
+  monitored_services    = ["nextjs", "spring", "fastapi"]
 
   # 여러 줄 합치기 규칙 (observability/fluent-bit/parsers.conf)
   # spring·fastapi는 줄이 ISO 시각으로 시작, nextjs는 시각 없이 찍혀서 들여쓴 줄(스택)만 합친다
