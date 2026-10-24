@@ -7,9 +7,10 @@ EC2는 Terraform(`infra/environments/dev/v2/observability`)으로 관리하고, 
 
 | 저장소 | 서버 | 역할 |
 |---|---|---|
-| `docker-compose.yaml` | `/opt/monitoring/docker-compose.yaml` | Prometheus, Loki, Alloy, Grafana, DB exporter (MySQL, PostgreSQL) |
+| `docker-compose.yaml` | `/opt/monitoring/docker-compose.yaml` | Prometheus, Loki, Alloy, Grafana, Tempo, DB exporter (MySQL, PostgreSQL), db-log-tailer |
 | `prometheus/prometheus.yml` | `/opt/monitoring/prometheus/prometheus.yml` | 모니터링 구성요소, ECS Task, 앱, DB exporter scrape |
 | `loki/config.yaml` | `/opt/monitoring/loki/config.yaml` | 단일 바이너리, S3 저장, 보존 7일 |
+| `tempo/config.yaml` | `/opt/monitoring/tempo/config.yaml` | Tempo 3.1 단일 바이너리, OTLP 수신(내부), S3 저장, 보존 7일, metrics-generator(서비스 그래프·스팬 지표 → Prometheus) |
 | `alloy/config.alloy` | `/opt/monitoring/alloy/config.alloy` | 호스트 메트릭·AWS 메트릭(YACE) → Prometheus, Loki push 수신(:3500) → Loki |
 | `grafana/provisioning/datasources/datasources.yaml` | `/opt/monitoring/grafana/provisioning/datasources/datasources.yaml` | Prometheus, Loki, CloudWatch 데이터소스 |
 | `grafana/provisioning/dashboards/dashboards.yaml` | `/opt/monitoring/grafana/provisioning/dashboards/dashboards.yaml` | 대시보드 JSON 폴더를 읽는 provider (UI 수정 불가, 파일이 원본) |
@@ -27,6 +28,7 @@ EC2는 Terraform(`infra/environments/dev/v2/observability`)으로 관리하고, 
 |---|---|
 | `GRAFANA_ADMIN_PASSWORD` | Parameter Store `/lookddak/dev/monitoring/grafana-admin-password` |
 | `LOKI_S3_BUCKET` | `lookddak-dev-loki-<계정 ID>-ap-northeast-2` (Terraform 출력 `loki_bucket_name`) |
+| `TEMPO_S3_BUCKET` | `lookddak-dev-tempo-<계정 ID>-ap-northeast-2` (Terraform 출력 `tempo_bucket_name`) |
 | `POSTGRES_EXPORTER_HOST` | Parameter Store `/lookddak/dev/v2/postgresql/host` |
 | `POSTGRES_EXPORTER_PASSWORD` | Parameter Store `/lookddak/dev/monitoring/postgres-exporter/password` |
 
@@ -43,6 +45,8 @@ EC2는 Terraform(`infra/environments/dev/v2/observability`)으로 관리하고, 
 |---|---|---|
 | 3000 | Grafana | 호스트 (ALB 보안 그룹, SSM 포트포워딩) |
 | 3500 | Alloy Loki push 수신 | 호스트 (lambda-promtail, ECS Task FireLens) |
+| 4317 | Alloy OTLP gRPC 트레이스 수신 | 호스트 (ECS Task, SG로 nextjs·spring·fastapi만) |
+| 3200 | Tempo 조회 API | 127.0.0.1 |
 | 9090 | Prometheus | 127.0.0.1 |
 | 3100 | Loki (저장소: S3) | 127.0.0.1 |
 | 12345 | Alloy UI | 127.0.0.1 |
@@ -87,6 +91,7 @@ aws ssm start-session --target <instance-id> --document-name AWS-StartPortForwar
 | `prometheus/prometheus.yml` | `curl -X POST localhost:9090/-/reload` |
 | `alloy/config.alloy` | `curl -X POST localhost:12345/-/reload` |
 | `loki/config.yaml` | `docker compose restart loki` |
+| `tempo/config.yaml` | `docker compose restart tempo` |
 | Grafana 대시보드 JSON | 자동 (60초 안에 다시 읽음) |
 | Grafana 데이터소스, `docker-compose.yaml` | `docker compose up -d` |
 

@@ -63,6 +63,11 @@ output "loki_bucket_name" {
   value       = aws_s3_bucket.loki.id
 }
 
+output "tempo_bucket_name" {
+  description = "Tempo S3 bucket (server .env TEMPO_S3_BUCKET)"
+  value       = aws_s3_bucket.tempo.id
+}
+
 output "fluent_bit_parsers_arn" {
   description = "FireLens 여러 줄 합치기 규칙 파일 S3 객체 ARN"
   value       = "arn:${data.aws_partition.current.partition}:s3:::${aws_s3_object.fluent_bit_parsers.bucket}/${aws_s3_object.fluent_bit_parsers.key}"

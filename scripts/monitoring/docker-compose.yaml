@@ -56,11 +56,15 @@ services:
       - /:/host/root:ro,rslave
     ports:
       - "3500:3500"
+      # 앱 Task의 OTLP gRPC 트레이스 수신 (SG로 nextjs·spring·fastapi Task만 허용)
+      - "4317:4317"
       - "127.0.0.1:12345:12345"
-    mem_limit: 384m
+    # 트레이스 수신(otelcol) 추가로 384m → 512m
+    mem_limit: 512m
     depends_on:
       - prometheus
       - loki
+      - tempo
 
   grafana:
     image: grafana/grafana:12.0.0
@@ -87,7 +91,8 @@ services:
       - grafana-data:/var/lib/grafana
     ports:
       - "3000:3000"
-    mem_limit: 256m
+    # 실사용 약 260MiB로 256m 한도에 붙어 있어 올림 (2026-10-24 실측)
+    mem_limit: 384m
     depends_on:
       - prometheus
       - loki
@@ -143,9 +148,29 @@ services:
     depends_on:
       - alloy
 
+  # 트레이스 저장소: Alloy가 보낸 트레이스를 받아 S3에 블록으로 저장하고, Grafana가 :3200으로 조회한다
+  # - OTLP :4317은 compose 내부에서만 쓴다 (호스트 :4317은 Alloy)
+  # - S3 버킷 이름은 서버 .env의 TEMPO_S3_BUCKET
+  tempo:
+    image: grafana/tempo:3.1.1
+    restart: unless-stopped
+    command:
+      - -target=all
+      - -config.file=/etc/tempo/config.yaml
+      - -config.expand-env=true
+    environment:
+      TEMPO_S3_BUCKET: ${TEMPO_S3_BUCKET:?TEMPO_S3_BUCKET is required}
+    volumes:
+      - ./tempo:/etc/tempo:ro
+      - tempo-data:/var/tempo
+    ports:
+      - "127.0.0.1:3200:3200"
+    mem_limit: 768m
+
 volumes:
   prometheus-data:
   loki-data:
   alloy-data:
   grafana-data:
   db-log-tailer-state:
+  tempo-data:
