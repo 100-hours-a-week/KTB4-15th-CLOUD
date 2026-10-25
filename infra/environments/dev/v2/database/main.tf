@@ -224,4 +224,8 @@ module "mysql" {
   deletion_protection      = false
   skip_final_snapshot      = true
   delete_automated_backups = true
+
+  # error·slowquery 로그는 db-log-tailer가 RDS API로 읽어 Alloy → Loki로 보낸다 (CloudWatch로 내보내지 않음).
+  # 모듈이 apply_immediately를 쓰지 않아 다음 유지보수 시간에 반영된다. 바로 끄려면 CLI --apply-immediately.
+  enabled_cloudwatch_logs_exports = []
 }
