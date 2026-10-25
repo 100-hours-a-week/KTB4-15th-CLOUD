@@ -78,6 +78,11 @@ locals {
         OTEL_INSTRUMENTATION_HTTP_SERVER_CAPTURE_REQUEST_HEADERS = "X-Amzn-Trace-Id"
         OTEL_METRICS_EXPORTER                                    = "none"
         OTEL_LOGS_EXPORTER                                       = "none"
+        # SQS 메시지로 트레이스 연결 (spring → fastapi 워커 → spring)
+        # - 보낼 때 메시지 속성에 traceparent를 넣고, 받을 때 꺼낸다 (AWS SDK 계측, 실험 옵션)
+        # - 받기 구간(receive)과 메시지별 처리 구간(process)을 만들어 보낸 쪽 트레이스와 잇는다
+        OTEL_INSTRUMENTATION_AWS_SDK_EXPERIMENTAL_USE_PROPAGATOR_FOR_MESSAGING = "true"
+        OTEL_INSTRUMENTATION_MESSAGING_EXPERIMENTAL_RECEIVE_TELEMETRY_ENABLED  = "true"
         # 로그 줄에 [trace_id,span_id] (에이전트가 MDC에 넣은 값). Grafana에서 로그 → 트레이스 이동
         LOGGING_PATTERN_CORRELATION = "[%X{trace_id:-},%X{span_id:-}] "
       }
