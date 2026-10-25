@@ -1,5 +1,5 @@
 variable "deploy_role_names" {
-  description = "prod 앱 배포 Role 이름 (fe, be, ai => Role 이름)"
+  description = "prod 앱 배포 Role 이름 (fe, be, ai, crawler => Role 이름)"
   type        = map(string)
 }
 

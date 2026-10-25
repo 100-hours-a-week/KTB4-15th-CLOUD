@@ -21,3 +21,8 @@ output "deploy_role_names" {
     ai = aws_iam_role.ai_deploy.name
   }
 }
+
+output "crawler_deploy_role_name" {
+  description = "Name of the crawler prod CD deployment role (V2 task definition registration only)"
+  value       = aws_iam_role.crawler_deploy.name
+}
