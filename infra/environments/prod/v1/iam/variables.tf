@@ -4,6 +4,7 @@ variable "ecr_repository_arns" {
     nextjs  = string
     spring  = string
     fastapi = string
+    crawler = string
   })
 }
 

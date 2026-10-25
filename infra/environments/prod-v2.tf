@@ -109,7 +109,9 @@ module "prod_v2_ecs_services" {
 module "prod_v2_cicd_deploy_policy" {
   source = "./prod/v2/cicd-deploy-policy"
 
-  deploy_role_names       = module.prod_v1_iam.deploy_role_names
+  deploy_role_names = merge(module.prod_v1_iam.deploy_role_names, {
+    crawler = module.prod_v1_iam.crawler_deploy_role_name
+  })
   template_bucket_arn     = module.shared_ecs_taskdef_store.bucket_arn
   ecr_repository_arns     = module.shared_core.ecr_repository_arns
   cluster_name            = module.prod_v2_ecs_cluster.cluster_name
