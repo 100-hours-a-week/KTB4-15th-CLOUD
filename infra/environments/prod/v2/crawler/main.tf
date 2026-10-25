@@ -53,7 +53,7 @@ resource "aws_scheduler_schedule" "crawler" {
   name        = "lookddak-prod-v2-crawler"
   group_name  = aws_scheduler_schedule_group.crawler.name
   description = "Collect prices and create outbox rows every day at 11:00 Asia/Seoul"
-  state       = "DISABLED"
+  state       = "ENABLED"
 
   schedule_expression          = "cron(0 11 * * ? *)"
   schedule_expression_timezone = "Asia/Seoul"
@@ -96,7 +96,7 @@ resource "aws_scheduler_schedule" "delivery" {
   name        = "lookddak-prod-v2-crawler-delivery"
   group_name  = aws_scheduler_schedule_group.crawler.name
   description = "Deliver due crawler outbox rows to the Backend every five minutes"
-  state       = "DISABLED"
+  state       = "ENABLED"
 
   schedule_expression = "rate(5 minutes)"
 
@@ -180,7 +180,7 @@ resource "aws_scheduler_schedule" "cleanup" {
   name        = "lookddak-prod-v2-crawler-cleanup"
   group_name  = aws_scheduler_schedule_group.crawler.name
   description = "Delete crawler DONE outbox rows older than five days at 04:00 Asia/Seoul"
-  state       = "DISABLED"
+  state       = "ENABLED"
 
   schedule_expression          = "cron(0 4 * * ? *)"
   schedule_expression_timezone = "Asia/Seoul"
