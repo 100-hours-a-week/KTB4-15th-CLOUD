@@ -6,5 +6,8 @@ terraform {
         aws.us_east_1,
       ]
     }
+    random = {
+      source = "hashicorp/random"
+    }
   }
 }
