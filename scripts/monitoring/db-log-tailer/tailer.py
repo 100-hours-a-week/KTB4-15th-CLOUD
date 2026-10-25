@@ -2,10 +2,16 @@
 
 RDS API(DescribeDBLogFiles, DownloadDBLogFilePortion)로 DB 로그 파일을 이어 읽어 Alloy(Loki push API)로 보낸다.
 - MySQL: MariaDB Audit Plugin 감사 로그 (audit/server_audit.log*) -> source="db-query"
+- MySQL: 오류 로그(error/), 슬로우 쿼리 로그(slowquery/) -> source="rds",
+  log_group=/aws/rds/instance/<id>/{error,slowquery} (예전 CloudWatch 경로와 같은 레이블)
 - PostgreSQL: postgresql.log (log_statement=all + log_duration=on) -> 쿼리는 source="db-query",
   나머지(오류 등)는 PG_SEND_OTHER=true일 때 source="rds", log_group으로 보낸다
   같은 pid의 DETAIL(바인드 값)·duration·ERROR를 바로 앞 쿼리에 붙인다 (result=ok|error, duration_ms)
 - 파일별 읽은 위치(Marker)를 STATE_FILE에 저장해 재시작해도 이어 읽는다.
+- MySQL 로그 회전: 현재 파일(server_audit.log, mysql-error-running.log, mysql-slowquery.log)만 이어 읽는다.
+  회전되면 마지막으로 읽은 위치 이후의 남은 부분을 회전된 파일에서 마저 읽는다 (Marker "0:<offset>").
+  - error·slowquery: 1시간마다 <이름>.YYYY-MM-DD.H 로 회전 (새 회전 파일이 보이면 회전)
+  - audit: 100MB마다 <이름>.01 로 회전, 이전 파일은 .02… 로 밀린다 (현재 파일이 작아지면 회전)
 - /metrics: Prometheus 지표 (마지막 성공 시각, 보낸 줄 수, 오류 수, 지연)
 """
 import json
@@ -108,6 +114,82 @@ def parse_mysql_audit(text):
     return out
 
 
+# 2026-10-19T02:16:34.072141Z 0 [System] [MY-010931] [Server] message
+MYSQL_ERROR_LINE = re.compile(
+    r"^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(?:\.\d+)?Z\s+(\d+)\s+\[(\w+)\]\s+\[([^\]]*)\]\s+\[([^\]]*)\]\s?(.*)$")
+# 감사 플러그인이 오류 로그에 남기는 줄: 261023 13:59:41 server_audit: ...
+MYSQL_PLUGIN_LINE = re.compile(r"^(\d{6} \d{2}:\d{2}:\d{2}) (.*)$")
+
+
+def parse_mysql_error(text, log_group):
+    """MySQL 오류 로그. 한 줄 = 한 건. 시각이 없는 줄([AWS_QPC_INFO] 등)은 바로 앞 시각으로 보낸다."""
+    out = []
+    last_ts = None
+    for raw in text.splitlines():
+        if not raw.strip():
+            continue
+        meta = {}
+        m = MYSQL_ERROR_LINE.match(raw)
+        p = MYSQL_PLUGIN_LINE.match(raw) if not m else None
+        if m:
+            last_ts = datetime.strptime(m.group(1), "%Y-%m-%dT%H:%M:%S").replace(tzinfo=timezone.utc)
+            meta = {"thread": m.group(2), "level": m.group(3), "code": m.group(4), "subsystem": m.group(5)}
+        elif p:
+            try:
+                last_ts = datetime.strptime(p.group(1), "%y%m%d %H:%M:%S").replace(tzinfo=timezone.utc)
+            except ValueError:
+                pass
+        if last_ts is None:
+            continue
+        out.append((last_ts, {"source": "rds", "log_group": log_group}, raw, meta))
+    return out
+
+
+MYSQL_SLOW_TIME = re.compile(r"^# Time: (\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})")
+MYSQL_SLOW_USER = re.compile(r"^# User@Host: ([^\[]*)\[[^\]]*\] @ ([^\[]*)\[([^\]]*)\]\s+Id:\s+(\d+)")
+MYSQL_SLOW_STATS = re.compile(
+    r"^# Query_time: ([0-9.]+)\s+Lock_time: ([0-9.]+)\s+Rows_sent: (\d+)\s+Rows_examined: (\d+)")
+# 서버 시작·회전 때 파일 앞에 붙는 머리말
+MYSQL_SLOW_HEADER = ("/rdsdbbin/", "Tcp port:", "Time                 Id Command")
+
+
+def parse_mysql_slow(text, log_group):
+    """MySQL 슬로우 쿼리 로그. "# Time:"부터 다음 "# Time:" 전까지 = 한 건 (원문 그대로)."""
+    out = []
+    cur = None
+
+    def flush():
+        if cur and cur["user"] not in EXCLUDE_USERS:
+            out.append((cur["ts"], {"source": "rds", "log_group": log_group}, "\n".join(cur["lines"]), cur["meta"]))
+
+    for raw in text.splitlines():
+        if raw.startswith(MYSQL_SLOW_HEADER):
+            flush()
+            cur = None
+            continue
+        t = MYSQL_SLOW_TIME.match(raw)
+        if t:
+            flush()
+            cur = {"ts": datetime.strptime(t.group(1), "%Y-%m-%dT%H:%M:%S").replace(tzinfo=timezone.utc),
+                   "lines": [raw], "meta": {}, "user": ""}
+            continue
+        if cur is None:
+            continue
+        cur["lines"].append(raw)
+        u = MYSQL_SLOW_USER.match(raw)
+        if u:
+            cur["user"] = u.group(1).strip()
+            cur["meta"].update(db_user=cur["user"] or "unknown", client_host=u.group(3) or u.group(2).strip(),
+                               connection_id=u.group(4))
+            continue
+        q = MYSQL_SLOW_STATS.match(raw)
+        if q:
+            cur["meta"].update(query_time=q.group(1), lock_time=q.group(2), rows_sent=q.group(3),
+                               rows_examined=q.group(4))
+    flush()
+    return out
+
+
 # RDS 기본 log_line_prefix: %t:%r:%u@%d:[%p]:
 PG_PREFIX = re.compile(
     r"^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(?:\.\d+)? UTC):([^:]*):([^@]*)@([^:]*):\[(\d+)\]:([A-Z]+):\s{1,2}(.*)$")
@@ -199,25 +281,101 @@ def save_state(state):
 
 
 # ---------------------------------------------------------------- tail
-def tail_target(rds, state, engine, instance, prefix):
-    key_prefix = f"{instance}/"
+# MySQL 회전 파일 이름: <현재 파일>.YYYY-MM-DD.H (error, slowquery) / <현재 파일>.NN (audit)
+MYSQL_ROTATED_HOURLY = re.compile(r"^(?P<base>.+)\.(?P<date>\d{4}-\d{2}-\d{2})\.(?P<hour>\d{1,2})$")
+MYSQL_ROTATED_NUMBERED = re.compile(r"^(?P<base>.+)\.(?P<num>\d{2})$")
+
+
+def rotated_base(name):
+    m = MYSQL_ROTATED_HOURLY.match(name) or MYSQL_ROTATED_NUMBERED.match(name)
+    return m.group("base") if m else None
+
+
+def rotation_order(name):
+    """회전 파일을 오래된 것부터 정렬하는 키"""
+    m = MYSQL_ROTATED_HOURLY.match(name)
+    if m:
+        return (m.group("date"), int(m.group("hour")))
+    m = MYSQL_ROTATED_NUMBERED.match(name)
+    return ("", -int(m.group("num"))) if m else ("", 0)
+
+
+def marker_offset(marker):
+    """RDS Marker "<회전 시각>:<바이트 위치>"에서 위치만 꺼낸다"""
+    try:
+        return int(str(marker).rsplit(":", 1)[-1])
+    except ValueError:
+        return 0
+
+
+def target_kind(engine, prefix):
+    return "postgresql" if engine == "postgresql" else prefix.strip("/").split("/")[0]
+
+
+def metric_key(engine, kind):
+    # 기존 지표 레이블 유지: MySQL 감사 로그 = "mysql", PostgreSQL = "postgresql"
+    return engine if kind in ("audit", "postgresql") else f"{engine}_{kind}"
+
+
+def parse_entries(engine, kind, instance, text):
+    log_group = f"/aws/rds/instance/{instance}/{kind}"
+    if kind == "postgresql":
+        return parse_pg(text, log_group)
+    if kind == "audit":
+        return parse_mysql_audit(text)
+    if kind == "error":
+        return parse_mysql_error(text, log_group)
+    if kind == "slowquery":
+        return parse_mysql_slow(text, log_group)
+    raise ValueError(f"unknown log kind: {kind}")
+
+
+def read_file(rds, state, st, engine, kind, instance, name, marker):
+    """marker부터 파일 끝까지 읽어 보낸다. st가 있으면 읽을 때마다 위치를 저장한다. 마지막 marker를 돌려준다."""
+    key = metric_key(engine, kind)
+    while True:
+        resp = rds.download_db_log_file_portion(DBInstanceIdentifier=instance, LogFileName=name, Marker=marker)
+        text = resp.get("LogFileData") or ""
+        if text:
+            entries = parse_entries(engine, kind, instance, text)
+            entries.sort(key=lambda e: e[0])
+            for i in range(0, len(entries), PUSH_BATCH):
+                push(entries[i:i + PUSH_BATCH])
+            if entries:
+                inc("lines", key, len(entries))
+                # error·slowquery는 드물게 쌓여 "마지막 로그 시각"이 지연처럼 보이므로 감사·PG 로그만 기록한다
+                if kind in ("audit", "postgresql"):
+                    setm("last_log_ts", key, entries[-1][0].timestamp())
+        marker = resp["Marker"]
+        if st is not None:
+            st["marker"] = marker
+            save_state(state)
+        if not resp.get("AdditionalDataPending"):
+            return marker
+
+
+def list_files(rds, instance, prefix):
     files = []
     for page in rds.get_paginator("describe_db_log_files").paginate(DBInstanceIdentifier=instance, FilenameContains=prefix):
         files += page["DescribeDBLogFiles"]
-    files.sort(key=lambda f: f["LastWritten"])
+    return files
+
+
+def tail_postgresql(rds, state, instance, prefix):
+    """PostgreSQL: 1시간마다 새 이름(postgresql.log.YYYY-MM-DD-HH)으로 쓰므로 파일별로 이어 읽는다."""
+    key_prefix = f"{instance}/"
+    files = sorted(list_files(rds, instance, prefix), key=lambda f: f["LastWritten"])
     names = {f["LogFileName"] for f in files}
     init_key = key_prefix + "__init__"
     first_run = init_key not in state
     newest = files[-1]["LogFileName"] if files else None
-    log_group = f"/aws/rds/instance/{instance}/postgresql"
     for f in files:
         name = f["LogFileName"]
         key = key_prefix + name
         st = state.get(key)
         if st is None:
-            if first_run and not (engine == "mysql" or name == newest):
-                # 처음 시작: PostgreSQL의 지난 시간 파일은 끝으로 건너뛴다 (과거 로그를 다시 보내지 않음)
-                # MySQL 감사 파일과 PostgreSQL 현재 파일은 처음부터 읽는다 (DB 로깅을 켠 직후 쿼리를 놓치지 않게)
+            if first_run and name != newest:
+                # 처음 시작: 지난 시간 파일은 끝으로 건너뛴다 (과거 로그를 다시 보내지 않음)
                 resp = rds.download_db_log_file_portion(DBInstanceIdentifier=instance, LogFileName=name)
                 while resp.get("AdditionalDataPending"):
                     resp = rds.download_db_log_file_portion(DBInstanceIdentifier=instance, LogFileName=name, Marker=resp["Marker"])
@@ -225,35 +383,85 @@ def tail_target(rds, state, engine, instance, prefix):
                 continue
             st = state[key] = {"marker": "0", "size": 0}
         if f["Size"] < st.get("size", 0):
-            # 같은 이름의 파일이 회전되어 작아졌다: 처음부터 다시 읽는다
             log(f"rotation detected {key}: size {st['size']} -> {f['Size']}")
             st["marker"] = "0"
         if f["Size"] == st.get("size") and st["marker"] != "0":
             continue
-        marker = st["marker"]
-        while True:
-            resp = rds.download_db_log_file_portion(DBInstanceIdentifier=instance, LogFileName=name, Marker=marker)
-            text = resp.get("LogFileData") or ""
-            if text:
-                entries = parse_mysql_audit(text) if engine == "mysql" else parse_pg(text, log_group)
-                entries.sort(key=lambda e: e[0])
-                for i in range(0, len(entries), PUSH_BATCH):
-                    push(entries[i:i + PUSH_BATCH])
-                if entries:
-                    inc("lines", engine, len(entries))
-                    setm("last_log_ts", engine, entries[-1][0].timestamp())
-            marker = resp["Marker"]
-            st["marker"] = marker
-            save_state(state)
-            if not resp.get("AdditionalDataPending"):
-                break
+        read_file(rds, state, st, "postgresql", "postgresql", instance, name, st["marker"])
         st["size"] = f["Size"]
         save_state(state)
     state[init_key] = True
-    # RDS에서 사라진 파일의 위치 정보는 지운다
     for k in [k for k in state if k.startswith(key_prefix) and k != init_key and k[len(key_prefix):] not in names]:
         del state[k]
     save_state(state)
+
+
+def tail_mysql(rds, state, instance, prefix):
+    """MySQL: 현재 파일만 이어 읽고, 회전되면 남은 부분을 회전된 파일에서 마저 읽는다."""
+    kind = target_kind("mysql", prefix)
+    key_prefix = f"{instance}/"
+    target_prefix = key_prefix + prefix
+    init_key = f"{key_prefix}__init__/{prefix}"
+    # 이 대상의 파일 위치가 하나라도 있으면 처음이 아니다 (예전 버전이 남긴 감사 로그 위치 포함)
+    first_run = init_key not in state and not any(k.startswith(target_prefix) for k in state)
+    files = list_files(rds, instance, prefix)
+    names = {f["LogFileName"] for f in files}
+    current = {f["LogFileName"]: f for f in files if rotated_base(f["LogFileName"]) is None}
+    rotated = {}
+    for f in files:
+        base = rotated_base(f["LogFileName"])
+        if base is not None:
+            rotated.setdefault(base, []).append(f["LogFileName"])
+
+    for name in sorted(current):
+        f = current[name]
+        key = key_prefix + name
+        st = state.get(key)
+        if st is None:
+            st = state[key] = {"marker": "0", "size": 0}
+        unseen = sorted((r for r in rotated.get(name, []) if key_prefix + r not in state), key=rotation_order)
+        shrunk = f["Size"] < st.get("size", 0)
+
+        if first_run:
+            # 처음 시작: 지난 회전 파일은 보내지 않고 현재 파일만 처음부터 읽는다
+            pass
+        elif unseen or shrunk:
+            offset = marker_offset(st["marker"])
+            if unseen:
+                # 시간 단위 회전: 가장 오래된 새 회전 파일 = 방금까지 읽던 파일. 그 뒤 것은 통째로 읽는다
+                cont, rest = unseen[0], unseen[1:]
+            else:
+                # 번호 회전(audit): 방금까지 읽던 파일은 .01
+                cont, rest = (name + ".01" if name + ".01" in names else None), []
+            log(f"rotation {key}: continue {cont} from offset {offset}, then {len(rest)} file(s)")
+            if cont:
+                read_file(rds, state, None, "mysql", kind, instance, cont, f"0:{offset}")
+            for r in rest:
+                read_file(rds, state, None, "mysql", kind, instance, r, "0")
+            st["marker"], st["size"] = "0", 0
+            save_state(state)
+
+        # 회전 파일은 이어 읽기에서만 쓰고, 본 것으로 표시한다
+        for r in rotated.get(name, []):
+            state.setdefault(key_prefix + r, {"seen": True})
+
+        if f["Size"] == st.get("size") and st["marker"] != "0":
+            continue
+        read_file(rds, state, st, "mysql", kind, instance, name, st["marker"])
+        st["size"] = f["Size"]
+        save_state(state)
+
+    state[init_key] = True
+    for k in [k for k in state if k.startswith(target_prefix) and k[len(key_prefix):] not in names]:
+        del state[k]
+    save_state(state)
+
+
+def tail_target(rds, state, engine, instance, prefix):
+    if engine == "postgresql":
+        tail_postgresql(rds, state, instance, prefix)
+    else:
+        tail_mysql(rds, state, instance, prefix)
 
 
 # ---------------------------------------------------------------- metrics
@@ -296,10 +504,10 @@ def main():
         for engine, instance, prefix in TARGETS:
             try:
                 tail_target(rds, state, engine, instance, prefix)
-                setm("last_success", engine, time.time())
+                setm("last_success", metric_key(engine, target_kind(engine, prefix)), time.time())
             except Exception as e:  # noqa: BLE001
-                inc("errors", engine)
-                log(f"{engine} {instance}: {e}")
+                inc("errors", metric_key(engine, target_kind(engine, prefix)))
+                log(f"{engine} {instance} {prefix}: {e}")
         time.sleep(POLL_SECONDS)
 
 

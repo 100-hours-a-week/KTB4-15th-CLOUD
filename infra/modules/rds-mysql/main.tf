@@ -100,7 +100,7 @@ resource "aws_db_instance" "this" {
 
   monitoring_interval             = 0
   performance_insights_enabled    = false
-  enabled_cloudwatch_logs_exports = ["error", "slowquery"]
+  enabled_cloudwatch_logs_exports = var.enabled_cloudwatch_logs_exports
 
   tags = {
     Name        = "${var.name_prefix}-mysql"

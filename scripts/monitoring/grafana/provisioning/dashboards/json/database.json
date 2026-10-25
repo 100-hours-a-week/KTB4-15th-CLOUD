@@ -1730,7 +1730,7 @@
       "id": 33,
       "type": "logs",
       "title": "느린 쿼리: MySQL (2초 이상)",
-      "description": "slowquery 로그 (long_query_time 2초, CloudWatch 경로). Query_time·Rows_examined 포함",
+      "description": "slowquery 로그 (long_query_time 2초, db-log-tailer). Query_time·Rows_examined 포함",
       "datasource": {
         "type": "loki",
         "uid": "loki"
@@ -1762,7 +1762,7 @@
       "id": 34,
       "type": "logs",
       "title": "MySQL 오류 로그",
-      "description": "error 로그 (CloudWatch 경로)",
+      "description": "error 로그 (db-log-tailer)",
       "datasource": {
         "type": "loki",
         "uid": "loki"

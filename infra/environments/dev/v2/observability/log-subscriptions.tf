@@ -1,15 +1,12 @@
 # ---------------------------------------------------------------
 # CloudWatch Logs 구독 → lambda-promtail → Alloy → Loki
-# - RDS 로그 그룹은 RDS가 만든다 (Terraform 관리 대상 아님). 이름만 참조한다.
-#   MySQL: error, slowquery(long_query_time 2초)
-#   PostgreSQL 로그는 CloudWatch로 내보내지 않는다. db-log-tailer가 RDS API로 직접 받아 Alloy로 보낸다 (db-query-log.tf).
+# - RDS 로그(MySQL 감사·error·slowquery, PostgreSQL)는 CloudWatch로 내보내지 않는다.
+#   db-log-tailer가 RDS API로 직접 받아 Alloy로 보낸다 (db-query-log.tf).
 # - 로그 그룹당 구독 필터는 최대 2개다.
 # - 레이블: Alloy가 로그 그룹 경로로 log_group, source(rds, ecs-event, app)·service를 붙인다.
 # ---------------------------------------------------------------
 locals {
   subscribed_log_groups = toset([
-    "/aws/rds/instance/lookddak-dev-v2-mysql/error",
-    "/aws/rds/instance/lookddak-dev-v2-mysql/slowquery",
     aws_cloudwatch_log_group.ecs_task_stopped.name,
     # 가격 갱신 배치(EventBridge Scheduler → RunTask). 짧게 떴다 사라지는 Task라
     # 사이드카 대신 기존 awslogs 로그 그룹을 구독한다. 로그 그룹은 dev/v2/logging이 만든다.

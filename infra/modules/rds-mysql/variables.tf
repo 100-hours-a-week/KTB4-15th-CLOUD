@@ -189,3 +189,9 @@ variable "delete_automated_backups" {
   type        = bool
   default     = true
 }
+
+variable "enabled_cloudwatch_logs_exports" {
+  description = "CloudWatch Logs로 내보낼 로그 종류 (error, slowquery, audit, general). 빈 목록이면 내보내지 않는다"
+  type        = list(string)
+  default     = ["error", "slowquery"]
+}
