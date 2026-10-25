@@ -95,10 +95,13 @@ resource "aws_scheduler_schedule" "crawler" {
 resource "aws_scheduler_schedule" "delivery" {
   name        = "lookddak-dev-v2-crawler-delivery"
   group_name  = aws_scheduler_schedule_group.crawler.name
-  description = "Deliver due crawler outbox rows to the Backend every five minutes"
+  description = "Deliver due crawler outbox rows to the Backend at 11:40 and 13:40 Asia/Seoul"
   state       = "ENABLED"
 
-  schedule_expression = "rate(5 minutes)"
+  # 수집(11:00, 약 15~20분) 뒤 1회 + 실패분 당일 재시도 1회.
+  # 1회 실행 상한: 요청 10회 x 100건 = 1,000건. 남은 건은 다음 실행으로 넘어간다.
+  schedule_expression          = "cron(40 11,13 * * ? *)"
+  schedule_expression_timezone = "Asia/Seoul"
 
   flexible_time_window {
     mode = "OFF"
