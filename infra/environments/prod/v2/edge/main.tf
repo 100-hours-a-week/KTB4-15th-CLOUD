@@ -18,6 +18,11 @@ locals {
   }
 }
 
+resource "random_password" "origin_verify" {
+  length  = 32
+  special = false
+}
+
 # -----------------------------------------------------------------------------
 # Regional certificate and ALB origin
 # -----------------------------------------------------------------------------
@@ -215,9 +220,18 @@ resource "aws_lb_listener" "https" {
   ssl_policy        = "ELBSecurityPolicy-TLS13-1-2-2021-06"
   certificate_arn   = aws_acm_certificate_validation.origin.certificate_arn
 
+  # CloudFront must finish propagating the origin verification header before
+  # the ALB starts rejecting requests that do not contain it.
+  depends_on = [aws_cloudfront_distribution.this]
+
   default_action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.nextjs.arn
+    type = "fixed-response"
+
+    fixed_response {
+      content_type = "text/plain"
+      message_body = "Forbidden"
+      status_code  = "403"
+    }
   }
 
   tags = merge(local.common_tags, {
@@ -249,15 +263,17 @@ resource "aws_lb_listener_rule" "fastapi_webhook" {
     }
   }
 
-  # ALB 규칙당 조건 값은 최대 5개 (path 1 + token 1 + host 3).
-  # www.lookddak.com은 넣지 않는다: CloudFront가 Host를 origin 도메인으로 바꿔 보내므로 ALB에는 오지 않는다.
+  condition {
+    http_header {
+      http_header_name = "X-Lookddak-Origin-Verify"
+      values           = [random_password.origin_verify.result]
+    }
+  }
+
+  # CloudFront가 viewer Host를 전달하지 않으므로 ALB에는 origin 도메인만 도착한다.
   condition {
     host_header {
-      values = [
-        var.origin_domain_name,
-        var.test_domain_name,
-        var.production_domain_name,
-      ]
+      values = [var.origin_domain_name]
     }
   }
 
@@ -279,6 +295,13 @@ resource "aws_lb_listener_rule" "spring" {
   condition {
     path_pattern {
       values = ["/api", "/api/*"]
+    }
+  }
+
+  condition {
+    http_header {
+      http_header_name = "X-Lookddak-Origin-Verify"
+      values           = [random_password.origin_verify.result]
     }
   }
 
@@ -304,9 +327,37 @@ resource "aws_lb_listener_rule" "spring_sse" {
     }
   }
 
+  condition {
+    http_header {
+      http_header_name = "X-Lookddak-Origin-Verify"
+      values           = [random_password.origin_verify.result]
+    }
+  }
+
   tags = merge(local.common_tags, {
     Name    = "lookddak-prod-v2-spring-sse"
     Service = "spring-sse"
+  })
+}
+
+resource "aws_lb_listener_rule" "nextjs" {
+  listener_arn = aws_lb_listener.https.arn
+  priority     = 100
+
+  action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.nextjs.arn
+  }
+
+  condition {
+    http_header {
+      http_header_name = "X-Lookddak-Origin-Verify"
+      values           = [random_password.origin_verify.result]
+    }
+  }
+
+  tags = merge(local.common_tags, {
+    Name = "lookddak-prod-v2-nextjs"
   })
 }
 
@@ -372,6 +423,7 @@ resource "aws_cloudfront_distribution" "this" {
   is_ipv6_enabled = true
   http_version    = "http2and3"
   price_class     = "PriceClass_200"
+  web_acl_id      = aws_wafv2_web_acl.this.arn
   aliases = [
     var.test_domain_name,
     var.production_domain_name,
@@ -381,6 +433,11 @@ resource "aws_cloudfront_distribution" "this" {
   origin {
     domain_name = var.origin_domain_name
     origin_id   = "lookddak-prod-v2-alb"
+
+    custom_header {
+      name  = "X-Lookddak-Origin-Verify"
+      value = random_password.origin_verify.result
+    }
 
     custom_origin_config {
       http_port              = 80
