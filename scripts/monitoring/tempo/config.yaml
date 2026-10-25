@@ -47,9 +47,12 @@ metrics_generator:
     external_labels:
       source: tempo
   processor:
-    # 서비스 그래프의 DB·외부 노드 이름: peer.service → db.system(mysql, postgresql) → server.address 순으로 쓴다
-    # (기본값이면 spring은 RDS 호스트, fastapi는 DB 이름으로 나와 같은 종류가 다른 노드가 된다)
+    # 서비스 그래프 노드 이름
+    # - database_name_attributes: DB 노드. db.system(mysql, postgresql)만 쓴다
+    #   (기본값 db.namespace → db.name → db.system 이면 spring은 RDS 호스트, fastapi는 DB 이름으로 나와 노드가 제각각)
+    # - peer_attributes: 그 밖의 외부 노드(SQS 등). peer.service → db.system → server.address
     service_graphs:
+      database_name_attributes: ["db.system"]
       peer_attributes: ["peer.service", "db.system", "server.address"]
     # 스팬 지표에 DB 종류를 붙인다 (db_system 레이블, DB 구간만 값이 있다). 트레이스 대시보드 DB 행에서 쓴다
     span_metrics:
