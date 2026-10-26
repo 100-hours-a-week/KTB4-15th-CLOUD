@@ -6,7 +6,7 @@
 # - 업그레이드는 새 키로 올린 뒤 Lambda의 s3_key를 바꾸는 PR로 한다.
 # ---------------------------------------------------------------
 resource "aws_s3_bucket" "lambda_artifacts" {
-  bucket = "lookddak-dev-lambda-artifacts-${data.aws_caller_identity.current.account_id}-${data.aws_region.current.region}"
+  bucket = "lookddak-${var.environment}-lambda-artifacts-${data.aws_caller_identity.current.account_id}-${data.aws_region.current.region}"
 
   tags = merge(local.common_tags, {
     Purpose = "lambda-artifacts"

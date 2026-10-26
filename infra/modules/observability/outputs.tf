@@ -19,12 +19,12 @@ output "instance_role_name" {
 }
 
 output "ecs_task_stopped_log_group_name" {
-  description = "CloudWatch log group receiving dev V2 ECS task stopped events"
+  description = "CloudWatch log group receiving V2 ECS task stopped events"
   value       = aws_cloudwatch_log_group.ecs_task_stopped.name
 }
 
 output "lambda_artifacts_bucket_name" {
-  description = "S3 bucket for dev Lambda deployment packages"
+  description = "S3 bucket for Lambda deployment packages"
   value       = aws_s3_bucket.lambda_artifacts.bucket
 }
 
@@ -34,7 +34,7 @@ output "lambda_promtail_function_name" {
 }
 
 output "alb_logs_bucket_name" {
-  description = "S3 bucket for dev V2 ALB access logs (bucket policy applied)"
+  description = "S3 bucket for V2 ALB access logs (bucket policy applied)"
   value       = aws_s3_bucket_policy.alb_logs.bucket
 }
 

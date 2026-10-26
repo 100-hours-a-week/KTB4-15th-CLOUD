@@ -9,7 +9,7 @@
 # - 앱 클라이언트 시크릿은 Terraform state(S3)에만 있다. ALB가 직접 사용한다.
 # ---------------------------------------------------------------
 resource "aws_cognito_user_pool" "grafana" {
-  name                = "lookddak-dev-grafana"
+  name                = "lookddak-${var.environment}-grafana"
   deletion_protection = "ACTIVE"
 
   username_attributes      = ["email"]
@@ -40,12 +40,12 @@ resource "aws_cognito_user_pool" "grafana" {
 
 # 로그인 페이지: https://lookddak-dev-grafana.auth.ap-northeast-2.amazoncognito.com
 resource "aws_cognito_user_pool_domain" "grafana" {
-  domain       = "lookddak-dev-grafana"
+  domain       = "lookddak-${var.environment}-grafana"
   user_pool_id = aws_cognito_user_pool.grafana.id
 }
 
 resource "aws_cognito_user_pool_client" "grafana_alb" {
-  name         = "lookddak-dev-grafana-alb"
+  name         = "lookddak-${var.environment}-grafana-alb"
   user_pool_id = aws_cognito_user_pool.grafana.id
 
   generate_secret                      = true
@@ -69,7 +69,7 @@ resource "aws_cognito_user_pool_client" "grafana_alb" {
 # 호스트가 달라 기존 규칙(5, 10, 20, 30)과 겹치지 않는다.
 resource "aws_lb_listener_rule" "grafana" {
   listener_arn = var.https_listener_arn
-  priority     = 40
+  priority     = var.grafana_listener_rule_priority
 
   action {
     type = "authenticate-cognito"
@@ -96,7 +96,7 @@ resource "aws_lb_listener_rule" "grafana" {
   }
 
   tags = merge(local.common_tags, {
-    Name = "lookddak-dev-v2-grafana"
+    Name = "lookddak-${var.environment}-v2-grafana"
   })
 
   depends_on = [aws_lb_listener_certificate.grafana]

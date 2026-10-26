@@ -15,7 +15,7 @@ resource "aws_acm_certificate" "grafana" {
   }
 
   tags = merge(local.common_tags, {
-    Name = "lookddak-dev-grafana"
+    Name = "lookddak-${var.environment}-grafana"
   })
 }
 
@@ -48,7 +48,7 @@ resource "aws_lb_listener_certificate" "grafana" {
 
 # --- Target Group ---
 resource "aws_lb_target_group" "grafana" {
-  name        = "lookddak-dev-v2-grafana-tg"
+  name        = "lookddak-${var.environment}-v2-grafana-tg"
   port        = 3000
   protocol    = "HTTP"
   target_type = "instance"
@@ -63,7 +63,7 @@ resource "aws_lb_target_group" "grafana" {
   }
 
   tags = merge(local.common_tags, {
-    Name = "lookddak-dev-v2-grafana-tg"
+    Name = "lookddak-${var.environment}-v2-grafana-tg"
   })
 }
 
@@ -85,7 +85,7 @@ resource "aws_vpc_security_group_egress_rule" "alb_to_grafana" {
 
 resource "aws_vpc_security_group_ingress_rule" "grafana_from_alb" {
   security_group_id            = aws_security_group.this.id
-  description                  = "Grafana from the dev V2 ALB"
+  description                  = "Grafana from the ${var.environment} V2 ALB"
   ip_protocol                  = "tcp"
   from_port                    = 3000
   to_port                      = 3000

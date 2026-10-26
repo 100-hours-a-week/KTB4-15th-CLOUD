@@ -7,7 +7,7 @@
 # - 소스: lambda/grafana_logout/ (Terraform이 zip으로 묶어 배포)
 # ---------------------------------------------------------------
 locals {
-  grafana_logout_name = "lookddak-dev-grafana-logout"
+  grafana_logout_name = "lookddak-${var.environment}-grafana-logout"
   grafana_url         = "https://${var.grafana_domain_name}/"
   cognito_logout_url  = "https://${aws_cognito_user_pool_domain.grafana.domain}.auth.${data.aws_region.current.region}.amazoncognito.com/logout?client_id=${aws_cognito_user_pool_client.grafana_alb.id}&logout_uri=${urlencode(local.grafana_url)}"
 }
@@ -21,7 +21,7 @@ data "archive_file" "grafana_logout" {
 
 resource "aws_iam_role" "grafana_logout" {
   name        = "${local.grafana_logout_name}-role"
-  description = "LookDDak dev Grafana logout Lambda execution role"
+  description = "LookDDak ${var.environment} Grafana logout Lambda execution role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -104,7 +104,7 @@ resource "aws_lb_target_group_attachment" "grafana_logout" {
 # Grafana 규칙(40)보다 먼저 평가되도록 39
 resource "aws_lb_listener_rule" "grafana_logout" {
   listener_arn = var.https_listener_arn
-  priority     = 39
+  priority     = var.grafana_logout_listener_rule_priority
 
   action {
     type             = "forward"

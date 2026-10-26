@@ -4,17 +4,17 @@
 # - 이후 이 로그 그룹을 구독해 Loki로 보낸다.
 # ---------------------------------------------------------------
 resource "aws_cloudwatch_log_group" "ecs_task_stopped" {
-  name              = "/aws/events/lookddak-dev-v2-ecs-task-stopped"
+  name              = "/aws/events/lookddak-${var.environment}-v2-ecs-task-stopped"
   retention_in_days = 7
 
   tags = merge(local.common_tags, {
-    Name = "lookddak-dev-v2-ecs-task-stopped"
+    Name = "lookddak-${var.environment}-v2-ecs-task-stopped"
   })
 }
 
 # EventBridge가 로그 그룹에 쓸 수 있게 허용 (CloudWatch Logs 리소스 정책)
 resource "aws_cloudwatch_log_resource_policy" "ecs_task_stopped" {
-  policy_name = "lookddak-dev-v2-ecs-task-stopped-events"
+  policy_name = "lookddak-${var.environment}-v2-ecs-task-stopped-events"
 
   policy_document = jsonencode({
     Version = "2012-10-17"
@@ -34,8 +34,8 @@ resource "aws_cloudwatch_log_resource_policy" "ecs_task_stopped" {
 }
 
 resource "aws_cloudwatch_event_rule" "ecs_task_stopped" {
-  name        = "lookddak-dev-v2-ecs-task-stopped"
-  description = "Dev V2 ECS task stopped events (stop reason, exit codes)"
+  name        = "lookddak-${var.environment}-v2-ecs-task-stopped"
+  description = "${local.environment_title} V2 ECS task stopped events (stop reason, exit codes)"
 
   event_pattern = jsonencode({
     source        = ["aws.ecs"]

@@ -1,5 +1,10 @@
+variable "environment" {
+  description = "Environment name used in resource names and tags (dev, prod)"
+  type        = string
+}
+
 variable "vpc_id" {
-  description = "Dev VPC ID"
+  description = "VPC ID"
   type        = string
 }
 
@@ -27,7 +32,7 @@ variable "root_volume_size" {
 }
 
 variable "ecs_cluster_arn" {
-  description = "Dev V2 ECS cluster ARN for task stopped events"
+  description = "V2 ECS cluster ARN for task stopped events"
   type        = string
 }
 
@@ -37,7 +42,7 @@ variable "lambda_subnet_ids" {
 }
 
 variable "grafana_domain_name" {
-  description = "Public domain for Grafana behind the dev V2 ALB"
+  description = "Public domain for Grafana behind the V2 ALB"
   type        = string
 }
 
@@ -47,22 +52,22 @@ variable "route53_zone_id" {
 }
 
 variable "https_listener_arn" {
-  description = "Dev V2 ALB HTTPS listener ARN"
+  description = "V2 ALB HTTPS listener ARN"
   type        = string
 }
 
 variable "alb_security_group_id" {
-  description = "Dev V2 ALB security group ID"
+  description = "V2 ALB security group ID"
   type        = string
 }
 
 variable "alb_dns_name" {
-  description = "Dev V2 ALB DNS name"
+  description = "V2 ALB DNS name"
   type        = string
 }
 
 variable "alb_zone_id" {
-  description = "Dev V2 ALB canonical hosted zone ID"
+  description = "V2 ALB canonical hosted zone ID"
   type        = string
 }
 
@@ -72,12 +77,12 @@ variable "ecs_task_security_group_ids" {
 }
 
 variable "mysql_security_group_id" {
-  description = "Dev V2 MySQL security group ID (mysqld_exporter 접속)"
+  description = "V2 MySQL security group ID (mysqld_exporter 접속)"
   type        = string
 }
 
 variable "postgresql_security_group_id" {
-  description = "Dev V2 PostgreSQL security group ID (postgres_exporter 접속)"
+  description = "V2 PostgreSQL security group ID (postgres_exporter 접속)"
   type        = string
 }
 
@@ -99,4 +104,27 @@ variable "firelens_task_role_names" {
 variable "app_log_group_names" {
   description = "서비스별 앱 로그 그룹 이름 (service => log group name)"
   type        = map(string)
+}
+
+variable "db_query_log_instance_ids" {
+  description = "db-log-tailer가 로그 파일을 읽을 RDS 인스턴스 ID 목록"
+  type        = list(string)
+}
+
+variable "extra_subscribed_log_group_names" {
+  description = "ecs task stopped 외에 lambda-promtail로 구독할 CloudWatch 로그 그룹 이름"
+  type        = list(string)
+  default     = []
+}
+
+variable "grafana_listener_rule_priority" {
+  description = "Grafana(Cognito 인증) HTTPS 리스너 규칙 우선순위"
+  type        = number
+  default     = 40
+}
+
+variable "grafana_logout_listener_rule_priority" {
+  description = "Grafana 로그아웃 HTTPS 리스너 규칙 우선순위"
+  type        = number
+  default     = 39
 }
