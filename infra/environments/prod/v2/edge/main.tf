@@ -71,6 +71,17 @@ resource "aws_lb" "this" {
   ip_address_type    = "ipv4"
   idle_timeout       = 120
 
+  # 액세스 로그 → S3 (5분마다 파일). 버킷은 observability 모듈이 만든다.
+  dynamic "access_logs" {
+    for_each = var.access_logs_bucket == null ? [] : [var.access_logs_bucket]
+
+    content {
+      bucket  = access_logs.value
+      prefix  = "alb"
+      enabled = true
+    }
+  }
+
   tags = merge(local.common_tags, {
     Name = "lookddak-prod-v2-alb"
   })

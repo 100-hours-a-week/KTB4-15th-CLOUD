@@ -72,3 +72,8 @@ output "fluent_bit_parsers_arn" {
   description = "FireLens 여러 줄 합치기 규칙 파일 S3 객체 ARN"
   value       = "arn:${data.aws_partition.current.partition}:s3:::${aws_s3_object.fluent_bit_parsers.bucket}/${aws_s3_object.fluent_bit_parsers.key}"
 }
+
+output "grafana_cloudfront_distribution_id" {
+  description = "Grafana CloudFront distribution ID (grafana_cloudfront_enabled일 때)"
+  value       = try(aws_cloudfront_distribution.grafana[0].id, null)
+}

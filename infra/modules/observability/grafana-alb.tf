@@ -1,5 +1,6 @@
 # ---------------------------------------------------------------
-# Grafana 외부 접속: grafana.dev.lookddak.com → dev V2 ALB → Monitoring EC2:3000
+# Grafana 외부 접속: grafana 도메인 → V2 ALB → Monitoring EC2:3000
+# - prod는 CloudFront를 거친다 (grafana-cloudfront.tf)
 # - 인증서는 따로 만들어 HTTPS 리스너에 SNI로 추가한다 (기존 인증서 교체 없음).
 # - 리스너 규칙(Cognito 인증 → Grafana 전달)은 grafana-cognito.tf에 있다.
 # - Grafana 3000은 ALB 보안 그룹에서만 들어온다. Alloy 3500은 ALB에 연결하지 않는다.
@@ -93,14 +94,15 @@ resource "aws_vpc_security_group_ingress_rule" "grafana_from_alb" {
 }
 
 # --- DNS ---
+# grafana_cloudfront_enabled면 CloudFront로 (grafana-cloudfront.tf), 아니면 ALB로 바로 보낸다
 resource "aws_route53_record" "grafana" {
   zone_id = var.route53_zone_id
   name    = var.grafana_domain_name
   type    = "A"
 
   alias {
-    name                   = var.alb_dns_name
-    zone_id                = var.alb_zone_id
+    name                   = var.grafana_cloudfront_enabled ? aws_cloudfront_distribution.grafana[0].domain_name : var.alb_dns_name
+    zone_id                = var.grafana_cloudfront_enabled ? aws_cloudfront_distribution.grafana[0].hosted_zone_id : var.alb_zone_id
     evaluate_target_health = false
   }
 }

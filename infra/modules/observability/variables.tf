@@ -128,3 +128,28 @@ variable "grafana_logout_listener_rule_priority" {
   type        = number
   default     = 39
 }
+
+variable "grafana_cloudfront_enabled" {
+  description = "Grafana를 CloudFront 경유로 연다 (ALB가 CloudFront 대역만 받는 환경). false면 ALB에 바로 붙인다"
+  type        = bool
+  default     = false
+}
+
+variable "grafana_origin_domain_name" {
+  description = "Grafana CloudFront 원본 도메인 (ALB를 가리키는 이름). grafana_cloudfront_enabled일 때 필요"
+  type        = string
+  default     = null
+}
+
+variable "grafana_origin_verify_header_name" {
+  description = "CloudFront가 붙이고 ALB 규칙이 확인하는 원본 검증 헤더 이름"
+  type        = string
+  default     = "X-Lookddak-Origin-Verify"
+}
+
+variable "grafana_origin_verify_header_value" {
+  description = "원본 검증 헤더 값 (edge 모듈과 같은 값). grafana_cloudfront_enabled일 때 필요"
+  type        = string
+  default     = null
+  sensitive   = true
+}

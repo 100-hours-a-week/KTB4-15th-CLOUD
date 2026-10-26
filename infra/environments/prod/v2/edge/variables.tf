@@ -57,3 +57,9 @@ variable "production_www_domain_name" {
   type        = string
   default     = "www.lookddak.com"
 }
+
+variable "access_logs_bucket" {
+  description = "ALB 액세스 로그 S3 버킷 (null이면 끈다)"
+  type        = string
+  default     = null
+}
