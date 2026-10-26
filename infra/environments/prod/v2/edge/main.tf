@@ -385,14 +385,14 @@ resource "aws_route53_record" "origin" {
 }
 
 # -----------------------------------------------------------------------------
-# Global certificate and CloudFront validation hostname
-# - lookddak.com, www.lookddak.com are covered now, but their current DNS records remain untouched.
+# Global certificate (CloudFront viewer)
+# - lookddak.com, www.lookddak.com (v2-prod.lookddak.com validation hostname removed 2026-10-26)
 # -----------------------------------------------------------------------------
 resource "aws_acm_certificate" "viewer" {
   provider = aws.us_east_1
 
-  domain_name               = var.test_domain_name
-  subject_alternative_names = [var.production_domain_name, var.production_www_domain_name]
+  domain_name               = var.production_domain_name
+  subject_alternative_names = [var.production_www_domain_name]
   validation_method         = "DNS"
 
   lifecycle {
@@ -436,7 +436,6 @@ resource "aws_cloudfront_distribution" "this" {
   price_class     = "PriceClass_200"
   web_acl_id      = aws_wafv2_web_acl.this.arn
   aliases = [
-    var.test_domain_name,
     var.production_domain_name,
     var.production_www_domain_name,
   ]
@@ -525,28 +524,4 @@ resource "aws_cloudfront_distribution" "this" {
   tags = merge(local.common_tags, {
     Name = "lookddak-prod-v2"
   })
-}
-
-resource "aws_route53_record" "test_domain_ipv4" {
-  zone_id = var.route53_zone_id
-  name    = var.test_domain_name
-  type    = "A"
-
-  alias {
-    name                   = aws_cloudfront_distribution.this.domain_name
-    zone_id                = aws_cloudfront_distribution.this.hosted_zone_id
-    evaluate_target_health = false
-  }
-}
-
-resource "aws_route53_record" "test_domain_ipv6" {
-  zone_id = var.route53_zone_id
-  name    = var.test_domain_name
-  type    = "AAAA"
-
-  alias {
-    name                   = aws_cloudfront_distribution.this.domain_name
-    zone_id                = aws_cloudfront_distribution.this.hosted_zone_id
-    evaluate_target_health = false
-  }
 }

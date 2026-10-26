@@ -52,7 +52,7 @@ locals {
         AWS_REGION                      = "ap-northeast-2"
         AWS_S3_BUCKET                   = var.images_bucket_name
         AI_SERVER_URL                   = "http://fastapi:8000"
-        CORS_ALLOWED_ORIGINS            = "https://dev.lookddak.com,https://v2-dev.lookddak.com"
+        CORS_ALLOWED_ORIGINS            = "https://dev.lookddak.com"
         SENTRY_ENVIRONMENT              = "dev"
         SSE_SERVER_PORT                 = "8081"
         BE_FITTING_REQUEST_QUEUE_URL    = var.queue_urls["be-fitting-request"]

@@ -40,12 +40,6 @@ variable "origin_domain_name" {
   default     = "origin-v2-prod.lookddak.com"
 }
 
-variable "test_domain_name" {
-  description = "V2 Prod validation hostname routed to CloudFront"
-  type        = string
-  default     = "v2-prod.lookddak.com"
-}
-
 variable "production_domain_name" {
   description = "Production hostname included in the certificate for the later cutover"
   type        = string

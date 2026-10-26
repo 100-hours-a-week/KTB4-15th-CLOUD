@@ -28,11 +28,6 @@ output "cloudfront_domain_name" {
   value       = aws_cloudfront_distribution.this.domain_name
 }
 
-output "test_domain_name" {
-  description = "V2 Prod validation hostname routed to CloudFront"
-  value       = aws_route53_record.test_domain_ipv4.fqdn
-}
-
 output "origin_domain_name" {
   description = "V2 Prod ALB origin hostname"
   value       = aws_route53_record.origin.fqdn

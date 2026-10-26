@@ -13,11 +13,6 @@ output "alb_zone_id" {
   value       = aws_lb.dev_v2.zone_id
 }
 
-output "test_domain_name" {
-  description = "V2 dev test domain routed to the Application Load Balancer"
-  value       = aws_route53_record.dev_v2.fqdn
-}
-
 output "https_listener_arn" {
   description = "V2 dev HTTPS listener ARN"
   value       = aws_lb_listener.https.arn

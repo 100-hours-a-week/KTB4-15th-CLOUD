@@ -1,6 +1,7 @@
 # ---------------------------------------------------------------
 # ACM certificate
-# - dev.lookddak.com and v2-dev.lookddak.com both terminate TLS on this ALB.
+# - dev.lookddak.com terminates TLS on this ALB (v2-dev.lookddak.com removed 2026-10-26).
+# - The dev.lookddak.com A record is managed in dev/v1/edge.
 # ---------------------------------------------------------------
 resource "aws_acm_certificate" "dev" {
   domain_name               = var.domain_name
@@ -38,18 +39,6 @@ resource "aws_route53_record" "certificate_validation" {
 resource "aws_acm_certificate_validation" "dev" {
   certificate_arn         = aws_acm_certificate.dev.arn
   validation_record_fqdns = [for record in aws_route53_record.certificate_validation : record.fqdn]
-}
-
-resource "aws_route53_record" "dev_v2" {
-  zone_id = var.route53_zone_id
-  name    = var.domain_name
-  type    = "A"
-
-  alias {
-    name                   = aws_lb.dev_v2.dns_name
-    zone_id                = aws_lb.dev_v2.zone_id
-    evaluate_target_health = false
-  }
 }
 
 # ---------------------------------------------------------------
@@ -285,10 +274,7 @@ resource "aws_lb_listener_rule" "spring" {
 
   condition {
     host_header {
-      values = [
-        var.domain_name,
-        var.v1_domain_name,
-      ]
+      values = [var.domain_name]
     }
   }
 
@@ -318,10 +304,7 @@ resource "aws_lb_listener_rule" "spring_sse" {
 
   condition {
     host_header {
-      values = [
-        var.domain_name,
-        var.v1_domain_name,
-      ]
+      values = [var.domain_name]
     }
   }
 
@@ -365,10 +348,7 @@ resource "aws_lb_listener_rule" "fastapi" {
 
   condition {
     host_header {
-      values = [
-        var.domain_name,
-        var.v1_domain_name,
-      ]
+      values = [var.domain_name]
     }
   }
 
@@ -390,10 +370,7 @@ resource "aws_lb_listener_rule" "nextjs" {
 
   condition {
     host_header {
-      values = [
-        var.domain_name,
-        var.v1_domain_name,
-      ]
+      values = [var.domain_name]
     }
   }
 
