@@ -29,6 +29,59 @@ module "prod_v2_edge" {
   alb_security_group_id = module.prod_v2_network.security_group_ids["alb"]
   route53_zone_id       = module.shared_core.route53_zone_id
   fastapi_webhook_token = data.aws_ssm_parameter.prod_fastapi_webhook_token.value
+
+  access_logs_bucket = module.prod_v2_monitoring.alb_logs_bucket_name
+}
+
+# ---------------------------------------------------------------
+# V2 prod monitoring server (Grafana, Prometheus, Loki, Tempo, Alloy) - dev와 같은 모듈
+# - Private App 2a, fixed private IP, Session Manager access only.
+# - Grafana: grafana.lookddak.com → CloudFront → ALB(원본 검증 헤더) → Monitoring EC2:3000
+#   ALB 보안 그룹은 CloudFront 대역만 받으므로 ALB에 직접 붙이지 않는다.
+# ---------------------------------------------------------------
+module "prod_v2_monitoring" {
+  source = "../modules/observability"
+
+  providers = {
+    aws           = aws
+    aws.us_east_1 = aws.us_east_1
+  }
+
+  environment = "prod"
+
+  vpc_id            = module.prod_v1_network.vpc_id
+  subnet_id         = module.prod_v2_network.private_app_subnet_ids[0]
+  lambda_subnet_ids = module.prod_v2_network.private_app_subnet_ids
+  ecs_cluster_arn   = module.prod_v2_ecs_cluster.cluster_arn
+
+  grafana_domain_name   = "grafana.lookddak.com"
+  route53_zone_id       = module.shared_core.route53_zone_id
+  https_listener_arn    = module.prod_v2_edge.https_listener_arn
+  alb_security_group_id = module.prod_v2_network.security_group_ids["alb"]
+  alb_dns_name          = module.prod_v2_edge.alb_dns_name
+  alb_zone_id           = module.prod_v2_edge.alb_zone_id
+
+  grafana_cloudfront_enabled         = true
+  grafana_origin_domain_name         = module.prod_v2_edge.origin_domain_name
+  grafana_origin_verify_header_value = module.prod_v2_edge.origin_verify_header_value
+
+  ecs_task_security_group_ids = {
+    for service in ["nextjs", "spring", "fastapi"] :
+    service => module.prod_v2_network.security_group_ids[service]
+  }
+  mysql_security_group_id      = module.prod_v2_network.security_group_ids["mysql"]
+  postgresql_security_group_id = module.prod_v2_network.security_group_ids["postgresql"]
+
+  taskdef_bucket_name = module.shared_ecs_taskdef_store.bucket_name
+  taskdef_bucket_arn  = module.shared_ecs_taskdef_store.bucket_arn
+  firelens_task_role_names = {
+    for service in ["nextjs", "spring", "fastapi"] :
+    service => module.prod_v2_iam.task_role_names[service]
+  }
+  app_log_group_names = module.prod_v2_logging.log_group_names
+
+  db_query_log_instance_ids        = ["lookddak-prod-v2-mysql", "lookddak-prod-v2-postgresql"]
+  extra_subscribed_log_group_names = ["/lookddak/prod/v2/crawler"]
 }
 
 module "prod_v2_ecs_cluster" {
@@ -200,6 +253,16 @@ output "prod_v2_postgresql_parameter_paths" {
 output "prod_v2_postgresql_secure_parameter_arns" {
   description = "V2 Prod PostgreSQL SecureString ARNs managed manually outside Terraform"
   value       = module.prod_v2_database.secure_parameter_arns
+}
+
+output "prod_v2_monitoring_instance_id" {
+  description = "V2 prod monitoring server instance ID (Session Manager)"
+  value       = module.prod_v2_monitoring.instance_id
+}
+
+output "prod_v2_grafana_url" {
+  description = "V2 prod Grafana URL"
+  value       = module.prod_v2_monitoring.grafana_url
 }
 
 output "prod_v2_ecs_cluster_name" {

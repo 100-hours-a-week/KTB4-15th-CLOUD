@@ -123,6 +123,18 @@ resource "aws_lb_listener_rule" "grafana_logout" {
     }
   }
 
+  # CloudFront 경유(prod)면 원본 검증 헤더가 있어야 한다 (ALB 직접 접근 차단)
+  dynamic "condition" {
+    for_each = var.grafana_cloudfront_enabled ? [1] : []
+
+    content {
+      http_header {
+        http_header_name = var.grafana_origin_verify_header_name
+        values           = [var.grafana_origin_verify_header_value]
+      }
+    }
+  }
+
   tags = merge(local.common_tags, {
     Name = local.grafana_logout_name
   })

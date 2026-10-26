@@ -37,3 +37,19 @@ output "origin_domain_name" {
   description = "V2 Prod ALB origin hostname"
   value       = aws_route53_record.origin.fqdn
 }
+
+output "alb_zone_id" {
+  description = "V2 Prod Application Load Balancer canonical hosted zone ID"
+  value       = aws_lb.this.zone_id
+}
+
+output "https_listener_arn" {
+  description = "V2 Prod ALB HTTPS listener ARN"
+  value       = aws_lb_listener.https.arn
+}
+
+output "origin_verify_header_value" {
+  description = "CloudFront → ALB 원본 검증 헤더 값 (Grafana CloudFront도 같은 값을 쓴다)"
+  value       = random_password.origin_verify.result
+  sensitive   = true
+}

@@ -89,6 +89,11 @@ module "dev_v2_db_access" {
 module "dev_v2_monitoring" {
   source = "../modules/observability"
 
+  providers = {
+    aws           = aws
+    aws.us_east_1 = aws.us_east_1
+  }
+
   environment = "dev"
 
   vpc_id            = module.dev_v1_network.vpc_id
