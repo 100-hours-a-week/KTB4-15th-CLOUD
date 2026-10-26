@@ -13,7 +13,7 @@
 #   Alloy가 이를 변환한 뒤 __ 레이블을 버린다.
 # ---------------------------------------------------------------
 locals {
-  lambda_promtail_name    = "lookddak-dev-lambda-promtail"
+  lambda_promtail_name    = "lookddak-${var.environment}-lambda-promtail"
   lambda_promtail_version = "v1.0.1"
   lambda_promtail_s3_key  = "lambda-promtail/${local.lambda_promtail_version}/lambda-promtail-${local.lambda_promtail_version}.zip"
 }
@@ -21,7 +21,7 @@ locals {
 # --- Network ---
 resource "aws_security_group" "lambda_promtail" {
   name                   = "${local.lambda_promtail_name}-sg"
-  description            = "LookDDak dev lambda-promtail"
+  description            = "LookDDak ${var.environment} lambda-promtail"
   vpc_id                 = var.vpc_id
   revoke_rules_on_delete = true
 
@@ -64,7 +64,7 @@ resource "aws_vpc_security_group_ingress_rule" "alloy_from_lambda_promtail" {
 # --- IAM ---
 resource "aws_iam_role" "lambda_promtail" {
   name        = "${local.lambda_promtail_name}-role"
-  description = "LookDDak dev lambda-promtail execution role"
+  description = "LookDDak ${var.environment} lambda-promtail execution role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -152,7 +152,7 @@ resource "aws_lambda_function" "lambda_promtail" {
   environment {
     variables = {
       WRITE_ADDRESS            = "http://${aws_instance.this.private_ip}:3500/loki/api/v1/push"
-      EXTRA_LABELS             = "env,dev"
+      EXTRA_LABELS             = "env,${var.environment}"
       OMIT_EXTRA_LABELS_PREFIX = "true"
       KEEP_STREAM              = "false"
       PRINT_LOG_LINE           = "false"
@@ -184,7 +184,7 @@ resource "aws_lambda_function_event_invoke_config" "lambda_promtail" {
 
 # --- 알람: 이름이 lookddak-로 시작하면 기존 EventBridge 규칙이 Discord로 보낸다 ---
 resource "aws_cloudwatch_metric_alarm" "lambda_promtail_failed" {
-  alarm_name          = "lookddak-dev-v2-lambda-promtail-failed"
+  alarm_name          = "lookddak-${var.environment}-v2-lambda-promtail-failed"
   alarm_description   = "lambda-promtail이 재시도 후에도 Loki 전송에 실패해 실패 큐에 이벤트가 쌓임. Alloy·Loki 상태 확인 후 재처리"
   namespace           = "AWS/SQS"
   metric_name         = "ApproximateNumberOfMessagesVisible"
@@ -204,7 +204,7 @@ resource "aws_cloudwatch_metric_alarm" "lambda_promtail_failed" {
 }
 
 resource "aws_cloudwatch_metric_alarm" "lambda_promtail_errors" {
-  alarm_name          = "lookddak-dev-v2-lambda-promtail-errors"
+  alarm_name          = "lookddak-${var.environment}-v2-lambda-promtail-errors"
   alarm_description   = "lambda-promtail 호출 오류. Alloy(:3500) 응답·보안 그룹 확인"
   namespace           = "AWS/Lambda"
   metric_name         = "Errors"

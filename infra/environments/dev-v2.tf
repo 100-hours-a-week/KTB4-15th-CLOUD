@@ -87,7 +87,9 @@ module "dev_v2_db_access" {
 # - Private App 2a, fixed private IP, Session Manager access only.
 # ---------------------------------------------------------------
 module "dev_v2_monitoring" {
-  source = "./dev/v2/observability"
+  source = "../modules/observability"
+
+  environment = "dev"
 
   vpc_id            = module.dev_v1_network.vpc_id
   subnet_id         = module.dev_v2_network.private_app_subnet_ids[0]
@@ -115,6 +117,9 @@ module "dev_v2_monitoring" {
     service => module.dev_v2_iam.task_role_names[service]
   }
   app_log_group_names = module.dev_v2_logging.log_group_names
+
+  db_query_log_instance_ids        = ["lookddak-dev-v2-mysql", "lookddak-dev-postgresql"]
+  extra_subscribed_log_group_names = ["/lookddak/dev/v2/crawler"]
 }
 
 module "dev_v2_crawler" {

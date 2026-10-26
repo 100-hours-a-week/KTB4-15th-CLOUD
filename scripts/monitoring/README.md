@@ -1,7 +1,7 @@
 # dev 모니터링 서버 파일
 
 dev 모니터링 서버(`lookddak-dev-monitoring`, `10.30.21.250`)의 `/opt/monitoring`에 배치하는 파일입니다.
-EC2는 Terraform(`infra/environments/dev/v2/observability`)으로 관리하고, 서버 안의 파일은 이 폴더가 원본입니다.
+EC2는 Terraform(`infra/modules/observability`)으로 관리하고, 서버 안의 파일은 이 폴더가 원본입니다.
 
 ## 파일 위치
 

@@ -13,12 +13,14 @@ data "aws_ssm_parameter" "al2023_arm64" {
 }
 
 locals {
-  name       = "lookddak-dev-monitoring"
+  name       = "lookddak-${var.environment}-monitoring"
   private_ip = cidrhost(data.aws_subnet.this.cidr_block, var.private_ip_host_number)
+
+  environment_title = title(var.environment)
 
   common_tags = {
     Component   = "monitoring"
-    Environment = "dev"
+    Environment = var.environment
     Version     = "v2"
   }
 }
@@ -31,7 +33,7 @@ locals {
 # ---------------------------------------------------------------
 resource "aws_security_group" "this" {
   name                   = "${local.name}-sg"
-  description            = "LookDDak dev monitoring server"
+  description            = "LookDDak ${var.environment} monitoring server"
   vpc_id                 = var.vpc_id
   revoke_rules_on_delete = true
 
@@ -58,7 +60,7 @@ resource "aws_vpc_security_group_egress_rule" "https" {
 # ---------------------------------------------------------------
 resource "aws_iam_role" "instance" {
   name        = "${local.name}-instance-role"
-  description = "LookDDak dev monitoring server"
+  description = "LookDDak ${var.environment} monitoring server"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -126,7 +128,7 @@ resource "aws_iam_role_policy" "observability_read" {
       Sid      = "MonitoringParameters"
       Effect   = "Allow"
       Action   = "ssm:GetParameter"
-      Resource = "arn:${data.aws_partition.current.partition}:ssm:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:parameter/lookddak/dev/monitoring/*"
+      Resource = "arn:${data.aws_partition.current.partition}:ssm:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:parameter/lookddak/${var.environment}/monitoring/*"
     }]
   })
 }

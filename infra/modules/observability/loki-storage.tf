@@ -6,7 +6,7 @@
 # - 트래픽은 S3 Gateway Endpoint(dev/v2/network)를 탄다.
 # ---------------------------------------------------------------
 resource "aws_s3_bucket" "loki" {
-  bucket = "lookddak-dev-loki-${data.aws_caller_identity.current.account_id}-${data.aws_region.current.region}"
+  bucket = "lookddak-${var.environment}-loki-${data.aws_caller_identity.current.account_id}-${data.aws_region.current.region}"
 
   tags = merge(local.common_tags, {
     Purpose = "loki-chunks-index"

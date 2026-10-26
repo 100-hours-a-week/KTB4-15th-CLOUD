@@ -91,7 +91,7 @@ module "postgresql" {
   final_snapshot_identifier = "lookddak-dev-postgresql-final"
 
   # postgresql 로그는 CloudWatch로 내보내지 않는다 (모든 쿼리를 기록해서 비용이 크다).
-  # db-log-tailer가 RDS API로 로그 파일을 읽어 Alloy → Loki로 보낸다 (dev/v2/observability/db-query-log.tf).
+  # db-log-tailer가 RDS API로 로그 파일을 읽어 Alloy → Loki로 보낸다 (modules/observability/db-query-log.tf).
   enabled_cloudwatch_logs_exports = ["upgrade"]
 }
 

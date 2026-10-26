@@ -6,12 +6,11 @@
 # - 레이블: Alloy가 로그 그룹 경로로 log_group, source(rds, ecs-event, app)·service를 붙인다.
 # ---------------------------------------------------------------
 locals {
-  subscribed_log_groups = toset([
-    aws_cloudwatch_log_group.ecs_task_stopped.name,
-    # 가격 갱신 배치(EventBridge Scheduler → RunTask). 짧게 떴다 사라지는 Task라
-    # 사이드카 대신 기존 awslogs 로그 그룹을 구독한다. 로그 그룹은 dev/v2/logging이 만든다.
-    "/lookddak/dev/v2/crawler",
-  ])
+  # extra_subscribed_log_group_names: 사이드카 없이 awslogs로 남기는 로그 그룹(예: 가격 갱신 배치 crawler)
+  subscribed_log_groups = toset(concat(
+    [aws_cloudwatch_log_group.ecs_task_stopped.name],
+    var.extra_subscribed_log_group_names,
+  ))
 }
 
 # CloudWatch Logs가 lambda-promtail을 호출할 권한 (로그 그룹별로 한정)

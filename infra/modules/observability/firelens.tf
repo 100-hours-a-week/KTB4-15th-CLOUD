@@ -6,7 +6,7 @@
 # - Task SG → Alloy :3500
 # ---------------------------------------------------------------
 locals {
-  fluent_bit_prefix      = "dev/v2/fluent-bit"
+  fluent_bit_prefix      = "${var.environment}/v2/fluent-bit"
   fluent_bit_config_key  = "${local.fluent_bit_prefix}/loki.conf"
   fluent_bit_parsers_key = "${local.fluent_bit_prefix}/parsers.conf"
 }
