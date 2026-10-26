@@ -42,3 +42,13 @@ variable "fluent_bit_parsers_arn" {
   description = "FireLens 여러 줄 합치기 규칙 파일 S3 객체 ARN (prod 모니터링 모듈 출력)"
   type        = string
 }
+
+variable "otlp_endpoint" {
+  description = "OTLP gRPC 트레이스 수신 주소 (prod 모니터링 서버 Alloy :4317, spring)"
+  type        = string
+}
+
+variable "otlp_http_endpoint" {
+  description = "OTLP HTTP 트레이스 수신 주소 (prod 모니터링 서버 Alloy :4318, nextjs·fastapi)"
+  type        = string
+}

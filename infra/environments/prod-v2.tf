@@ -146,6 +146,8 @@ module "prod_v2_task_definitions" {
   images_bucket_name      = module.prod_s3.images_bucket_name
   fluent_bit_config_arn   = module.prod_v2_monitoring.fluent_bit_config_arn
   fluent_bit_parsers_arn  = module.prod_v2_monitoring.fluent_bit_parsers_arn
+  otlp_endpoint           = "http://${module.prod_v2_monitoring.private_ip}:4317"
+  otlp_http_endpoint      = "http://${module.prod_v2_monitoring.private_ip}:4318"
 }
 
 module "prod_v2_ecs_services" {
