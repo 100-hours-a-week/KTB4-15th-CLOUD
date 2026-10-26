@@ -1,4 +1,5 @@
-// dev 모니터링 서버 수집기
+// 모니터링 서버 수집기 (dev, prod 공용)
+// - 환경 이름은 서버 .env의 MONITORING_ENV (dev, prod). 레이블 env, 로그 그룹 경로, AWS 태그 검색에 쓴다.
 
 // ---------------------------------------------------------------
 // 호스트 메트릭 (CPU, 메모리, 디스크, 네트워크) → Prometheus
@@ -16,7 +17,7 @@ prometheus.scrape "host" {
 }
 
 prometheus.remote_write "local" {
-  external_labels = { env = "dev" }
+  external_labels = { env = sys.env("MONITORING_ENV") }
 
   endpoint {
     url = "http://prometheus:9090/api/v1/write"
@@ -84,13 +85,13 @@ loki.relabel "cloudwatch" {
   // ECS 앱 로그 (awslogs 로그 그룹 구독, 지금은 crawler만). FireLens 앱 로그와 같은 service 레이블을 쓴다.
   rule {
     source_labels = ["__aws_cloudwatch_log_group"]
-    regex         = "/lookddak/dev/v2/(nextjs|spring|fastapi|crawler)"
+    regex         = "/lookddak/" + sys.env("MONITORING_ENV") + "/v2/(nextjs|spring|fastapi|crawler)"
     target_label  = "service"
     replacement   = "$1"
   }
   rule {
     source_labels = ["__aws_cloudwatch_log_group"]
-    regex         = "/lookddak/dev/v2/(nextjs|spring|fastapi|crawler)"
+    regex         = "/lookddak/" + sys.env("MONITORING_ENV") + "/v2/(nextjs|spring|fastapi|crawler)"
     target_label  = "source"
     replacement   = "app"
   }
@@ -104,7 +105,7 @@ loki.relabel "cloudwatch" {
 }
 
 loki.write "local" {
-  external_labels = { env = "dev" }
+  external_labels = { env = sys.env("MONITORING_ENV") }
 
   endpoint {
     url = "http://loki:3100/loki/api/v1/push"
@@ -113,7 +114,7 @@ loki.write "local" {
 
 // ---------------------------------------------------------------
 // AWS 인프라 메트릭 (YACE) → Prometheus
-// - Environment=dev 태그가 붙은 ALB·타깃그룹, ECS 서비스, RDS, SQS를 찾는다.
+// - Environment=<MONITORING_ENV> 태그가 붙은 ALB·타깃그룹, ECS 서비스, RDS, SQS를 찾는다.
 // - CloudWatch 조회는 5분마다 한 번만 하고(decoupled_scraping),
 //   Prometheus 쪽 scrape는 1분마다 캐시된 값을 읽는다.
 //   GetMetricData 비용은 조회 횟수에 비례하므로 5분 주기로 고정한다.
@@ -132,7 +133,7 @@ prometheus.exporter.cloudwatch "aws" {
   discovery {
     type                        = "AWS/ApplicationELB"
     regions                     = ["ap-northeast-2"]
-    search_tags                 = { "Environment" = "dev", "Version" = "v2" }
+    search_tags                 = { "Environment" = sys.env("MONITORING_ENV"), "Version" = "v2" }
     dimension_name_requirements = ["LoadBalancer", "TargetGroup"]
 
     metric {
@@ -162,7 +163,7 @@ prometheus.exporter.cloudwatch "aws" {
   discovery {
     type                        = "AWS/ApplicationELB"
     regions                     = ["ap-northeast-2"]
-    search_tags                 = { "Environment" = "dev", "Version" = "v2" }
+    search_tags                 = { "Environment" = sys.env("MONITORING_ENV"), "Version" = "v2" }
     dimension_name_requirements = ["LoadBalancer"]
 
     metric {
@@ -181,7 +182,7 @@ prometheus.exporter.cloudwatch "aws" {
   discovery {
     type                        = "AWS/ECS"
     regions                     = ["ap-northeast-2"]
-    search_tags                 = { "Environment" = "dev" }
+    search_tags                 = { "Environment" = sys.env("MONITORING_ENV") }
     dimension_name_requirements = ["ClusterName", "ServiceName"]
 
     metric {
@@ -200,7 +201,7 @@ prometheus.exporter.cloudwatch "aws" {
   discovery {
     type                        = "AWS/RDS"
     regions                     = ["ap-northeast-2"]
-    search_tags                 = { "Environment" = "dev" }
+    search_tags                 = { "Environment" = sys.env("MONITORING_ENV") }
     dimension_name_requirements = ["DBInstanceIdentifier"]
 
     metric {
@@ -229,7 +230,7 @@ prometheus.exporter.cloudwatch "aws" {
   discovery {
     type                        = "AWS/SQS"
     regions                     = ["ap-northeast-2"]
-    search_tags                 = { "Environment" = "dev" }
+    search_tags                 = { "Environment" = sys.env("MONITORING_ENV") }
     dimension_name_requirements = ["QueueName"]
 
     metric {
@@ -292,7 +293,7 @@ prometheus.exporter.cloudwatch "aws_1m" {
   discovery {
     type                        = "AWS/ApplicationELB"
     regions                     = ["ap-northeast-2"]
-    search_tags                 = { "Environment" = "dev", "Version" = "v2" }
+    search_tags                 = { "Environment" = sys.env("MONITORING_ENV"), "Version" = "v2" }
     dimension_name_requirements = ["LoadBalancer"]
 
     metric {

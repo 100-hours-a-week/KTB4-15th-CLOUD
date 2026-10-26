@@ -1,7 +1,7 @@
 {
   "uid": "lookddak-ecs-task",
   "title": "서비스 별 지표 및 로그",
-  "description": "dev V2 서비스별 ECS Task·컨테이너 리소스(ecs_exporter, 30초 수집), 앱 로그(Loki), 트레이스(Tempo). crawler 배치는 제외",
+  "description": "V2 서비스별 ECS Task·컨테이너 리소스(ecs_exporter, 30초 수집), 앱 로그(Loki), 트레이스(Tempo). crawler 배치는 제외",
   "tags": [
     "lookddak",
     "ecs"
