@@ -7,7 +7,6 @@ locals {
   eventbridge_sqs = {
     alarm_state_change = { name = "Amazon_EventBridge_Invoke_Sqs_1504746143", rule = "lookddak-alarm-state-change" }
     aws_health         = { name = "Amazon_EventBridge_Invoke_Sqs_1568336830", rule = "lookddak-aws-health" }
-    docker_events      = { name = "Amazon_EventBridge_Invoke_Sqs_2071571937", rule = "lookddak-docker-events" }
     ec2_state_change   = { name = "Amazon_EventBridge_Invoke_Sqs_1541928649", rule = "lookddak-ec2-state-change" }
     rds_events         = { name = "Amazon_EventBridge_Invoke_Sqs_533425366", rule = "lookddak-rds-events" }
   }

@@ -3,7 +3,6 @@ variable "eventbridge_role_arns" {
   type = object({
     alarm_state_change = string
     aws_health         = string
-    docker_events      = string
     ec2_state_change   = string
     rds_events         = string
   })
