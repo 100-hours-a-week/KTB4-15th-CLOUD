@@ -122,30 +122,8 @@ resource "aws_wafv2_web_acl" "this" {
   }
 
   rule {
-    name     = "aws-common-rule-set"
-    priority = 2
-
-    override_action {
-      none {}
-    }
-
-    statement {
-      managed_rule_group_statement {
-        name        = "AWSManagedRulesCommonRuleSet"
-        vendor_name = "AWS"
-      }
-    }
-
-    visibility_config {
-      cloudwatch_metrics_enabled = true
-      metric_name                = "lookddak-prod-v2-common-rule-set"
-      sampled_requests_enabled   = true
-    }
-  }
-
-  rule {
     name     = "amazon-ip-reputation-list"
-    priority = 3
+    priority = 2
 
     override_action {
       none {}
@@ -161,6 +139,100 @@ resource "aws_wafv2_web_acl" "this" {
     visibility_config {
       cloudwatch_metrics_enabled = true
       metric_name                = "lookddak-prod-v2-ip-reputation-list"
+      sampled_requests_enabled   = true
+    }
+  }
+
+  # Spring validates the image size, media type, and body-image suitability.
+  # Keep the rate and IP reputation rules above, then bypass CRS body inspection
+  # only for the exact multipart upload endpoint to prevent binary false positives.
+  rule {
+    name     = "allow-full-body-image-upload"
+    priority = 3
+
+    action {
+      allow {}
+    }
+
+    statement {
+      and_statement {
+        statement {
+          byte_match_statement {
+            positional_constraint = "EXACTLY"
+            search_string         = "POST"
+
+            field_to_match {
+              method {}
+            }
+
+            text_transformation {
+              priority = 0
+              type     = "NONE"
+            }
+          }
+        }
+
+        statement {
+          byte_match_statement {
+            positional_constraint = "EXACTLY"
+            search_string         = "/api/v1/full-body-image/validate"
+
+            field_to_match {
+              uri_path {}
+            }
+
+            text_transformation {
+              priority = 0
+              type     = "NONE"
+            }
+          }
+        }
+
+        statement {
+          byte_match_statement {
+            positional_constraint = "STARTS_WITH"
+            search_string         = "multipart/form-data"
+
+            field_to_match {
+              single_header {
+                name = "content-type"
+              }
+            }
+
+            text_transformation {
+              priority = 0
+              type     = "LOWERCASE"
+            }
+          }
+        }
+      }
+    }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "lookddak-prod-v2-allow-full-body-image-upload"
+      sampled_requests_enabled   = true
+    }
+  }
+
+  rule {
+    name     = "aws-common-rule-set"
+    priority = 4
+
+    override_action {
+      none {}
+    }
+
+    statement {
+      managed_rule_group_statement {
+        name        = "AWSManagedRulesCommonRuleSet"
+        vendor_name = "AWS"
+      }
+    }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "lookddak-prod-v2-common-rule-set"
       sampled_requests_enabled   = true
     }
   }
