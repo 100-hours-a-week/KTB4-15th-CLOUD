@@ -108,10 +108,6 @@ module "dev_parameter_store" {
   rds_port           = 3306
 }
 
-module "dev_v1_logging" {
-  source = "./dev/v1/logging"
-}
-
 module "dev_v1_iam" {
   source = "./dev/v1/iam"
 

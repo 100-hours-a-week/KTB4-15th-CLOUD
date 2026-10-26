@@ -27,14 +27,6 @@ locals {
         }
       }
     }
-    docker_events = {
-      name      = "lookddak-docker-events"
-      target_id = "Idbcc7eb30-dd93-4cad-8eb9-d8c9f63d97c9"
-      pattern = {
-        source        = ["custom.docker"]
-        "detail-type" = ["Container State Change"]
-      }
-    }
     ec2_state_change = {
       name      = "lookddak-ec2-state-change"
       target_id = "Ida2188ef3-263c-42f9-b7de-ca0a4cb8a6ca"
