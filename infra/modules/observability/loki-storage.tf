@@ -1,7 +1,7 @@
 # ---------------------------------------------------------------
 # Loki 저장소 (S3)
 # - 로그 청크와 색인을 S3에 둔다. Monitoring EC2를 교체해도 로그가 남는다.
-# - 보존(7일)은 Loki compactor가 지운다. 아래 수명 주기는 compactor가 놓친 객체를 지우는 안전장치.
+# - 보존(30일)은 Loki compactor가 지운다. 아래 수명 주기(45일)는 compactor가 놓친 객체를 지우는 안전장치 (보존 기간보다 길어야 한다).
 # - 버킷 이름에 계정 ID가 들어가서 Loki 설정 파일에는 쓰지 않는다. 서버 .env의 LOKI_S3_BUCKET으로 넣는다.
 # - 트래픽은 S3 Gateway Endpoint(dev/v2/network)를 탄다.
 # ---------------------------------------------------------------
@@ -45,13 +45,13 @@ resource "aws_s3_bucket_lifecycle_configuration" "loki" {
   bucket = aws_s3_bucket.loki.id
 
   rule {
-    id     = "safety-expire-30d"
+    id     = "safety-expire-45d"
     status = "Enabled"
 
     filter {}
 
     expiration {
-      days = 30
+      days = 45
     }
 
     abort_incomplete_multipart_upload {

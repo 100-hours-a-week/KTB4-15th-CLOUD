@@ -288,19 +288,15 @@ locals {
   }
   otel_services = keys(local.otel_agents)
 
-  # 앱 컨테이너 로그: FireLens. 여기 options가 출력 1(CloudWatch, 기존 로그 그룹)이 된다.
+  # 앱 컨테이너 로그: FireLens. options가 출력 1이 되는데, CloudWatch로 보내지 않도록 null 출력으로 둔다.
   # ECS 기본 전달 모드가 non-blocking이라 mode는 따로 두지 않는다 (Fluent Bit 출력 옵션으로 넘어가지 않게).
   app_log_configuration = {
     for service in local.monitored_services : service => {
       logDriver = "awsfirelens"
+      # 출력 1(options)은 버린다: 앱 로그를 CloudWatch로 보내지 않는다 (2026-10-26).
+      # 앱 로그는 Fluent Bit 추가 설정(S3 loki.conf)의 Loki 출력으로만 간다 (Loki 보존 7일).
       options = {
-        Name              = "cloudwatch_logs"
-        region            = "ap-northeast-2"
-        log_group_name    = var.log_group_names[service]
-        log_stream_prefix = "ecs/"
-        auto_create_group = "false"
-        # CloudWatch에는 원문만 (메타데이터 JSON 없이, awslogs 때와 같은 모양)
-        log_key = "log"
+        Name = "null"
       }
     }
   }
