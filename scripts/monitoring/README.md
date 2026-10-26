@@ -14,7 +14,7 @@ EC2는 Terraform(`infra/modules/observability`)으로 관리하고, 서버 안�
 |---|---|---|
 | `docker-compose.yaml` | `/opt/monitoring/docker-compose.yaml` | Prometheus, Loki, Alloy, Grafana, Tempo, DB exporter (MySQL, PostgreSQL), db-log-tailer |
 | `prometheus/prometheus.dev.yml`, `prometheus/prometheus.prod.yml` | `/opt/monitoring/prometheus/` (둘 다) | 모니터링 구성요소, ECS Task, 앱, DB exporter scrape. `MONITORING_ENV`로 고른다. 클러스터·서비스·DB 이름만 다르니 함께 고친다 |
-| `loki/config.yaml` | `/opt/monitoring/loki/config.yaml` | 단일 바이너리, S3 저장, 보존 7일 |
+| `loki/config.yaml` | `/opt/monitoring/loki/config.yaml` | 단일 바이너리, S3 저장, 보존 30일 (앱 로그는 CloudWatch로 보내지 않아 Loki가 보관처) |
 | `tempo/config.yaml` | `/opt/monitoring/tempo/config.yaml` | Tempo 3.1 단일 바이너리, OTLP 수신(내부), S3 저장, 보존 7일, metrics-generator(서비스 그래프·스팬 지표 → Prometheus) |
 | `alloy/config.alloy` | `/opt/monitoring/alloy/config.alloy` | 호스트 메트릭·AWS 메트릭(YACE) → Prometheus, Loki push 수신(:3500) → Loki |
 | `grafana/provisioning/datasources/datasources.yaml` | `/opt/monitoring/grafana/provisioning/datasources/datasources.yaml` | Prometheus, Loki, CloudWatch 데이터소스 |
@@ -79,7 +79,7 @@ EC2는 Terraform(`infra/modules/observability`)으로 관리하고, 서버 안�
 
 ## 데이터
 
-Docker named volume(`prometheus-data`, `loki-data`, `alloy-data`, `grafana-data`)에 저장합니다. 루트 디스크(30GB) 하나만 쓰므로 Prometheus는 `retention.size=10GB`로 제한합니다. Loki 로그는 S3에 7일 보존하고, 로컬 볼륨에는 WAL·캐시만 둡니다. 인스턴스를 교체하면 메트릭은 사라집니다.
+Docker named volume(`prometheus-data`, `loki-data`, `alloy-data`, `grafana-data`)에 저장합니다. 루트 디스크(30GB) 하나만 쓰므로 Prometheus는 `retention.size=10GB`로 제한합니다. Loki 로그는 S3에 30일 보존하고, 로컬 볼륨에는 WAL·캐시만 둡니다. 인스턴스를 교체하면 메트릭은 사라집니다.
 
 ## 접속
 
