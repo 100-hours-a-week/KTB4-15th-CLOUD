@@ -62,16 +62,3 @@ resource "aws_iam_role_policy" "discord_alert_ssm_read" {
   })
   role = aws_iam_role.discord_alert.name
 }
-
-resource "aws_iam_role_policy" "discord_alert_status_logs_read" {
-  name = "LamdaRole"
-  policy = jsonencode({
-    Statement = [{
-      Action   = "logs:GetLogEvents"
-      Effect   = "Allow"
-      Resource = "arn:aws:logs:${local.region}:${local.account_id}:log-group:/lookddak/prod/status:*"
-    }]
-    Version = "2012-10-17"
-  })
-  role = aws_iam_role.discord_alert.name
-}

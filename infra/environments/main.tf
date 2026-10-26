@@ -35,27 +35,7 @@ module "prod_v1_parameter_store" {
 module "prod_v1_iam" {
   source = "./prod/v1/iam"
 
-  ecr_repository_arns           = module.shared_core.ecr_repository_arns
-  postgresql_backup_bucket_arn  = module.prod_s3.postgresql_backup_bucket_arn
-  postgresql_backup_kms_key_arn = module.prod_s3.postgresql_backup_kms_key_arn
-}
-
-module "prod_v1_compute" {
-  source = "./prod/v1/compute"
-
-  subnet_id                 = module.prod_v1_network.public_subnet_ids[0]
-  security_group_id         = module.prod_v1_network.app_security_group_id
-  iam_instance_profile_name = module.prod_v1_iam.ec2_instance_profile_name
-}
-
-module "prod_v1_cicd_deploy_policy" {
-  source = "./prod/v1/cicd-deploy-policy"
-
-  deploy_role_names   = module.prod_v1_iam.deploy_role_names
   ecr_repository_arns = module.shared_core.ecr_repository_arns
-  ec2_instance_arns = [
-    module.prod_v1_compute.instance_arn,
-  ]
 }
 
 module "prod_v1_edge" {
