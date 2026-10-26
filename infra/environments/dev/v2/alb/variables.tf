@@ -24,7 +24,7 @@ variable "route53_zone_id" {
 }
 
 variable "domain_name" {
-  description = "V2 dev test domain covered by the ALB certificate and routed to the ALB"
+  description = "Dev domain covered by the ALB certificate and matched by the listener rules"
   type        = string
 }
 
@@ -32,11 +32,6 @@ variable "subject_alternative_names" {
   description = "Additional domains covered by the ALB certificate for a future cutover"
   type        = list(string)
   default     = []
-}
-
-variable "v1_domain_name" {
-  description = "V1 dev domain routed to the V1 dev EC2 nginx through the ALB"
-  type        = string
 }
 
 variable "fastapi_enabled" {

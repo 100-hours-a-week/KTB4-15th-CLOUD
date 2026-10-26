@@ -284,11 +284,6 @@ output "prod_v2_service_connect_namespace_arn" {
   value       = module.prod_v2_ecs_services.service_connect_namespace_arn
 }
 
-output "prod_v2_test_domain_name" {
-  description = "V2 prod validation hostname routed to CloudFront"
-  value       = module.prod_v2_edge.test_domain_name
-}
-
 output "prod_v2_origin_domain_name" {
   description = "V2 prod CloudFront origin hostname routed to the ALB"
   value       = module.prod_v2_edge.origin_domain_name
