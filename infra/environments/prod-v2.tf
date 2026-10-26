@@ -61,6 +61,11 @@ module "prod_v2_monitoring" {
   alb_dns_name          = module.prod_v2_edge.alb_dns_name
   alb_zone_id           = module.prod_v2_edge.alb_zone_id
 
+  # Spring(/api/*, 10)·SSE(6) 규칙은 호스트 조건 없이 원본 검증 헤더만 본다.
+  # Grafana도 /api/*를 쓰므로 그보다 먼저 평가되게 둔다 (로그아웃 1 → Grafana 2).
+  grafana_logout_listener_rule_priority = 1
+  grafana_listener_rule_priority        = 2
+
   grafana_cloudfront_enabled         = true
   grafana_origin_domain_name         = module.prod_v2_edge.origin_domain_name
   grafana_origin_verify_header_value = module.prod_v2_edge.origin_verify_header_value
