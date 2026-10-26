@@ -4,7 +4,7 @@
 # - revision 등록은 앱 레포 CD(main merge)가 한다 (템플릿 + 이미지 digest).
 # - 이 값을 바꾸고 apply하면 다음 배포부터 반영된다.
 # - 값은 기존 정적 JSON(prod/v2/task-definitions/*.json)과 같다 (Spring SSE 8081 포함, #293).
-# - ecs-exporter 사이드카는 prod 모니터링 구성 후 추가한다.
+# - 모니터링 사이드카(ecs-exporter, FireLens log-router)는 dev와 같다. 트레이스(otel-init)는 아직 넣지 않는다.
 # - crawler는 EventBridge Scheduler(현재 DISABLED)가 family ARN으로 RunTask한다.
 # ---------------------------------------------------------------
 locals {
@@ -128,6 +128,99 @@ locals {
   }
 }
 
+# ---------------------------------------------------------------
+# 모니터링 사이드카 (nextjs, spring, fastapi에만. crawler 배치는 제외) - dev/v2/task-definitions와 같다
+# 1) ecs-exporter: Task CPU·메모리·네트워크 → :9779/metrics (prod 모니터링 서버 Prometheus가 수집)
+#    Task 메타데이터 엔드포인트(169.254.170.2)를 읽으므로 IAM 권한이 필요 없다.
+# 2) log-router: FireLens(aws-for-fluent-bit init 이미지)
+#    앱 stdout/stderr → CloudWatch(기존 로그 그룹) + Loki(prod 모니터링 서버 Alloy :3500)
+#    Loki 출력·여러 줄 합치기 설정은 S3(fluent_bit_config_arn, fluent_bit_parsers_arn)에서 시작할 때 받는다.
+# - 둘 다 essential = false: 죽어도 앱은 계속 돈다 (로그·지표보다 서비스 가용성 우선).
+#   단, 앱 컨테이너는 log-router가 시작(START)된 뒤에 뜬다.
+# - 템플릿은 다음 앱 배포(main merge CD) 때 반영된다. 앱 CD는 앱 컨테이너를 이름으로 찾는다.
+# ---------------------------------------------------------------
+locals {
+  ecs_exporter_image = "quay.io/prometheuscommunity/ecs-exporter:v0.4.0"
+  fluent_bit_image   = "public.ecr.aws/aws-observability/aws-for-fluent-bit:init-2.34.3.20261020"
+  monitored_services = ["nextjs", "spring", "fastapi"]
+
+  # 여러 줄 합치기 규칙 (modules/observability/fluent-bit/parsers.conf)
+  multiline_parsers = {
+    nextjs  = "indented_cont"
+    spring  = "ts_start"
+    fastapi = "ts_start"
+  }
+
+  sidecars = {
+    for service in local.monitored_services : service => [
+      {
+        name              = "ecs-exporter"
+        image             = local.ecs_exporter_image
+        essential         = false
+        command           = ["--web.disable-exporter-metrics"]
+        memory            = 64
+        memoryReservation = 32
+        portMappings = [{
+          containerPort = 9779
+          hostPort      = 9779
+          protocol      = "tcp"
+        }]
+        logConfiguration = {
+          logDriver = "awslogs"
+          options = {
+            "awslogs-group"         = var.log_group_names[service]
+            "awslogs-region"        = "ap-northeast-2"
+            "awslogs-stream-prefix" = "ecs-exporter"
+          }
+        }
+        readonlyRootFilesystem = true
+      },
+      {
+        name              = "log-router"
+        image             = local.fluent_bit_image
+        essential         = false
+        memoryReservation = 50
+        firelensConfiguration = {
+          type = "fluentbit"
+          options = {
+            "enable-ecs-log-metadata" = "true"
+          }
+        }
+        environment = [
+          { name = "SERVICE", value = service },
+          { name = "MULTILINE_PARSER", value = local.multiline_parsers[service] },
+          { name = "aws_fluent_bit_init_s3_1", value = var.fluent_bit_config_arn },
+          { name = "aws_fluent_bit_init_s3_2", value = var.fluent_bit_parsers_arn },
+        ]
+        # log-router 자신의 로그는 awslogs로 (FireLens로 보내면 순환)
+        logConfiguration = {
+          logDriver = "awslogs"
+          options = {
+            "awslogs-group"         = var.log_group_names[service]
+            "awslogs-region"        = "ap-northeast-2"
+            "awslogs-stream-prefix" = "log-router"
+          }
+        }
+      },
+    ]
+  }
+
+  # 앱 컨테이너 로그: FireLens. options가 출력 1(CloudWatch, 기존 로그 그룹)이 된다.
+  app_log_configuration = {
+    for service in local.monitored_services : service => {
+      logDriver = "awsfirelens"
+      options = {
+        Name              = "cloudwatch_logs"
+        region            = "ap-northeast-2"
+        log_group_name    = var.log_group_names[service]
+        log_stream_prefix = "ecs/"
+        auto_create_group = "false"
+        log_key           = "log"
+      }
+    }
+  }
+}
+
 module "template" {
   source   = "../../../../modules/ecs-taskdef-template"
   for_each = local.services
@@ -149,6 +242,11 @@ module "template" {
   log_group_name       = var.log_group_names[each.key]
   command              = each.value.command
   health_check         = each.value.health_check
+  sidecars             = try(local.sidecars[each.key], [])
+  log_configuration    = try(local.app_log_configuration[each.key], null)
+  depends_on_containers = contains(local.monitored_services, each.key) ? [
+    { containerName = "log-router", condition = "START" },
+  ] : []
 
   tags = {
     Environment = "prod"

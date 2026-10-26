@@ -32,3 +32,13 @@ variable "images_bucket_name" {
   description = "prod 이미지 버킷 이름"
   type        = string
 }
+
+variable "fluent_bit_config_arn" {
+  description = "FireLens Loki 출력 설정 파일 S3 객체 ARN (prod 모니터링 모듈 출력)"
+  type        = string
+}
+
+variable "fluent_bit_parsers_arn" {
+  description = "FireLens 여러 줄 합치기 규칙 파일 S3 객체 ARN (prod 모니터링 모듈 출력)"
+  type        = string
+}
