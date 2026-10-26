@@ -1,3 +1,6 @@
+# dev 모니터링 서버 Prometheus 설정
+# - prod는 prometheus.prod.yml. 클러스터·서비스 이름, env 레이블, DB 이름만 다르다 (함께 고친다).
+# - docker-compose.yaml이 MONITORING_ENV로 고른다: prometheus.<MONITORING_ENV>.yml
 global:
   scrape_interval: 15s
   evaluation_interval: 15s

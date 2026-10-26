@@ -1,7 +1,8 @@
 name: monitoring
 
-# dev 모니터링 서버 (/opt/monitoring)
-# - 데이터는 Docker named volume(루트 디스크)에 둔다. 인스턴스 교체 시 유실을 감수한다 (dev).
+# 모니터링 서버 (/opt/monitoring, dev·prod 공용)
+# - 환경별 값은 서버 .env에 둔다 (README): MONITORING_ENV, Grafana 주소·프록시 허용 대역, DB 로그 대상 등
+# - 데이터는 Docker named volume(루트 디스크)에 둔다. 인스턴스 교체 시 메트릭 유실을 감수한다 (로그·트레이스는 S3).
 # - 외부(ECS task 등)에 여는 포트는 Grafana 3000, Alloy 3500(Loki push)뿐이다.
 #   나머지는 127.0.0.1에만 열어 SSM 포트포워딩으로 확인한다.
 
@@ -11,7 +12,8 @@ services:
     image: prom/prometheus:v3.15.1
     restart: unless-stopped
     command:
-      - --config.file=/etc/prometheus/prometheus.yml
+      # 환경별 파일: prometheus.dev.yml, prometheus.prod.yml
+      - --config.file=/etc/prometheus/prometheus.${MONITORING_ENV:?MONITORING_ENV is required}.yml
       - --storage.tsdb.path=/prometheus
       - --storage.tsdb.retention.time=15d
       - --storage.tsdb.retention.size=10GB
@@ -48,6 +50,9 @@ services:
       - --server.http.listen-addr=0.0.0.0:12345
       - --storage.path=/var/lib/alloy/data
       - /etc/alloy/config.alloy
+    environment:
+      # 레이블 env, 로그 그룹 경로(/lookddak/<env>/v2/...), AWS 태그 검색(Environment=<env>)
+      MONITORING_ENV: ${MONITORING_ENV:?MONITORING_ENV is required}
     volumes:
       - ./alloy:/etc/alloy:ro
       - alloy-data:/var/lib/alloy/data
@@ -76,15 +81,15 @@ services:
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?GRAFANA_ADMIN_PASSWORD is required}
       GF_USERS_ALLOW_SIGN_UP: "false"
       GF_AUTH_ANONYMOUS_ENABLED: "false"
-      GF_SERVER_ROOT_URL: https://grafana.dev.lookddak.com
+      GF_SERVER_ROOT_URL: ${GRAFANA_ROOT_URL:?GRAFANA_ROOT_URL is required}
       # 자동 로그인: ALB(Cognito 인증)가 넘기는 사용자 ID(UUID) 헤더로 로그인
-      # - 헤더는 ALB 서브넷(10.30.1.0/24, 10.30.2.0/24)에서 온 요청만 믿는다.
+      # - 헤더는 ALB 서브넷(.env GRAFANA_PROXY_WHITELIST)에서 온 요청만 믿는다.
       # - 처음 들어온 사용자는 Editor로 자동 생성된다.
       GF_AUTH_PROXY_ENABLED: "true"
       GF_AUTH_PROXY_HEADER_NAME: X-Amzn-Oidc-Identity
       GF_AUTH_PROXY_HEADER_PROPERTY: username
       GF_AUTH_PROXY_AUTO_SIGN_UP: "true"
-      GF_AUTH_PROXY_WHITELIST: 10.30.1.0/24, 10.30.2.0/24
+      GF_AUTH_PROXY_WHITELIST: ${GRAFANA_PROXY_WHITELIST:?GRAFANA_PROXY_WHITELIST is required}
       GF_USERS_AUTO_ASSIGN_ORG_ROLE: Editor
       GF_ANALYTICS_REPORTING_ENABLED: "false"
       GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
@@ -138,7 +143,8 @@ services:
     image: lookddak/db-log-tailer:local
     restart: unless-stopped
     environment:
-      TARGETS: mysql:lookddak-dev-v2-mysql:audit/,mysql:lookddak-dev-v2-mysql:error/,mysql:lookddak-dev-v2-mysql:slowquery/,postgresql:lookddak-dev-postgresql:error/postgresql.log
+      # <엔진>:<RDS 인스턴스 ID>:<로그 파일 접두사>,... (README)
+      TARGETS: ${DB_LOG_TARGETS:?DB_LOG_TARGETS is required}
       AWS_REGION: ap-northeast-2
       POLL_SECONDS: "5"
       # PostgreSQL 쿼리 외 로그(오류, 체크포인트 등)도 보낸다 (source="rds"). PG CloudWatch 구독은 쓰지 않는다

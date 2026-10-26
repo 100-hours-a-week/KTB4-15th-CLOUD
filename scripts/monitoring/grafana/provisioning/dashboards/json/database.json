@@ -1,7 +1,7 @@
 {
   "uid": "lookddak-database",
   "title": "Database",
-  "description": "dev RDS 내부 지표 (mysqld_exporter, postgres_exporter, 60초 수집)와 쿼리 로그 (db-log-tailer)",
+  "description": "RDS 내부 지표 (mysqld_exporter, postgres_exporter, 60초 수집)와 쿼리 로그 (db-log-tailer)",
   "tags": [
     "lookddak",
     "database"
@@ -71,7 +71,7 @@
     {
       "id": 1,
       "type": "row",
-      "title": "MySQL (lookddak-dev-v2-mysql)",
+      "title": "MySQL",
       "collapsed": false,
       "gridPos": {
         "h": 1,
@@ -733,7 +733,7 @@
     {
       "id": 12,
       "type": "row",
-      "title": "PostgreSQL (lookddak-dev-postgresql, DB lookddak)",
+      "title": "PostgreSQL (DB lookddak)",
       "collapsed": false,
       "gridPos": {
         "h": 1,

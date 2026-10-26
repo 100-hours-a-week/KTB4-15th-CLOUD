@@ -1,0 +1,144 @@
+# prod 모니터링 서버 Prometheus 설정
+# - dev는 prometheus.dev.yml. 클러스터·서비스 이름, env 레이블, DB 이름만 다르다 (함께 고친다).
+# - docker-compose.yaml이 MONITORING_ENV로 고른다: prometheus.<MONITORING_ENV>.yml
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    env: prod
+
+# 호스트 메트릭은 Alloy가 수집해 remote write로 넣는다.
+# 여기서는 모니터링 구성요소, ECS Task(ecs_exporter), 앱(Spring·FastAPI)을 scrape한다.
+scrape_configs:
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  - job_name: loki
+    static_configs:
+      - targets: ["loki:3100"]
+
+  - job_name: tempo
+    static_configs:
+      - targets: ["tempo:3200"]
+
+  - job_name: alloy
+    static_configs:
+      - targets: ["alloy:12345"]
+
+  - job_name: grafana
+    static_configs:
+      - targets: ["grafana:3000"]
+
+  # ECS Task 메트릭 (ecs_exporter 사이드카, Task IP:9779)
+  # - ECS API로 Task를 찾는다 (인스턴스 역할 권한). 배포로 Task가 바뀌면 다음 갱신(60초)에 반영된다.
+  # - prod V2 클러스터의 nextjs·spring·fastapi 서비스 Task 중 RUNNING만 수집한다.
+  - job_name: ecs-exporter
+    scrape_interval: 30s
+    aws_sd_configs:
+      - role: ecs
+        region: ap-northeast-2
+        port: 9779
+        refresh_interval: 60s
+    relabel_configs:
+      - source_labels: [__meta_ecs_cluster]
+        regex: (.*/)?lookddak-prod-v2
+        action: keep
+      - source_labels: [__meta_ecs_service]
+        regex: (.*/)?lookddak-prod-v2-(nextjs|spring|fastapi)-service
+        action: keep
+      - source_labels: [__meta_ecs_last_status]
+        regex: RUNNING
+        action: keep
+      - source_labels: [__meta_ecs_service]
+        regex: (.*/)?lookddak-prod-v2-(.+)-service
+        target_label: service
+        replacement: $2
+      - source_labels: [__meta_ecs_task_arn]
+        regex: .*/([^/]+)
+        target_label: task_id
+      - source_labels: [__meta_ecs_task_definition]
+        regex: .*:([0-9]+)
+        target_label: task_revision
+      - source_labels: [__meta_ecs_availability_zone]
+        target_label: availability_zone
+
+  # 앱 메트릭 (담당자 B). ecs-exporter와 같은 ECS 디스커버리, 서비스별 포트·경로만 다르다.
+  - job_name: spring
+    scrape_interval: 30s
+    metrics_path: /actuator/prometheus
+    aws_sd_configs:
+      - role: ecs
+        region: ap-northeast-2
+        port: 8080
+        refresh_interval: 60s
+    relabel_configs:
+      - source_labels: [__meta_ecs_cluster]
+        regex: (.*/)?lookddak-prod-v2
+        action: keep
+      - source_labels: [__meta_ecs_service]
+        regex: (.*/)?lookddak-prod-v2-spring-service
+        action: keep
+      - source_labels: [__meta_ecs_last_status]
+        regex: RUNNING
+        action: keep
+      - target_label: service
+        replacement: spring
+      - source_labels: [__meta_ecs_task_arn]
+        regex: .*/([^/]+)
+        target_label: task_id
+      - source_labels: [__meta_ecs_task_definition]
+        regex: .*:([0-9]+)
+        target_label: task_revision
+      - source_labels: [__meta_ecs_availability_zone]
+        target_label: availability_zone
+
+  - job_name: fastapi
+    scrape_interval: 30s
+    metrics_path: /metrics
+    aws_sd_configs:
+      - role: ecs
+        region: ap-northeast-2
+        port: 8000
+        refresh_interval: 60s
+    relabel_configs:
+      - source_labels: [__meta_ecs_cluster]
+        regex: (.*/)?lookddak-prod-v2
+        action: keep
+      - source_labels: [__meta_ecs_service]
+        regex: (.*/)?lookddak-prod-v2-fastapi-service
+        action: keep
+      - source_labels: [__meta_ecs_last_status]
+        regex: RUNNING
+        action: keep
+      - target_label: service
+        replacement: fastapi
+      - source_labels: [__meta_ecs_task_arn]
+        regex: .*/([^/]+)
+        target_label: task_id
+      - source_labels: [__meta_ecs_task_definition]
+        regex: .*:([0-9]+)
+        target_label: task_revision
+      - source_labels: [__meta_ecs_availability_zone]
+        target_label: availability_zone
+
+  # RDS 내부 지표 (DB exporter 컨테이너가 RDS에 접속해 읽는다)
+  # - 매 수집마다 DB에 조회가 들어가므로 60초로 둔다.
+  - job_name: mysql
+    scrape_interval: 60s
+    static_configs:
+      - targets: ["mysqld-exporter:9104"]
+        labels:
+          db: lookddak-prod-v2-mysql
+
+  - job_name: postgresql
+    scrape_interval: 60s
+    static_configs:
+      - targets: ["postgres-exporter:9187"]
+        labels:
+          db: lookddak-prod-v2-postgresql
+
+  # DB 쿼리 로그 수집기 상태 (보낸 줄 수, 오류, 마지막 성공·로그 시각)
+  - job_name: db-log-tailer
+    static_configs:
+      - targets: ["db-log-tailer:9200"]

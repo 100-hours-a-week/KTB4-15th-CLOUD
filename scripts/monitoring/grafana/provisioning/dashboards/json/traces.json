@@ -1,7 +1,7 @@
 {
   "uid": "lookddak-traces",
   "title": "트레이스 (DB·가상피팅·채팅)",
-  "description": "dev 트레이스(Tempo) 기준 흐름별 지표. 그래프는 Tempo span 지표(traces_spanmetrics_*, Prometheus), 표는 TraceQL 검색. 서비스 전체 그래프는 '서비스 별 지표 및 로그' 대시보드",
+  "description": "트레이스(Tempo) 기준 흐름별 지표. 그래프는 Tempo span 지표(traces_spanmetrics_*, Prometheus), 표는 TraceQL 검색. 서비스 전체 그래프는 '서비스 별 지표 및 로그' 대시보드",
   "tags": [
     "lookddak",
     "traces"
