@@ -220,20 +220,21 @@ variable "prod_v2_service_capacity" {
     min_capacity  = number
     max_capacity  = number
   }))
+  # 2026-10-28: 트래픽에 맞춰 서비스별 최소 1개로 줄임 (부하가 늘면 Auto Scaling이 최대 5개까지 늘린다)
   default = {
     nextjs = {
-      desired_count = 2
-      min_capacity  = 2
+      desired_count = 1
+      min_capacity  = 1
       max_capacity  = 5
     }
     spring = {
-      desired_count = 2
-      min_capacity  = 2
+      desired_count = 1
+      min_capacity  = 1
       max_capacity  = 5
     }
     fastapi = {
-      desired_count = 2
-      min_capacity  = 2
+      desired_count = 1
+      min_capacity  = 1
       max_capacity  = 5
     }
   }
