@@ -87,7 +87,7 @@ resource "aws_lb_target_group" "nextjs" {
 
   health_check {
     enabled             = true
-    path                = "/onboarding"
+    path                = "/health"
     port                = "traffic-port"
     protocol            = "HTTP"
     matcher             = "200"
