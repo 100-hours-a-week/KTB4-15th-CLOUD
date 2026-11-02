@@ -24,3 +24,11 @@ module "dev_v3_eks" {
     "arn:aws:iam::686496667254:user/lookddak-infra-cli",
   ]
 }
+
+module "dev_v3_iam" {
+  source = "./dev/v3/iam"
+
+  cluster_name      = local.dev_v3_cluster_name
+  oidc_provider_arn = module.dev_v3_eks.oidc_provider_arn
+  oidc_issuer       = module.dev_v3_eks.oidc_issuer
+}
