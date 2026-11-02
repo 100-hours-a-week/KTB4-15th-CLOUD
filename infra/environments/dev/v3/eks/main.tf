@@ -49,11 +49,11 @@ resource "aws_eks_cluster" "this" {
     bootstrap_cluster_creator_admin_permissions = true
   }
 
+  # API 엔드포인트는 private만 연다. 접근은 VPC 안(bastion SSM 포트포워딩)에서만 한다.
   vpc_config {
     subnet_ids              = var.subnet_ids
     endpoint_private_access = true
-    endpoint_public_access  = true
-    public_access_cidrs     = var.public_access_cidrs
+    endpoint_public_access  = false
   }
 
   kubernetes_network_config {
