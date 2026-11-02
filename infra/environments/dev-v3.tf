@@ -36,3 +36,11 @@ module "dev_v3_iam" {
   oidc_provider_arn = module.dev_v3_eks.oidc_provider_arn
   oidc_issuer       = module.dev_v3_eks.oidc_issuer
 }
+
+# 클러스터 안 설치 (helm provider: providers.tf)
+module "dev_v3_cilium" {
+  source = "./dev/v3/cilium"
+
+  cluster_endpoint  = module.dev_v3_eks.cluster_endpoint
+  operator_role_arn = module.dev_v3_iam.cilium_operator_role_arn
+}
