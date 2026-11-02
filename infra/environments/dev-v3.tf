@@ -23,10 +23,6 @@ module "dev_v3_eks" {
   admin_principal_arns = [
     "arn:aws:iam::686496667254:user/lookddak-infra-cli",
   ]
-
-  view_principal_arns = [
-    "arn:aws:iam::686496667254:role/gha-terraform-plan-role",
-  ]
 }
 
 module "dev_v3_iam" {
@@ -35,12 +31,4 @@ module "dev_v3_iam" {
   cluster_name      = local.dev_v3_cluster_name
   oidc_provider_arn = module.dev_v3_eks.oidc_provider_arn
   oidc_issuer       = module.dev_v3_eks.oidc_issuer
-}
-
-# 클러스터 안 설치 (helm provider: providers.tf)
-module "dev_v3_cilium" {
-  source = "./dev/v3/cilium"
-
-  cluster_endpoint  = module.dev_v3_eks.cluster_endpoint
-  operator_role_arn = module.dev_v3_iam.cilium_operator_role_arn
 }
