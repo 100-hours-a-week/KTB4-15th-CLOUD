@@ -37,9 +37,3 @@ variable "admin_principal_arns" {
   type        = list(string)
   default     = []
 }
-
-variable "view_principal_arns" {
-  description = "클러스터 조회 권한(Secret 포함)을 줄 IAM 주체 ARN (PR CI plan Role)"
-  type        = list(string)
-  default     = []
-}
