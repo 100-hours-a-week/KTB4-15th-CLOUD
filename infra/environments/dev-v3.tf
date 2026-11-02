@@ -13,3 +13,14 @@ module "dev_v3_network" {
   cluster_name   = local.dev_v3_cluster_name
   nat_gateway_id = module.dev_v2_network.nat_gateway_id
 }
+
+module "dev_v3_eks" {
+  source = "./dev/v3/eks"
+
+  cluster_name = local.dev_v3_cluster_name
+  subnet_ids   = module.dev_v3_network.node_subnet_ids
+
+  admin_principal_arns = [
+    "arn:aws:iam::686496667254:user/lookddak-infra-cli",
+  ]
+}
