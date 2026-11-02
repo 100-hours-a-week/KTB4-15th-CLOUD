@@ -23,6 +23,10 @@ module "dev_v3_eks" {
   admin_principal_arns = [
     "arn:aws:iam::686496667254:user/lookddak-infra-cli",
   ]
+
+  view_principal_arns = [
+    "arn:aws:iam::686496667254:role/gha-terraform-plan-role",
+  ]
 }
 
 module "dev_v3_iam" {

@@ -116,3 +116,31 @@ resource "aws_eks_access_policy_association" "admin" {
 
   depends_on = [aws_eks_access_entry.admin]
 }
+
+# ---------------------------------------------------------------
+# 조회 전용 Access Entry
+# - PR CI plan Role: helm provider가 plan 때 release(Secret)를 읽는다.
+# ---------------------------------------------------------------
+resource "aws_eks_access_entry" "view" {
+  for_each = toset(var.view_principal_arns)
+
+  cluster_name  = aws_eks_cluster.this.name
+  principal_arn = each.value
+  type          = "STANDARD"
+
+  tags = local.common_tags
+}
+
+resource "aws_eks_access_policy_association" "view" {
+  for_each = toset(var.view_principal_arns)
+
+  cluster_name  = aws_eks_cluster.this.name
+  principal_arn = each.value
+  policy_arn    = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSAdminViewPolicy"
+
+  access_scope {
+    type = "cluster"
+  }
+
+  depends_on = [aws_eks_access_entry.view]
+}
