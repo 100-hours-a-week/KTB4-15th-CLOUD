@@ -1,0 +1,46 @@
+# Cilium 1.20 / EKS 1.36 / ENI 모드
+# 설계: work/k8s-design/07-네트워크-CNI-VPC.md, 09-Gateway-API-Controller.md
+
+# kube-proxy 대체 (클러스터에 kube-proxy 없음: bootstrap_self_managed_addons = false)
+# kube-proxy가 없어 kubernetes Service(ClusterIP)로 API 서버를 못 찾으므로 엔드포인트를 직접 준다
+kubeProxyReplacement: true
+k8sServiceHost: ${k8s_service_host}
+k8sServicePort: 443
+
+# ENI IPAM: Pod가 VPC IP(보조 CIDR 100.65.0.0/16)를 직접 받는다. 캡슐화 없음
+ipam:
+  mode: eni
+routingMode: native
+eni:
+  enabled: true
+  # IRSA: cilium-operator ServiceAccount에 Role 어노테이션
+  iamRole: ${operator_role_arn}
+  # /28 Prefix 단위 할당 (노드당 Pod 수 증가, Pod 서브넷 prefix 예약과 짝)
+  awsEnablePrefixDelegation: true
+  # 남는 IP/Prefix 반납
+  awsReleaseExcessIPs: true
+  # Pod ENI는 Pod 서브넷에만 만든다
+  subnetTagsFilter:
+    - Tier=private-pod
+  nodeSpec:
+    # eth0(노드 서브넷)은 Pod에 쓰지 않는다
+    firstInterfaceIndex: 1
+
+# Istio Ambient 공존
+# - istio-cni가 CNI 설정 파일에 체이닝할 수 있게 한다
+cni:
+  exclusive: false
+# - Pod 안에서는 socket LB를 끈다 (ztunnel 리다이렉션과 충돌 방지)
+socketLB:
+  hostNamespaceOnly: true
+
+operator:
+  replicas: 2
+
+# Hubble: 흐름 수집만 켠다. Relay/UI는 관측 단계에서 켠다
+hubble:
+  enabled: true
+  relay:
+    enabled: false
+  ui:
+    enabled: false
