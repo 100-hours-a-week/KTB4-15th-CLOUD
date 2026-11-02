@@ -23,6 +23,9 @@ module "dev_v3_eks" {
   admin_principal_arns = [
     "arn:aws:iam::686496667254:user/lookddak-infra-cli",
   ]
+
+  # private 엔드포인트 접근: 기존 dev bastion(SSM)
+  bastion_security_group_id = module.dev_v2_db_access.security_group_id
 }
 
 module "dev_v3_iam" {

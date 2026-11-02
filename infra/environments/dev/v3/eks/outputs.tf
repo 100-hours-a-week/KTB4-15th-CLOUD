@@ -31,3 +31,8 @@ output "oidc_issuer" {
   description = "https:// 를 뺀 issuer (IRSA 신뢰 정책 조건 키에 사용)"
   value       = replace(aws_eks_cluster.this.identity[0].oidc[0].issuer, "https://", "")
 }
+
+output "api_port_forward_document_name" {
+  description = "EKS API SSM 포트포워딩 문서 이름"
+  value       = aws_ssm_document.api_port_forward.name
+}
