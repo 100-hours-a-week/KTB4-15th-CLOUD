@@ -14,10 +14,9 @@ variable "subnet_ids" {
   type        = list(string)
 }
 
-variable "public_access_cidrs" {
-  description = "퍼블릭 API 엔드포인트 허용 대역 (GitHub Actions 러너 IP가 고정이 아니라 dev는 전체 허용, 인증은 IAM)"
-  type        = list(string)
-  default     = ["0.0.0.0/0"]
+variable "bastion_security_group_id" {
+  description = "API 엔드포인트(443)에 접근할 bastion 보안그룹 (dev db-access SSM 노드)"
+  type        = string
 }
 
 variable "service_ipv4_cidr" {
