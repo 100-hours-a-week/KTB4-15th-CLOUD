@@ -35,3 +35,11 @@ module "dev_v3_iam" {
   oidc_provider_arn = module.dev_v3_eks.oidc_provider_arn
   oidc_issuer       = module.dev_v3_eks.oidc_issuer
 }
+
+module "dev_v3_system_node_group" {
+  source = "./dev/v3/system-node-group"
+
+  cluster_name    = module.dev_v3_eks.cluster_name
+  cluster_version = module.dev_v3_eks.cluster_version
+  subnet_ids      = module.dev_v3_network.node_subnet_ids
+}
