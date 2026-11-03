@@ -36,6 +36,14 @@ module "dev_v3_iam" {
   oidc_issuer       = module.dev_v3_eks.oidc_issuer
 }
 
+module "dev_v3_karpenter_iam" {
+  source = "./dev/v3/karpenter-iam"
+
+  cluster_name      = module.dev_v3_eks.cluster_name
+  oidc_provider_arn = module.dev_v3_eks.oidc_provider_arn
+  oidc_issuer       = module.dev_v3_eks.oidc_issuer
+}
+
 module "dev_v3_system_node_group" {
   source = "./dev/v3/system-node-group"
 
