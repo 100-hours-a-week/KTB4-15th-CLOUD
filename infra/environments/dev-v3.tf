@@ -43,3 +43,12 @@ module "dev_v3_system_node_group" {
   cluster_version = module.dev_v3_eks.cluster_version
   subnet_ids      = module.dev_v3_network.node_subnet_ids
 }
+
+module "dev_v3_system_addons" {
+  source = "./dev/v3/system-addons"
+
+  cluster_name = module.dev_v3_eks.cluster_name
+
+  # CoreDNS Pod를 배치할 System Node가 먼저 준비되어야 한다.
+  depends_on = [module.dev_v3_system_node_group]
+}
