@@ -101,9 +101,9 @@ resource "aws_eks_node_group" "system" {
   subnet_ids      = var.subnet_ids
   version         = var.cluster_version
 
-  ami_type       = "AL2023_x86_64_STANDARD"
+  ami_type       = "AL2023_ARM_64_STANDARD"
   capacity_type  = "ON_DEMAND"
-  instance_types = ["m7i.large", "m6i.large"]
+  instance_types = ["m7g.large", "m6g.large"]
 
   scaling_config {
     min_size     = 2
