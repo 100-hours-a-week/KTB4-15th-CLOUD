@@ -15,6 +15,11 @@ locals {
       namespace       = "kube-system"
       service_account = "cilium-operator"
     }
+    aws_load_balancer_controller = {
+      role_name       = "${var.cluster_name}-aws-load-balancer-controller"
+      namespace       = "kube-system"
+      service_account = "aws-load-balancer-controller"
+    }
   }
 }
 
