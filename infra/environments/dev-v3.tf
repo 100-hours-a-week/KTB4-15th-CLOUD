@@ -34,6 +34,7 @@ module "dev_v3_iam" {
   cluster_name      = local.dev_v3_cluster_name
   oidc_provider_arn = module.dev_v3_eks.oidc_provider_arn
   oidc_issuer       = module.dev_v3_eks.oidc_issuer
+  route53_zone_id   = module.shared_core.route53_zone_id
 }
 
 module "dev_v3_karpenter_iam" {
