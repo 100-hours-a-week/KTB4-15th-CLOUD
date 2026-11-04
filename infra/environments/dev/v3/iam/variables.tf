@@ -12,3 +12,8 @@ variable "oidc_issuer" {
   description = "https:// 를 뺀 OIDC issuer"
   type        = string
 }
+
+variable "route53_zone_id" {
+  description = "cert-manager DNS-01 검증 대상 lookddak.com Hosted Zone ID"
+  type        = string
+}
