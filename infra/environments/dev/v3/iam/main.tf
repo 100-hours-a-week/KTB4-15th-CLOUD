@@ -20,6 +20,11 @@ locals {
       namespace       = "kube-system"
       service_account = "aws-load-balancer-controller"
     }
+    cert_manager = {
+      role_name       = "${var.cluster_name}-cert-manager"
+      namespace       = "kube-system"
+      service_account = "cert-manager"
+    }
   }
 }
 
