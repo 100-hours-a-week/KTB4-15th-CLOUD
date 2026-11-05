@@ -61,3 +61,20 @@ module "dev_v3_system_addons" {
   # CoreDNS Pod를 배치할 System Node가 먼저 준비되어야 한다.
   depends_on = [module.dev_v3_system_node_group]
 }
+
+# CloudFront → VPC Origin → 내부 NLB(Istio Gateway). NLB는 GITOPS(AWS LB Controller)가 만든다
+module "dev_v3_edge" {
+  source = "./dev/v3/edge"
+
+  providers = {
+    aws           = aws
+    aws.us_east_1 = aws.us_east_1
+  }
+
+  cluster_name    = module.dev_v3_eks.cluster_name
+  vpc_id          = module.dev_v1_network.vpc_id
+  route53_zone_id = module.shared_core.route53_zone_id
+
+  # dev.lookddak.com은 V2 → V3 전환 때, grafana.dev는 V2 Grafana CloudFront 정리 후 추가한다
+  domain_names = ["argocd.dev.lookddak.com"]
+}
