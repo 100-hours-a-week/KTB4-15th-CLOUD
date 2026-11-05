@@ -72,7 +72,7 @@ module "spring" {
       discovery_name              = "spring-sse"
       dns_name                    = "spring-sse"
       client_alias_port           = 8081
-      idle_timeout_seconds        = 60
+      idle_timeout_seconds        = 130
       per_request_timeout_seconds = 0
     }
   ]

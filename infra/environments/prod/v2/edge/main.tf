@@ -321,8 +321,8 @@ resource "aws_lb_listener_rule" "spring" {
   })
 }
 
-# Notification SSE uses a dedicated Spring port so only this long-lived route
-# disables the Service Connect per-request timeout.
+# Long-lived and long-running Spring requests use the dedicated port where the
+# Service Connect per-request timeout is disabled.
 resource "aws_lb_listener_rule" "spring_sse" {
   listener_arn = aws_lb_listener.https.arn
   priority     = 6
@@ -334,7 +334,10 @@ resource "aws_lb_listener_rule" "spring_sse" {
 
   condition {
     path_pattern {
-      values = ["/api/v1/notifications/stream"]
+      values = [
+        "/api/v1/notifications/stream",
+        "/api/v1/full-body-image/*",
+      ]
     }
   }
 
