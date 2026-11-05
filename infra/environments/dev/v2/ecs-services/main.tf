@@ -108,11 +108,12 @@ module "fastapi" {
   target_group_arn                  = lookup(var.target_group_arns, "fastapi", null)
   health_check_grace_period_seconds = 240
 
-  service_connect_namespace_arn  = aws_service_discovery_http_namespace.service_connect.arn
-  service_connect_mode           = "client-server"
-  service_connect_port_name      = "fastapi-http"
-  service_connect_discovery_name = "fastapi"
-  service_connect_dns_name       = "fastapi"
+  service_connect_namespace_arn               = aws_service_discovery_http_namespace.service_connect.arn
+  service_connect_mode                        = "client-server"
+  service_connect_port_name                   = "fastapi-http"
+  service_connect_discovery_name              = "fastapi"
+  service_connect_dns_name                    = "fastapi"
+  service_connect_per_request_timeout_seconds = 0
 
   # min/max=0 makes Application Auto Scaling clamp an already-running
   # service to zero even though the shared ECS module ignores desired_count.
