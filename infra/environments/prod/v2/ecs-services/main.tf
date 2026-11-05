@@ -125,7 +125,7 @@ module "fastapi" {
   service_connect_port_name                   = "fastapi-http"
   service_connect_discovery_name              = "fastapi"
   service_connect_dns_name                    = "fastapi"
-  service_connect_per_request_timeout_seconds = 120
+  service_connect_per_request_timeout_seconds = 0
 
   autoscaling_min_capacity  = local.effective_service_capacity["fastapi"].min_capacity
   autoscaling_max_capacity  = local.effective_service_capacity["fastapi"].max_capacity
