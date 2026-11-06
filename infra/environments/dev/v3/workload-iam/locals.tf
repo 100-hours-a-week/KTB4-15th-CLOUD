@@ -27,9 +27,9 @@ locals {
       namespace       = "lookddak-identity"
       service_account = "identity-api"
       parameter_names = [
-        "/lookddak/dev/v2/mysql/jdbc-url",
-        "/lookddak/dev/rds/app/username",
-        "/lookddak/dev/rds/app/password",
+        "/lookddak/dev/v3/mysql/jdbc-url",
+        "/lookddak/dev/v3/mysql/app/username",
+        "/lookddak/dev/v3/mysql/app/password",
         "/lookddak/dev/spring/jwt-secret",
         "/lookddak/dev/internal/ai-api-key",
       ]
@@ -51,9 +51,9 @@ locals {
       namespace       = "lookddak-commerce"
       service_account = "commerce-api"
       parameter_names = [
-        "/lookddak/dev/v2/mysql/jdbc-url",
-        "/lookddak/dev/rds/app/username",
-        "/lookddak/dev/rds/app/password",
+        "/lookddak/dev/v3/mysql/jdbc-url",
+        "/lookddak/dev/v3/mysql/app/username",
+        "/lookddak/dev/v3/mysql/app/password",
         "/lookddak/dev/spring/jwt-secret",
         "/lookddak/dev/spring/internal-api-key",
       ]
@@ -70,9 +70,9 @@ locals {
       namespace       = "lookddak-chat"
       service_account = "chat-api"
       parameter_names = [
-        "/lookddak/dev/v2/mysql/jdbc-url",
-        "/lookddak/dev/rds/app/username",
-        "/lookddak/dev/rds/app/password",
+        "/lookddak/dev/v3/mysql/jdbc-url",
+        "/lookddak/dev/v3/mysql/app/username",
+        "/lookddak/dev/v3/mysql/app/password",
         "/lookddak/dev/spring/jwt-secret",
         "/lookddak/dev/internal/ai-api-key",
       ]
@@ -93,9 +93,9 @@ locals {
       namespace       = "lookddak-fitting"
       service_account = "fitting-api"
       parameter_names = [
-        "/lookddak/dev/v2/mysql/jdbc-url",
-        "/lookddak/dev/rds/app/username",
-        "/lookddak/dev/rds/app/password",
+        "/lookddak/dev/v3/mysql/jdbc-url",
+        "/lookddak/dev/v3/mysql/app/username",
+        "/lookddak/dev/v3/mysql/app/password",
         "/lookddak/dev/spring/jwt-secret",
         "/lookddak/dev/internal/ai-api-key",
       ]
@@ -104,9 +104,9 @@ locals {
       namespace       = "lookddak-fitting"
       service_account = "fitting-worker"
       parameter_names = [
-        "/lookddak/dev/v2/mysql/jdbc-url",
-        "/lookddak/dev/rds/app/username",
-        "/lookddak/dev/rds/app/password",
+        "/lookddak/dev/v3/mysql/jdbc-url",
+        "/lookddak/dev/v3/mysql/app/username",
+        "/lookddak/dev/v3/mysql/app/password",
         "/lookddak/dev/spring/jwt-secret",
       ]
     }
