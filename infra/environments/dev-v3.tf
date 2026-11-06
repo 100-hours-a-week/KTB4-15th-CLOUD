@@ -41,6 +41,16 @@ module "dev_v3_iam" {
   route53_zone_id   = module.shared_core.route53_zone_id
 }
 
+module "dev_v3_workload_iam" {
+  source = "./dev/v3/workload-iam"
+
+  name_prefix        = "lookddak-dev-v3"
+  oidc_provider_arn  = module.dev_v3_eks.oidc_provider_arn
+  oidc_issuer        = module.dev_v3_eks.oidc_issuer
+  images_bucket_name = module.dev_s3.images_bucket_name
+  sqs_queue_arns     = module.dev_v3_sqs.queue_arns
+}
+
 module "dev_v3_karpenter_iam" {
   source = "./dev/v3/karpenter-iam"
 
@@ -102,4 +112,14 @@ output "dev_v3_sqs_dlq_urls" {
 output "dev_v3_sqs_dlq_arns" {
   description = "V3 Dev 피팅 DLQ ARN"
   value       = module.dev_v3_sqs.dlq_arns
+}
+
+output "dev_v3_workload_role_arns" {
+  description = "GitOps ServiceAccount에 연결할 V3 Dev 워크로드별 IRSA Role ARN"
+  value       = module.dev_v3_workload_iam.role_arns
+}
+
+output "dev_v3_workload_role_names" {
+  description = "V3 Dev 워크로드별 IRSA Role 이름"
+  value       = module.dev_v3_workload_iam.role_names
 }
