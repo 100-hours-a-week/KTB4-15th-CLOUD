@@ -13,6 +13,11 @@ output "security_group_id" {
   value       = aws_security_group.this.id
 }
 
+output "instance_role_name" {
+  description = "IAM role name used by the SSM DB access node"
+  value       = aws_iam_role.instance.name
+}
+
 output "mysql_document_name" {
   description = "Fixed-destination MySQL SSM port-forward document name"
   value       = aws_ssm_document.mysql_port_forward.name

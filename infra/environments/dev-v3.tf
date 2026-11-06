@@ -32,6 +32,16 @@ module "dev_v3_eks" {
   bastion_security_group_id = module.dev_v2_db_access.security_group_id
 }
 
+module "dev_v3_mysql" {
+  source = "./dev/v3/mysql"
+
+  mysql_endpoint                = module.dev_v2_database.mysql_address
+  mysql_security_group_id       = module.dev_v2_network.security_group_ids["mysql"]
+  eks_cluster_security_group_id = module.dev_v3_eks.cluster_security_group_id
+  db_access_instance_id         = module.dev_v2_db_access.instance_id
+  db_access_instance_role_name  = module.dev_v2_db_access.instance_role_name
+}
+
 module "dev_v3_iam" {
   source = "./dev/v3/iam"
 
@@ -122,4 +132,19 @@ output "dev_v3_workload_role_arns" {
 output "dev_v3_workload_role_names" {
   description = "V3 Dev 워크로드별 IRSA Role 이름"
   value       = module.dev_v3_workload_iam.role_names
+}
+
+output "dev_v3_mysql_database_name" {
+  description = "기존 Dev MySQL RDS 안에 격리한 V3 Database 이름"
+  value       = module.dev_v3_mysql.database_name
+}
+
+output "dev_v3_mysql_parameter_names" {
+  description = "V3 Spring 워크로드가 사용할 MySQL Parameter Store 경로"
+  value       = module.dev_v3_mysql.parameter_names
+}
+
+output "dev_v3_mysql_bootstrap_command" {
+  description = "V3 Database와 전용 사용자를 최초 1회 구성하는 SSM Run Command"
+  value       = module.dev_v3_mysql.bootstrap_command
 }
