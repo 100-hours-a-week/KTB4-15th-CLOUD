@@ -139,6 +139,8 @@ resource "aws_ssm_document" "bootstrap" {
           readonly aws_region="${data.aws_region.current.region}"
           readonly mysql_host="${var.mysql_endpoint}"
           readonly database_name="${local.database_name}"
+          # DB 단위 GRANT에서 밑줄을 일반 문자로 처리한다.
+          readonly grant_database_name="$${database_name//_/\\_}"
           readonly app_username="${local.app_username}"
           readonly admin_username_parameter="/lookddak/dev/rds/admin/username"
           readonly admin_password_parameter="/lookddak/dev/rds/admin/password"
@@ -187,7 +189,7 @@ resource "aws_ssm_document" "bootstrap" {
             CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
           CREATE USER IF NOT EXISTS '$${app_username}'@'%'
             IDENTIFIED BY RANDOM PASSWORD;
-          GRANT ALL PRIVILEGES ON \`$${database_name}\`.*
+          GRANT ALL PRIVILEGES ON \`$${grant_database_name}\`.*
             TO '$${app_username}'@'%';
           SQL
 
@@ -212,6 +214,7 @@ resource "aws_ssm_document" "bootstrap" {
                 --user="$${admin_username}" \
                 --ssl \
                 --batch \
+                --raw \
                 --skip-column-names \
                 --execute="ALTER USER '$${app_username}'@'%' IDENTIFIED BY RANDOM PASSWORD" \
               | awk -F '\t' 'NF >= 3 { print $3 }' \
@@ -223,12 +226,13 @@ resource "aws_ssm_document" "bootstrap" {
               exit 1
             fi
 
-            aws ssm put-parameter \
+            # 비밀번호를 프로세스 인자에 포함하지 않고 표준 입력으로 전달한다.
+            printf '%s' "$${app_password}" | aws ssm put-parameter \
               --region "$${aws_region}" \
               --name "$${app_password_parameter}" \
               --description "LookDDak Dev V3 MySQL application password" \
               --type SecureString \
-              --value "$${app_password}" \
+              --value file:///dev/stdin \
               --tier Standard \
               --data-type text \
               --overwrite \
