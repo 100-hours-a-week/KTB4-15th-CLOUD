@@ -6,6 +6,10 @@ locals {
   dev_v3_cluster_name = "lookddak-dev"
 }
 
+module "dev_v3_sqs" {
+  source = "./dev/v3/sqs"
+}
+
 module "dev_v3_network" {
   source = "./dev/v3/network"
 
@@ -78,4 +82,24 @@ module "dev_v3_edge" {
   # v3-dev.lookddak.com으로 V3 애플리케이션 경로를 먼저 검증한다.
   # dev.lookddak.com은 V2 → V3 전환 때, grafana.dev는 V2 Grafana CloudFront 정리 후 추가한다.
   domain_names = ["argocd.dev.lookddak.com", "v3-dev.lookddak.com"]
+}
+
+output "dev_v3_sqs_queue_urls" {
+  description = "V3 Dev 피팅 Main Queue URL"
+  value       = module.dev_v3_sqs.queue_urls
+}
+
+output "dev_v3_sqs_queue_arns" {
+  description = "V3 Dev 피팅 Main Queue ARN"
+  value       = module.dev_v3_sqs.queue_arns
+}
+
+output "dev_v3_sqs_dlq_urls" {
+  description = "V3 Dev 피팅 DLQ URL"
+  value       = module.dev_v3_sqs.dlq_urls
+}
+
+output "dev_v3_sqs_dlq_arns" {
+  description = "V3 Dev 피팅 DLQ ARN"
+  value       = module.dev_v3_sqs.dlq_arns
 }
