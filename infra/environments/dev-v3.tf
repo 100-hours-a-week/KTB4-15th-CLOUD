@@ -51,6 +51,13 @@ module "dev_v3_iam" {
   route53_zone_id   = module.shared_core.route53_zone_id
 }
 
+module "dev_v3_postgresql_access" {
+  source = "./dev/v3/postgresql-access"
+
+  postgresql_security_group_id  = module.dev_v2_network.security_group_ids["postgresql"]
+  eks_cluster_security_group_id = module.dev_v3_eks.cluster_security_group_id
+}
+
 module "dev_v3_workload_iam" {
   source = "./dev/v3/workload-iam"
 
