@@ -17,3 +17,8 @@ variable "route53_zone_id" {
   description = "cert-manager DNS-01 검증 대상 lookddak.com Hosted Zone ID"
   type        = string
 }
+
+variable "alert_queue_arn" {
+  description = "Argo CD Notifications가 실패 이벤트를 보낼 중앙 Alert Queue ARN"
+  type        = string
+}

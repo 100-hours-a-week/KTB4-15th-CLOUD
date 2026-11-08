@@ -15,6 +15,9 @@ SQS 메시지 본문(EventBridge 이벤트)을 꺼내 Discord로 전송.
   - Nginx 트래픽 알람           (lookddak-nginx-* 알람: 5xx 수, 요청 수)
       · 기준 초과(ALARM)만 "요청량 초과", "5xx 응답 증가" 경고(주황)로 전송하고 복구(OK) 알림은 보내지 않음
   - 컨테이너 상태 변화          (source: custom.docker, EC2의 docker-alert.sh가 전송)
+  - Argo CD 배포 실패          (source: custom.argocd, EKS Notifications Controller가 전송)
+      · Sync Failed/Error, Health Degraded, Sync Unknown만 critical 채널로 전송
+      · 성공·Healthy 이벤트는 전송하지 않음
   - EC2 인스턴스 상태 변경     (source: aws.ec2)
   - AWS Health 이벤트           (source: aws.health)
       → warning 채널
@@ -333,6 +336,68 @@ def from_docker(detail):
     }
 
 
+def from_argocd(detail):
+    """Argo CD 배포 실패 이벤트를 Critical Discord 카드로 변환한다."""
+    phase = str(detail.get("phase") or "")
+    health = str(detail.get("healthStatus") or "")
+    sync = str(detail.get("syncStatus") or "")
+
+    is_failure = (
+        phase.lower() in {"error", "failed"}
+        or health.lower() == "degraded"
+        or sync.lower() == "unknown"
+    )
+    if not is_failure:
+        return None
+
+    environment = str(detail.get("environment") or "dev")
+    application = str(detail.get("application") or "-")
+    project = str(detail.get("project") or "-")
+    namespace = str(detail.get("namespace") or "-")
+    workload = detail.get("workload") or detail.get("workloads") or "-"
+    if isinstance(workload, list):
+        workload = ", ".join(str(item) for item in workload)
+    else:
+        workload = str(workload)
+
+    description = str(detail.get("message") or "Argo CD가 배포 실패 상태를 감지했습니다.")
+    links = []
+    for label, key in (
+        ("Argo CD Application", "argocdUrl"),
+        ("GitOps 변경", "gitopsUrl"),
+        ("원본 커밋", "sourceCommitUrl"),
+        ("원본 Actions", "sourceActionsUrl"),
+    ):
+        url = detail.get(key)
+        if url:
+            links.append(f"[{label}]({url})")
+    if links:
+        description += "\n\n" + " · ".join(links)
+
+    fields = [
+        ("환경", environment),
+        ("Application", application),
+        ("Project / Namespace", f"{project} / {namespace}"),
+        ("워크로드", workload),
+        ("Sync / Health", f"{sync or '-'} / {health or '-'}"),
+        ("Phase", phase or "-"),
+    ]
+    revision = detail.get("revision")
+    if revision:
+        fields.append(("GitOps Revision", str(revision)))
+    digest = detail.get("digest")
+    if digest:
+        fields.append(("Image Digest", str(digest)))
+
+    return {
+        "title": f"[{environment.upper()}][배포 실패] {application}",
+        "state": "ALARM",
+        "webhook": CRITICAL_WEBHOOK_URL,
+        "description": truncate(description, 3500),
+        "fields": fields,
+    }
+
+
 # RDS 이벤트 카테고리 → (표시 이름, 카드 색상)
 RDS_CATEGORIES = {
     "failure": ("장애", "ALARM"),
@@ -374,6 +439,7 @@ PARSERS = {
     "aws.health": from_health,
     "aws.rds": from_rds,
     "custom.docker": from_docker,
+    "custom.argocd": from_argocd,
 }
 
 
