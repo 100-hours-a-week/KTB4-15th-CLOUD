@@ -49,6 +49,7 @@ module "dev_v3_iam" {
   oidc_provider_arn = module.dev_v3_eks.oidc_provider_arn
   oidc_issuer       = module.dev_v3_eks.oidc_issuer
   route53_zone_id   = module.shared_core.route53_zone_id
+  alert_queue_arn   = module.prod_v1_monitoring.alert_queue_arn
 }
 
 module "dev_v3_postgresql_access" {
@@ -139,6 +140,11 @@ output "dev_v3_workload_role_arns" {
 output "dev_v3_workload_role_names" {
   description = "V3 Dev 워크로드별 IRSA Role 이름"
   value       = module.dev_v3_workload_iam.role_names
+}
+
+output "dev_v3_argocd_notifications_role_arn" {
+  description = "GitOps Argo CD Notifications Controller에 연결할 V3 Dev IRSA Role ARN"
+  value       = module.dev_v3_iam.argocd_notifications_role_arn
 }
 
 output "dev_v3_mysql_database_name" {

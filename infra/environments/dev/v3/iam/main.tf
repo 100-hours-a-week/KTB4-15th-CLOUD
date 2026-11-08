@@ -25,6 +25,11 @@ locals {
       namespace       = "kube-system"
       service_account = "cert-manager"
     }
+    argocd_notifications = {
+      role_name       = "${var.cluster_name}-argocd-notifications"
+      namespace       = "argocd"
+      service_account = "argocd-notifications-controller"
+    }
   }
 }
 

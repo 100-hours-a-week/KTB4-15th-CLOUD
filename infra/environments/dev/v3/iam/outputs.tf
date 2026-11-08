@@ -12,3 +12,8 @@ output "cert_manager_role_arn" {
   description = "kube-system/cert-manager ServiceAccount에 붙일 IRSA Role ARN"
   value       = aws_iam_role.irsa["cert_manager"].arn
 }
+
+output "argocd_notifications_role_arn" {
+  description = "argocd/argocd-notifications-controller ServiceAccount에 붙일 IRSA Role ARN"
+  value       = aws_iam_role.irsa["argocd_notifications"].arn
+}
