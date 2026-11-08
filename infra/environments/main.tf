@@ -6,6 +6,12 @@ module "shared_ecs_taskdef_store" {
   source = "./shared/ecs-taskdef-store"
 }
 
+module "shared_service_quotas" {
+  source = "./shared/service-quotas"
+
+  ec2_ondemand_standard_vcpu = 64
+}
+
 module "prod_v1_network" {
   source = "./prod/v1/network"
 }
