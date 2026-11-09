@@ -105,6 +105,22 @@ module "prod_v3_system_addons" {
   depends_on = [module.prod_v3_system_node_group]
 }
 
+module "prod_v3_database_access" {
+  source = "./prod/v3/database-access"
+
+  eks_cluster_security_group_id = module.prod_v3_eks.cluster_security_group_id
+
+  mysql_security_group_id = module.prod_v2_network.security_group_ids["mysql"]
+  mysql_endpoint          = module.prod_v2_database.mysql_address
+
+  postgresql_security_group_id = module.prod_v2_network.security_group_ids["postgresql"]
+  postgresql_endpoint          = module.prod_v2_database.rds_address
+  postgresql_port              = module.prod_v2_database.rds_port
+
+  db_access_instance_id        = module.prod_v2_monitoring.instance_id
+  db_access_instance_role_name = module.prod_v2_monitoring.instance_role_name
+}
+
 output "prod_v3_cluster" {
   description = "Prod V3 EKS Control Plane 접속 정보"
   value = {
@@ -146,4 +162,14 @@ output "prod_v3_karpenter_node" {
     role_arn              = module.prod_v3_karpenter_iam.node_role_arn
     instance_profile_name = module.prod_v3_karpenter_iam.node_instance_profile_name
   }
+}
+
+output "prod_v3_database_parameter_names" {
+  description = "Prod V3 Parameter Store paths for the shared Prod databases"
+  value       = module.prod_v3_database_access.parameter_names
+}
+
+output "prod_v3_database_bootstrap_command" {
+  description = "Command that creates or verifies Prod V3 users on the shared Prod databases"
+  value       = module.prod_v3_database_access.bootstrap_command
 }
