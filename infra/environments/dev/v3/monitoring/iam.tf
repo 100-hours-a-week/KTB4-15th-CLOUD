@@ -81,3 +81,51 @@ resource "aws_iam_role_policy" "db_log_tailer" {
   role   = aws_iam_role.this["db-log-tailer"].id
   policy = data.aws_iam_policy_document.db_log_tailer.json
 }
+
+data "aws_kms_alias" "ssm" {
+  name = "alias/aws/ssm"
+}
+
+data "aws_iam_policy_document" "alloy_cluster" {
+  statement {
+    sid     = "ReadDbExporterPasswords"
+    actions = ["ssm:GetParameters"]
+    resources = [
+      "${local.ssm_parameter_arn_prefix}${local.mysql_exporter.password_parameter}",
+      "${local.ssm_parameter_arn_prefix}${local.postgres_exporter_password_parameter}",
+    ]
+  }
+
+  statement {
+    sid       = "DescribeParameters"
+    actions   = ["ssm:DescribeParameters"]
+    resources = ["*"]
+  }
+
+  statement {
+    sid       = "DecryptParametersViaSsm"
+    actions   = ["kms:Decrypt"]
+    resources = [data.aws_kms_alias.ssm.target_key_arn]
+
+    condition {
+      test     = "StringEquals"
+      variable = "kms:ViaService"
+      values   = ["ssm.${local.region}.amazonaws.com"]
+    }
+  }
+
+  statement {
+    sid = "ReadCloudWatchMetrics"
+    actions = [
+      "cloudwatch:GetMetricData",
+      "cloudwatch:ListMetrics",
+    ]
+    resources = ["*"]
+  }
+}
+
+resource "aws_iam_role_policy" "alloy_cluster" {
+  name   = "${var.name_prefix}-alloy-cluster-db-metrics"
+  role   = aws_iam_role.this["alloy-cluster"].id
+  policy = data.aws_iam_policy_document.alloy_cluster.json
+}
