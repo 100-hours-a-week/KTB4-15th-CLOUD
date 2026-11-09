@@ -69,6 +69,23 @@ module "prod_v3_eks" {
   api_access_security_group_id = data.aws_security_group.prod_v3_api_access.id
 }
 
+module "prod_v3_system_node_group" {
+  source = "./prod/v3/system-node-group"
+
+  cluster_name    = module.prod_v3_eks.cluster_name
+  cluster_version = module.prod_v3_eks.cluster_version
+  subnet_ids      = module.prod_v3_network.node_subnet_ids
+}
+
+module "prod_v3_system_addons" {
+  source = "./prod/v3/system-addons"
+
+  cluster_name = module.prod_v3_eks.cluster_name
+
+  # CoreDNS를 배치할 On-Demand System Node Group을 먼저 구성한다.
+  depends_on = [module.prod_v3_system_node_group]
+}
+
 output "prod_v3_cluster" {
   description = "Prod V3 EKS Control Plane 접속 정보"
   value = {
@@ -79,5 +96,15 @@ output "prod_v3_cluster" {
     api_access_instance_id  = one(data.aws_instances.prod_v3_api_access.ids)
     port_forward_document   = module.prod_v3_eks.api_port_forward_document_name
     control_plane_log_group = module.prod_v3_eks.control_plane_log_group_name
+  }
+}
+
+output "prod_v3_system_node_group" {
+  description = "Prod V3 On-Demand System Managed Node Group 정보"
+  value = {
+    name               = module.prod_v3_system_node_group.node_group_name
+    role_arn           = module.prod_v3_system_node_group.node_role_arn
+    launch_template_id = module.prod_v3_system_node_group.launch_template_id
+    coredns_version    = module.prod_v3_system_addons.coredns_addon_version
   }
 }
