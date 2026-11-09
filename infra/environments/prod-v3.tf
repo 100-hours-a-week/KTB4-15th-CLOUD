@@ -77,10 +77,29 @@ module "prod_v3_system_node_group" {
   subnet_ids      = module.prod_v3_network.node_subnet_ids
 }
 
+module "prod_v3_controller_iam" {
+  source = "./prod/v3/iam"
+
+  cluster_name      = module.prod_v3_eks.cluster_name
+  oidc_provider_arn = module.prod_v3_eks.oidc_provider_arn
+  oidc_issuer       = module.prod_v3_eks.oidc_issuer
+  route53_zone_id   = module.shared_core.route53_zone_id
+}
+
+module "prod_v3_karpenter_iam" {
+  source = "./prod/v3/karpenter-iam"
+
+  cluster_name      = module.prod_v3_eks.cluster_name
+  oidc_provider_arn = module.prod_v3_eks.oidc_provider_arn
+  oidc_issuer       = module.prod_v3_eks.oidc_issuer
+}
+
 module "prod_v3_system_addons" {
   source = "./prod/v3/system-addons"
 
   cluster_name = module.prod_v3_eks.cluster_name
+
+  ebs_csi_driver_role_arn = module.prod_v3_controller_iam.ebs_csi_driver_role_arn
 
   # CoreDNS를 배치할 On-Demand System Node Group을 먼저 구성한다.
   depends_on = [module.prod_v3_system_node_group]
@@ -106,5 +125,25 @@ output "prod_v3_system_node_group" {
     role_arn           = module.prod_v3_system_node_group.node_role_arn
     launch_template_id = module.prod_v3_system_node_group.launch_template_id
     coredns_version    = module.prod_v3_system_addons.coredns_addon_version
+    ebs_csi_version    = module.prod_v3_system_addons.ebs_csi_driver_addon_version
+  }
+}
+
+output "prod_v3_controller_role_arns" {
+  description = "Prod GitOps ServiceAccount에 연결할 Controller IRSA Role ARN"
+  value = {
+    cilium_operator              = module.prod_v3_controller_iam.cilium_operator_role_arn
+    aws_load_balancer_controller = module.prod_v3_controller_iam.aws_load_balancer_controller_role_arn
+    cert_manager                 = module.prod_v3_controller_iam.cert_manager_role_arn
+    ebs_csi_driver               = module.prod_v3_controller_iam.ebs_csi_driver_role_arn
+    karpenter_controller         = module.prod_v3_karpenter_iam.controller_role_arn
+  }
+}
+
+output "prod_v3_karpenter_node" {
+  description = "Prod Karpenter EC2NodeClass에 넣을 Node IAM 정보"
+  value = {
+    role_arn              = module.prod_v3_karpenter_iam.node_role_arn
+    instance_profile_name = module.prod_v3_karpenter_iam.node_instance_profile_name
   }
 }
