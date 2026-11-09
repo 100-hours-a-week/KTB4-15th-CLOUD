@@ -62,7 +62,10 @@ locals {
       namespace       = "lookddak-commerce"
       service_account = "price-crawler"
       parameter_names = [
+        # GitOps 전환 전 기존 Pod가 중단되지 않도록 V2·V3를 함께 허용한다.
+        # V3 전환 검증 후 V2 경로는 후속 정리 PR에서 제거한다.
         "/lookddak/dev/v2/postgresql/app/database-url",
+        "/lookddak/dev/v3/postgresql/app/database-url",
         "/lookddak/dev/internal/price-refresh-backend-auth-headers",
       ]
     }
@@ -83,6 +86,8 @@ locals {
       parameter_names = [
         "/lookddak/dev/v2/postgresql/app/database-url",
         "/lookddak/dev/v2/postgresql/app/checkpoint-dsn",
+        "/lookddak/dev/v3/postgresql/app/database-url",
+        "/lookddak/dev/v3/postgresql/app/checkpoint-dsn",
         "/lookddak/dev/internal/ai-api-key",
         "/lookddak/dev/fastapi/runware-llm-api-key",
         "/lookddak/dev/fastapi/runware-vton-api-key",
@@ -115,6 +120,7 @@ locals {
       service_account = "vton-orchestrator"
       parameter_names = [
         "/lookddak/dev/v2/postgresql/app/database-url",
+        "/lookddak/dev/v3/postgresql/app/database-url",
         "/lookddak/dev/internal/ai-api-key",
         "/lookddak/dev/fastapi/runware-vton-api-key",
         "/lookddak/dev/fastapi/runware-llm-api-key",
