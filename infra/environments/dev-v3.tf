@@ -120,6 +120,10 @@ module "dev_v3_monitoring" {
   oidc_provider_arn   = module.dev_v3_eks.oidc_provider_arn
   oidc_issuer         = module.dev_v3_eks.oidc_issuer
   db_log_instance_ids = ["lookddak-dev-v2-mysql", "lookddak-dev-postgresql"]
+
+  mysql_endpoint               = module.dev_v2_database.mysql_address
+  db_access_instance_id        = module.dev_v2_db_access.instance_id
+  db_access_instance_role_name = module.dev_v2_db_access.instance_role_name
 }
 
 # CloudFront → VPC Origin → 내부 NLB(Istio Gateway). NLB는 GITOPS(AWS LB Controller)가 만든다
@@ -223,4 +227,9 @@ output "dev_v3_db_log_tailer_repository_url" {
 output "dev_v3_ebs_csi_driver_role_arn" {
   description = "kube-system/ebs-csi-controller-sa IRSA Role ARN"
   value       = module.dev_v3_iam.ebs_csi_driver_role_arn
+}
+
+output "dev_v3_mysql_exporter_bootstrap_command" {
+  description = "V3 MySQL exporter 계정을 최초 1회 구성하는 SSM Run Command"
+  value       = module.dev_v3_monitoring.mysql_exporter_bootstrap_command
 }
