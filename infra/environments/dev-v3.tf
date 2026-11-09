@@ -59,6 +59,15 @@ module "dev_v3_postgresql_access" {
   eks_cluster_security_group_id = module.dev_v3_eks.cluster_security_group_id
 }
 
+module "dev_v3_postgresql" {
+  source = "./dev/v3/postgresql"
+
+  postgresql_endpoint          = module.dev_v2_database.rds_address
+  postgresql_port              = module.dev_v2_database.rds_port
+  db_access_instance_id        = module.dev_v2_db_access.instance_id
+  db_access_instance_role_name = module.dev_v2_db_access.instance_role_name
+}
+
 module "dev_v3_workload_iam" {
   source = "./dev/v3/workload-iam"
 
@@ -160,4 +169,19 @@ output "dev_v3_mysql_parameter_names" {
 output "dev_v3_mysql_bootstrap_command" {
   description = "V3 Database와 전용 사용자를 최초 1회 구성하는 SSM Run Command"
   value       = module.dev_v3_mysql.bootstrap_command
+}
+
+output "dev_v3_postgresql_database_name" {
+  description = "기존 Dev PostgreSQL RDS 안에 격리한 V3 Database 이름"
+  value       = module.dev_v3_postgresql.database_name
+}
+
+output "dev_v3_postgresql_parameter_names" {
+  description = "V3 AI·Crawler 워크로드가 사용할 PostgreSQL Parameter Store 경로"
+  value       = module.dev_v3_postgresql.parameter_names
+}
+
+output "dev_v3_postgresql_bootstrap_command" {
+  description = "V3 PostgreSQL Database와 전용 사용자를 최초 1회 구성하는 SSM Run Command"
+  value       = module.dev_v3_postgresql.bootstrap_command
 }
