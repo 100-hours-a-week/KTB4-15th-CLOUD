@@ -55,7 +55,7 @@ module "postgresql" {
   subnet_ids               = var.db_subnet_ids
   security_group_ids       = [var.postgresql_security_group_id]
   subnet_group_description = "LookDDak prod V2 PostgreSQL private DB subnets"
-  multi_az                 = true
+  multi_az                 = false
 
   engine_version              = "16.15"
   parameter_group_family      = "postgres16"
@@ -187,7 +187,7 @@ module "mysql" {
   # Uses lookddak-prod-db-subnet-group (aws_db_subnet_group.mysql above), inherited from the old DB.
   create_subnet_group = false
   security_group_ids  = [var.mysql_security_group_id]
-  multi_az            = true
+  multi_az            = false
 
   parameter_group_family      = "mysql8.4"
   parameter_group_description = "LookDDak prod V2 MySQL 8.4 parameter group"

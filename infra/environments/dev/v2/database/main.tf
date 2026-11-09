@@ -55,7 +55,7 @@ module "postgresql" {
   subnet_ids               = var.db_subnet_ids
   security_group_ids       = [var.postgresql_security_group_id]
   subnet_group_description = "LookDDak dev V2 PostgreSQL private DB subnets"
-  multi_az                 = true
+  multi_az                 = false
 
   engine_version              = "16.15"
   parameter_group_family      = "postgres16"
