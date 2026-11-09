@@ -60,12 +60,6 @@ data "aws_iam_policy_document" "parameters" {
   }
 
   statement {
-    sid       = "DescribeParameters"
-    actions   = ["ssm:DescribeParameters"]
-    resources = ["*"]
-  }
-
-  statement {
     sid       = "DecryptParametersViaSsm"
     actions   = ["kms:Decrypt"]
     resources = [data.aws_kms_alias.ssm.target_key_arn]
