@@ -28,3 +28,18 @@ variable "object_expiration_days" {
     error_message = "Loki·Tempo 보존 기간(7일)보다 길어야 합니다."
   }
 }
+
+variable "mysql_endpoint" {
+  description = "V3가 함께 쓰는 Dev MySQL RDS 엔드포인트"
+  type        = string
+}
+
+variable "db_access_instance_id" {
+  description = "MySQL exporter 계정 Runbook을 실행할 Dev DB Access Node 인스턴스 ID"
+  type        = string
+}
+
+variable "db_access_instance_role_name" {
+  description = "Dev DB Access Node IAM Role 이름"
+  type        = string
+}
