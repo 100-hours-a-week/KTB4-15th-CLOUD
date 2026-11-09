@@ -99,8 +99,27 @@ module "dev_v3_system_addons" {
 
   cluster_name = module.dev_v3_eks.cluster_name
 
+  ebs_csi_driver_role_arn = module.dev_v3_iam.ebs_csi_driver_role_arn
+
   # CoreDNS Pod를 배치할 System Node가 먼저 준비되어야 한다.
   depends_on = [module.dev_v3_system_node_group]
+}
+
+module "dev_v3_monitoring_node_group" {
+  source = "./dev/v3/monitoring-node-group"
+
+  cluster_name    = module.dev_v3_eks.cluster_name
+  cluster_version = module.dev_v3_eks.cluster_version
+  subnet_id       = module.dev_v3_network.node_subnet_ids[0]
+}
+
+module "dev_v3_monitoring" {
+  source = "./dev/v3/monitoring"
+
+  name_prefix         = "lookddak-dev-v3"
+  oidc_provider_arn   = module.dev_v3_eks.oidc_provider_arn
+  oidc_issuer         = module.dev_v3_eks.oidc_issuer
+  db_log_instance_ids = ["lookddak-dev-v2-mysql", "lookddak-dev-postgresql"]
 }
 
 # CloudFront → VPC Origin → 내부 NLB(Istio Gateway). NLB는 GITOPS(AWS LB Controller)가 만든다
@@ -184,4 +203,24 @@ output "dev_v3_postgresql_parameter_names" {
 output "dev_v3_postgresql_bootstrap_command" {
   description = "V3 PostgreSQL Database와 전용 사용자를 최초 1회 구성하는 SSM Run Command"
   value       = module.dev_v3_postgresql.bootstrap_command
+}
+
+output "dev_v3_monitoring_bucket_names" {
+  description = "Loki·Tempo Helm values에 넣을 S3 버킷 이름"
+  value       = module.dev_v3_monitoring.bucket_names
+}
+
+output "dev_v3_monitoring_role_arns" {
+  description = "monitoring Namespace ServiceAccount에 연결할 IRSA Role ARN"
+  value       = module.dev_v3_monitoring.role_arns
+}
+
+output "dev_v3_db_log_tailer_repository_url" {
+  description = "db-log-tailer 이미지 저장소 URL"
+  value       = module.dev_v3_monitoring.db_log_tailer_repository_url
+}
+
+output "dev_v3_ebs_csi_driver_role_arn" {
+  description = "kube-system/ebs-csi-controller-sa IRSA Role ARN"
+  value       = module.dev_v3_iam.ebs_csi_driver_role_arn
 }
