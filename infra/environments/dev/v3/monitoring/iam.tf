@@ -119,6 +119,7 @@ data "aws_iam_policy_document" "alloy_cluster" {
     actions = [
       "cloudwatch:GetMetricData",
       "cloudwatch:ListMetrics",
+      "tag:GetResources",
     ]
     resources = ["*"]
   }
