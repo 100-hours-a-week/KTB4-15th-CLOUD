@@ -145,6 +145,9 @@ module "prod_v3_argocd_edge" {
   vpc_id          = data.aws_vpc.prod_v3.id
   route53_zone_id = module.shared_core.route53_zone_id
   domain_name     = "argocd.lookddak.com"
+  additional_domain_names = [
+    "v3-prod.lookddak.com",
+  ]
 }
 
 output "prod_v3_cluster" {
@@ -211,9 +214,10 @@ output "prod_v3_runtime_parameter_names" {
 }
 
 output "prod_v3_argocd_edge" {
-  description = "Prod Argo CD CloudFront·Route 53 연결 정보"
+  description = "Prod V3 CloudFront·Route 53 연결 정보"
   value = {
     url                        = module.prod_v3_argocd_edge.argocd_url
+    validation_url             = module.prod_v3_argocd_edge.validation_urls["v3-prod.lookddak.com"]
     cloudfront_distribution_id = module.prod_v3_argocd_edge.cloudfront_distribution_id
     cloudfront_domain_name     = module.prod_v3_argocd_edge.cloudfront_domain_name
     gateway_nlb_dns_name       = module.prod_v3_argocd_edge.gateway_nlb_dns_name

@@ -23,6 +23,17 @@ variable "domain_name" {
   }
 }
 
+variable "additional_domain_names" {
+  description = "기존 Prod V3 CloudFront에 추가할 검증 도메인"
+  type        = set(string)
+  default     = []
+
+  validation {
+    condition     = alltrue([for domain in var.additional_domain_names : domain == "v3-prod.lookddak.com"])
+    error_message = "Prod V3 추가 도메인은 v3-prod.lookddak.com만 허용합니다."
+  }
+}
+
 variable "gateway_service" {
   description = "NLB를 만든 Istio Gateway Service(namespace/name)"
   type        = string
