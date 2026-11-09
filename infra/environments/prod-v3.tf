@@ -121,6 +121,18 @@ module "prod_v3_database_access" {
   db_access_instance_role_name = module.prod_v2_monitoring.instance_role_name
 }
 
+module "prod_v3_workload_iam" {
+  source = "./prod/v3/workload-iam"
+
+  name_prefix       = "lookddak-prod-v3"
+  oidc_provider_arn = module.prod_v3_eks.oidc_provider_arn
+  oidc_issuer       = module.prod_v3_eks.oidc_issuer
+
+  images_bucket_name = module.prod_s3.images_bucket_name
+  sqs_queue_arns     = module.prod_v2_sqs.queue_arns
+  sqs_queue_urls     = module.prod_v2_sqs.queue_urls
+}
+
 output "prod_v3_cluster" {
   description = "Prod V3 EKS Control Plane 접속 정보"
   value = {
@@ -172,4 +184,14 @@ output "prod_v3_database_parameter_names" {
 output "prod_v3_database_bootstrap_command" {
   description = "Command that creates or verifies Prod V3 users on the shared Prod databases"
   value       = module.prod_v3_database_access.bootstrap_command
+}
+
+output "prod_v3_workload_role_arns" {
+  description = "Prod GitOps ServiceAccount에 연결할 워크로드별 IRSA Role ARN"
+  value       = module.prod_v3_workload_iam.role_arns
+}
+
+output "prod_v3_runtime_parameter_names" {
+  description = "기존 Prod Queue·S3를 가리키는 V3 전용 Parameter Store 경로"
+  value       = module.prod_v3_workload_iam.runtime_parameter_names
 }
