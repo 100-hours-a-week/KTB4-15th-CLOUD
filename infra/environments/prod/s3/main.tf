@@ -5,9 +5,23 @@
 resource "aws_s3_bucket" "images" {
   bucket = "lookddak-prod-images-686496667254-ap-northeast-2"
 
+  lifecycle {
+    prevent_destroy = true
+  }
+
   tags = {
     Name        = "lookddak-prod-images"
     Environment = "prod"
+  }
+}
+
+# 이후 덮어쓰기·삭제되는 객체는 이전 Version을 남겨 30일 동안 복구할 수 있게 한다.
+# Versioning 활성화 이전 객체에는 Version ID가 없으므로 활성화 이후 변경부터 보호된다.
+resource "aws_s3_bucket_versioning" "images" {
+  bucket = aws_s3_bucket.images.id
+
+  versioning_configuration {
+    status = "Enabled"
   }
 }
 
@@ -64,6 +78,36 @@ resource "aws_s3_bucket_policy" "images" {
       },
     ]
   })
+}
+
+# 현재 객체는 만료하지 않는다. 이전 Version만 30일 후 정리해 복구 가능 기간과
+# 장기 저장 비용을 함께 제한하고, 중단된 Multipart Upload는 하루 뒤 제거한다.
+resource "aws_s3_bucket_lifecycle_configuration" "images" {
+  bucket = aws_s3_bucket.images.id
+
+  depends_on = [aws_s3_bucket_versioning.images]
+
+  rule {
+    id     = "expire-noncurrent-versions"
+    status = "Enabled"
+
+    filter {}
+
+    noncurrent_version_expiration {
+      noncurrent_days = 30
+    }
+  }
+
+  rule {
+    id     = "abort-incomplete-multipart-upload"
+    status = "Enabled"
+
+    filter {}
+
+    abort_incomplete_multipart_upload {
+      days_after_initiation = 1
+    }
+  }
 }
 
 # ---------------------------------------------------------------
