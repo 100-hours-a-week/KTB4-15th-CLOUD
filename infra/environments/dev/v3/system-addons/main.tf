@@ -33,3 +33,25 @@ resource "aws_eks_addon" "coredns" {
     Name = "${var.cluster_name}-coredns"
   })
 }
+
+resource "aws_eks_addon" "ebs_csi_driver" {
+  cluster_name             = var.cluster_name
+  addon_name               = "aws-ebs-csi-driver"
+  addon_version            = var.ebs_csi_driver_addon_version
+  service_account_role_arn = var.ebs_csi_driver_role_arn
+
+  resolve_conflicts_on_create = "OVERWRITE"
+  resolve_conflicts_on_update = "OVERWRITE"
+
+  configuration_values = jsonencode({
+    controller = {
+      nodeSelector = {
+        "lookddak.io/node-pool" = "system"
+      }
+    }
+  })
+
+  tags = merge(local.common_tags, {
+    Name = "${var.cluster_name}-aws-ebs-csi-driver"
+  })
+}
