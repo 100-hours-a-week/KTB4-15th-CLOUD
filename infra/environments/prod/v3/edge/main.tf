@@ -55,8 +55,9 @@ resource "aws_vpc_security_group_egress_rule" "gateway_nlb_all" {
 resource "aws_acm_certificate" "viewer" {
   provider = aws.us_east_1
 
-  domain_name       = var.domain_name
-  validation_method = "DNS"
+  domain_name               = var.domain_name
+  subject_alternative_names = sort(tolist(var.additional_domain_names))
+  validation_method         = "DNS"
 
   lifecycle {
     create_before_destroy = true
@@ -133,8 +134,8 @@ resource "aws_cloudfront_distribution" "this" {
   is_ipv6_enabled = true
   http_version    = "http2and3"
   price_class     = "PriceClass_200"
-  comment         = "LookDDak Prod V3 Argo CD"
-  aliases         = [var.domain_name]
+  comment         = "LookDDak Prod V3 Edge"
+  aliases         = concat([var.domain_name], sort(tolist(var.additional_domain_names)))
   web_acl_id      = aws_wafv2_web_acl.argocd.arn
 
   origin {
@@ -182,6 +183,23 @@ resource "aws_route53_record" "alias" {
   zone_id = var.route53_zone_id
   name    = var.domain_name
   type    = each.value
+
+  alias {
+    name                   = aws_cloudfront_distribution.this.domain_name
+    zone_id                = aws_cloudfront_distribution.this.hosted_zone_id
+    evaluate_target_health = false
+  }
+}
+
+# 기존 Argo CD A·AAAA 레코드의 State 주소는 유지하고 검증 도메인만 별도 추가한다.
+resource "aws_route53_record" "additional_alias" {
+  for_each = toset(flatten([
+    for domain in var.additional_domain_names : ["${domain}|A", "${domain}|AAAA"]
+  ]))
+
+  zone_id = var.route53_zone_id
+  name    = split("|", each.value)[0]
+  type    = split("|", each.value)[1]
 
   alias {
     name                   = aws_cloudfront_distribution.this.domain_name
