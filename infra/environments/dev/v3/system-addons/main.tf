@@ -49,6 +49,11 @@ resource "aws_eks_addon" "ebs_csi_driver" {
         "lookddak.io/node-pool" = "system"
       }
     }
+    node = {
+      nodeSelector = {
+        "lookddak.io/node-pool" = "monitoring"
+      }
+    }
   })
 
   tags = merge(local.common_tags, {
