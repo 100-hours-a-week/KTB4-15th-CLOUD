@@ -32,5 +32,18 @@ locals {
     db-log-tailer = {
       service_account = "db-log-tailer"
     }
+    alloy-cluster = {
+      service_account = "alloy-cluster"
+    }
   }
+
+  ssm_parameter_arn_prefix = "arn:${local.partition}:ssm:${local.region}:${local.account_id}:parameter"
+
+  mysql_exporter = {
+    username           = "lookddak_v3_exporter"
+    client_host        = "100.65.%"
+    password_parameter = "/lookddak/dev/v3/monitoring/mysql-exporter/password"
+  }
+
+  postgres_exporter_password_parameter = "/lookddak/dev/monitoring/postgres-exporter/password"
 }
