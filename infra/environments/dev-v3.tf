@@ -124,6 +124,9 @@ module "dev_v3_monitoring" {
   mysql_endpoint               = module.dev_v2_database.mysql_address
   db_access_instance_id        = module.dev_v2_db_access.instance_id
   db_access_instance_role_name = module.dev_v2_db_access.instance_role_name
+
+  grafana_user_pool_id = module.dev_v2_monitoring.grafana_user_pool_id
+  grafana_domain_name  = "grafana.v3-dev.lookddak.com"
 }
 
 # CloudFront → VPC Origin → 내부 NLB(Istio Gateway). NLB는 GITOPS(AWS LB Controller)가 만든다
@@ -141,7 +144,7 @@ module "dev_v3_edge" {
 
   # v3-dev.lookddak.com으로 V3 애플리케이션 경로를 먼저 검증한다.
   # dev.lookddak.com은 V2 → V3 전환 때, grafana.dev는 V2 Grafana CloudFront 정리 후 추가한다.
-  domain_names = ["argocd.dev.lookddak.com", "v3-dev.lookddak.com"]
+  domain_names = ["argocd.dev.lookddak.com", "v3-dev.lookddak.com", "grafana.v3-dev.lookddak.com"]
 }
 
 output "dev_v3_sqs_queue_urls" {
@@ -232,4 +235,9 @@ output "dev_v3_ebs_csi_driver_role_arn" {
 output "dev_v3_mysql_exporter_bootstrap_command" {
   description = "V3 MySQL exporter 계정을 최초 1회 구성하는 SSM Run Command"
   value       = module.dev_v3_monitoring.mysql_exporter_bootstrap_command
+}
+
+output "dev_v3_grafana_cognito_client_id" {
+  description = "V3 Grafana oauth2-proxy Cognito App Client ID"
+  value       = module.dev_v3_monitoring.grafana_cognito_client_id
 }

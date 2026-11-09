@@ -43,3 +43,13 @@ variable "db_access_instance_role_name" {
   description = "Dev DB Access Node IAM Role 이름"
   type        = string
 }
+
+variable "grafana_user_pool_id" {
+  description = "Grafana 로그인에 쓰는 Cognito 사용자 풀 ID (V2 Grafana 사용자 풀 재사용)"
+  type        = string
+}
+
+variable "grafana_domain_name" {
+  description = "V3 Grafana 외부 도메인"
+  type        = string
+}

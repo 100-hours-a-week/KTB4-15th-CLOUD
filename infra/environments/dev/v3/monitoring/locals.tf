@@ -35,6 +35,14 @@ locals {
     alloy-cluster = {
       service_account = "alloy-cluster"
     }
+    oauth2-proxy = {
+      service_account = "oauth2-proxy"
+    }
+  }
+
+  oauth2_proxy_parameters = {
+    client_secret = "/lookddak/dev/v3/monitoring/oauth2-proxy/client-secret"
+    cookie_secret = "/lookddak/dev/v3/monitoring/oauth2-proxy/cookie-secret"
   }
 
   ssm_parameter_arn_prefix = "arn:${local.partition}:ssm:${local.region}:${local.account_id}:parameter"

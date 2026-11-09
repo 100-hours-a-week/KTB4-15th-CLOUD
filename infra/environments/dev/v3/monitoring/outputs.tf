@@ -17,3 +17,8 @@ output "mysql_exporter_bootstrap_command" {
   description = "V3 MySQL exporter 계정을 최초 1회 구성하는 명령"
   value       = "aws ssm send-command --region ${local.region} --instance-ids ${var.db_access_instance_id} --document-name ${aws_ssm_document.mysql_exporter_bootstrap.name} --comment 'Bootstrap LookDDak Dev V3 MySQL exporter' --query 'Command.CommandId' --output text"
 }
+
+output "grafana_cognito_client_id" {
+  description = "oauth2-proxy에 넣을 Grafana Cognito App Client ID"
+  value       = aws_cognito_user_pool_client.grafana.id
+}
