@@ -232,6 +232,19 @@ resource "aws_ssm_document" "bootstrap" {
               "$@"
           }
 
+          migration_psql() {
+            local target_database="$1"
+            shift
+            PGPASSWORD="$${migration_password}" psql \
+              --host="$${postgresql_host}" \
+              --port="$${postgresql_port}" \
+              --username="$${migration_username}" \
+              --dbname="$${target_database}" \
+              --set=ON_ERROR_STOP=1 \
+              --no-psqlrc \
+              "$@"
+          }
+
           role_password_works() {
             local role_name="$1"
             local role_password="$2"
@@ -327,13 +340,19 @@ resource "aws_ssm_document" "bootstrap" {
           GRANT USAGE ON SCHEMA public TO ${local.app_username};
           GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO ${local.app_username};
           GRANT USAGE, SELECT, UPDATE ON ALL SEQUENCES IN SCHEMA public TO ${local.app_username};
-          ALTER DEFAULT PRIVILEGES FOR ROLE ${local.migration_username} IN SCHEMA public
-            GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO ${local.app_username};
-          ALTER DEFAULT PRIVILEGES FOR ROLE ${local.migration_username} IN SCHEMA public
-            GRANT USAGE, SELECT, UPDATE ON SEQUENCES TO ${local.app_username};
 
           CREATE SCHEMA IF NOT EXISTS langgraph AUTHORIZATION ${local.migration_username};
           ALTER SCHEMA langgraph OWNER TO ${local.migration_username};
+          SQL
+
+          # RDS 관리자도 다른 Role의 Default Privileges는 대신 변경할 수 없다.
+          # 객체를 생성할 Migration Role로 접속해 자신의 향후 객체 권한을 설정한다.
+          migration_psql "$${database_name}" <<'SQL'
+          ALTER DEFAULT PRIVILEGES IN SCHEMA public
+            GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO ${local.app_username};
+          ALTER DEFAULT PRIVILEGES IN SCHEMA public
+            GRANT USAGE, SELECT, UPDATE ON SEQUENCES TO ${local.app_username};
+
           GRANT USAGE, CREATE ON SCHEMA langgraph TO ${local.app_username};
           SQL
 
