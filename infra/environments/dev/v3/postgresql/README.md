@@ -14,6 +14,7 @@ V2와 V3는 같은 Dev PostgreSQL RDS 인스턴스를 사용하지만 Database�
 - V3 SecureString과 Database·사용자를 준비하는 SSM Runbook 생성
 - DB Access Node에 Runbook 실행용 최소 Parameter Store·KMS 권한 부여
 - V3 App·Migration 사용자와 `langgraph` Schema의 최소 권한 구성
+- AI 상품 임베딩 Schema가 요구하는 `vector` Extension 준비
 - GitOps 전환 동안 기존 Pod가 유지되도록 대상 IRSA에 V2·V3 Parameter를 함께 허용
 
 비밀번호와 비밀번호가 포함된 DSN은 Terraform 코드, 변수, 출력, Plan과 State에 저장하지 않는다.

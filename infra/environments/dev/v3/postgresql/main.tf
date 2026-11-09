@@ -320,6 +320,8 @@ resource "aws_ssm_document" "bootstrap" {
           SQL
 
           admin_psql "$${database_name}" <<'SQL'
+          CREATE EXTENSION IF NOT EXISTS vector;
+
           REVOKE CREATE ON SCHEMA public FROM PUBLIC;
           ALTER SCHEMA public OWNER TO ${local.migration_username};
           GRANT USAGE ON SCHEMA public TO ${local.app_username};
