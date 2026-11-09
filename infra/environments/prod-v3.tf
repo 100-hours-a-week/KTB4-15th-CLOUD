@@ -133,6 +133,20 @@ module "prod_v3_workload_iam" {
   sqs_queue_urls     = module.prod_v2_sqs.queue_urls
 }
 
+module "prod_v3_argocd_edge" {
+  source = "./prod/v3/edge"
+
+  providers = {
+    aws           = aws
+    aws.us_east_1 = aws.us_east_1
+  }
+
+  cluster_name    = module.prod_v3_eks.cluster_name
+  vpc_id          = data.aws_vpc.prod_v3.id
+  route53_zone_id = module.shared_core.route53_zone_id
+  domain_name     = "argocd.lookddak.com"
+}
+
 output "prod_v3_cluster" {
   description = "Prod V3 EKS Control Plane 접속 정보"
   value = {
@@ -194,4 +208,16 @@ output "prod_v3_workload_role_arns" {
 output "prod_v3_runtime_parameter_names" {
   description = "기존 Prod Queue·S3를 가리키는 V3 전용 Parameter Store 경로"
   value       = module.prod_v3_workload_iam.runtime_parameter_names
+}
+
+output "prod_v3_argocd_edge" {
+  description = "Prod Argo CD CloudFront·Route 53 연결 정보"
+  value = {
+    url                        = module.prod_v3_argocd_edge.argocd_url
+    cloudfront_distribution_id = module.prod_v3_argocd_edge.cloudfront_distribution_id
+    cloudfront_domain_name     = module.prod_v3_argocd_edge.cloudfront_domain_name
+    gateway_nlb_dns_name       = module.prod_v3_argocd_edge.gateway_nlb_dns_name
+    gateway_nlb_security_group = module.prod_v3_argocd_edge.gateway_nlb_security_group_id
+    web_acl_arn                = module.prod_v3_argocd_edge.web_acl_arn
+  }
 }
