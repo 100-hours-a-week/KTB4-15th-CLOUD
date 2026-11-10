@@ -10,6 +10,12 @@ module "dev_v3_sqs" {
   source = "./dev/v3/sqs"
 }
 
+module "dev_local_sqs" {
+  source = "./dev/v3/local-sqs"
+
+  local_test_user_name = module.dev_v2_iam.mq_local_test_user_name
+}
+
 module "dev_v3_network" {
   source = "./dev/v3/network"
 
@@ -165,6 +171,31 @@ output "dev_v3_sqs_dlq_urls" {
 output "dev_v3_sqs_dlq_arns" {
   description = "V3 Dev 피팅 DLQ ARN"
   value       = module.dev_v3_sqs.dlq_arns
+}
+
+output "dev_local_sqs_queue_urls" {
+  description = "로컬 피팅 테스트 Main Queue URL"
+  value       = module.dev_local_sqs.queue_urls
+}
+
+output "dev_local_sqs_queue_arns" {
+  description = "로컬 피팅 테스트 Main Queue ARN"
+  value       = module.dev_local_sqs.queue_arns
+}
+
+output "dev_local_sqs_dlq_urls" {
+  description = "로컬 피팅 테스트 DLQ URL"
+  value       = module.dev_local_sqs.dlq_urls
+}
+
+output "dev_local_sqs_dlq_arns" {
+  description = "로컬 피팅 테스트 DLQ ARN"
+  value       = module.dev_local_sqs.dlq_arns
+}
+
+output "dev_local_sqs_iam_policy_arn" {
+  description = "공유 로컬 테스트 사용자에 연결한 Queue 최소 권한 Policy ARN"
+  value       = module.dev_local_sqs.iam_policy_arn
 }
 
 output "dev_v3_workload_role_arns" {
