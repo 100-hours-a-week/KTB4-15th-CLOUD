@@ -272,3 +272,8 @@ output "dev_v3_grafana_cognito_client_id" {
   description = "V3 Grafana oauth2-proxy Cognito App Client ID"
   value       = module.dev_v3_monitoring.grafana_cognito_client_id
 }
+
+output "dev_v3_redis_readonly_acl_rule" {
+  description = "Redis ACL user 규칙 (GitOps redis-cache-config에 넣는다)"
+  value       = module.dev_v3_monitoring.redis_readonly_acl_rule
+}
