@@ -39,15 +39,6 @@ data "aws_security_group" "prod_v3_api_access" {
   }
 }
 
-data "aws_instances" "prod_v3_api_access" {
-  instance_state_names = ["running"]
-
-  filter {
-    name   = "tag:Name"
-    values = ["lookddak-prod-monitoring"]
-  }
-}
-
 module "prod_v3_network" {
   source = "./prod/v3/network"
 
@@ -84,6 +75,7 @@ module "prod_v3_controller_iam" {
   oidc_provider_arn = module.prod_v3_eks.oidc_provider_arn
   oidc_issuer       = module.prod_v3_eks.oidc_issuer
   route53_zone_id   = module.shared_core.route53_zone_id
+  alert_queue_arn   = module.prod_v1_monitoring.alert_queue_arn
 }
 
 module "prod_v3_karpenter_iam" {
@@ -182,7 +174,7 @@ output "prod_v3_cluster" {
     endpoint                = module.prod_v3_eks.cluster_endpoint
     node_subnet_ids         = module.prod_v3_network.node_subnet_ids
     pod_subnet_ids          = module.prod_v3_network.pod_subnet_ids
-    api_access_instance_id  = one(data.aws_instances.prod_v3_api_access.ids)
+    api_access_instance_id  = module.prod_v2_monitoring.instance_id
     port_forward_document   = module.prod_v3_eks.api_port_forward_document_name
     control_plane_log_group = module.prod_v3_eks.control_plane_log_group_name
   }
@@ -206,6 +198,7 @@ output "prod_v3_controller_role_arns" {
     aws_load_balancer_controller = module.prod_v3_controller_iam.aws_load_balancer_controller_role_arn
     cert_manager                 = module.prod_v3_controller_iam.cert_manager_role_arn
     ebs_csi_driver               = module.prod_v3_controller_iam.ebs_csi_driver_role_arn
+    argocd_notifications         = module.prod_v3_controller_iam.argocd_notifications_role_arn
     karpenter_controller         = module.prod_v3_karpenter_iam.controller_role_arn
   }
 }

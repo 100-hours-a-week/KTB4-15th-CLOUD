@@ -18,3 +18,8 @@ variable "route53_zone_id" {
   type        = string
 }
 
+variable "alert_queue_arn" {
+  description = "Argo CD 배포 실패 이벤트를 전달할 기존 중앙 Alert Queue ARN"
+  type        = string
+}
+

@@ -30,6 +30,11 @@ locals {
       namespace       = "kube-system"
       service_account = "ebs-csi-controller-sa"
     }
+    argocd_notifications = {
+      role_name       = "${var.cluster_name}-argocd-notifications"
+      namespace       = "argocd"
+      service_account = "argocd-notifications-controller"
+    }
   }
 }
 
