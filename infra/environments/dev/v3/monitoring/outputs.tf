@@ -22,3 +22,9 @@ output "grafana_cognito_client_id" {
   description = "oauth2-proxy에 넣을 Grafana Cognito App Client ID"
   value       = aws_cognito_user_pool_client.grafana.id
 }
+
+output "redis_readonly_acl_rule" {
+  description = "Redis ACL user 규칙 (비밀번호는 SHA-256 해시)"
+  value       = "user ${local.redis_readonly.username} on #${nonsensitive(sha256(random_password.redis_readonly.result))} ~* resetchannels -@all +@read +@connection +cluster|slots +cluster|shards +cluster|nodes +cluster|info -@dangerous +info"
+}
+
