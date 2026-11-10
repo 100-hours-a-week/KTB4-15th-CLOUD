@@ -29,8 +29,8 @@ variable "additional_domain_names" {
   default     = []
 
   validation {
-    condition     = alltrue([for domain in var.additional_domain_names : domain == "v3-prod.lookddak.com"])
-    error_message = "Prod V3 추가 도메인은 v3-prod.lookddak.com만 허용합니다."
+    condition     = alltrue([for domain in var.additional_domain_names : contains(["v3-prod.lookddak.com", "grafana.v3-prod.lookddak.com"], domain)])
+    error_message = "Prod V3 추가 도메인은 v3-prod.lookddak.com·grafana.v3-prod.lookddak.com만 허용합니다."
   }
 }
 

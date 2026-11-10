@@ -133,6 +133,30 @@ module "prod_v3_workload_iam" {
   sqs_queue_urls     = module.prod_v2_sqs.queue_urls
 }
 
+module "prod_v3_monitoring_node_group" {
+  source = "./prod/v3/monitoring-node-group"
+
+  cluster_name    = module.prod_v3_eks.cluster_name
+  cluster_version = module.prod_v3_eks.cluster_version
+  subnet_id       = module.prod_v3_network.node_subnet_ids[0]
+}
+
+module "prod_v3_monitoring" {
+  source = "./prod/v3/monitoring"
+
+  name_prefix         = "lookddak-prod-v3"
+  oidc_provider_arn   = module.prod_v3_eks.oidc_provider_arn
+  oidc_issuer         = module.prod_v3_eks.oidc_issuer
+  db_log_instance_ids = ["lookddak-prod-v2-mysql", "lookddak-prod-v2-postgresql"]
+
+  mysql_endpoint               = module.prod_v2_database.mysql_address
+  db_access_instance_id        = module.prod_v2_monitoring.instance_id
+  db_access_instance_role_name = module.prod_v2_monitoring.instance_role_name
+
+  grafana_user_pool_id = module.prod_v2_monitoring.grafana_user_pool_id
+  grafana_domain_name  = "grafana.v3-prod.lookddak.com"
+}
+
 module "prod_v3_argocd_edge" {
   source = "./prod/v3/edge"
 
@@ -147,6 +171,7 @@ module "prod_v3_argocd_edge" {
   domain_name     = "argocd.lookddak.com"
   additional_domain_names = [
     "v3-prod.lookddak.com",
+    "grafana.v3-prod.lookddak.com",
   ]
 }
 
@@ -225,3 +250,34 @@ output "prod_v3_argocd_edge" {
     web_acl_arn                = module.prod_v3_argocd_edge.web_acl_arn
   }
 }
+
+output "prod_v3_monitoring_bucket_names" {
+  description = "Prod V3 Loki·Tempo Helm values에 넣을 S3 버킷 이름"
+  value       = module.prod_v3_monitoring.bucket_names
+}
+
+output "prod_v3_monitoring_role_arns" {
+  description = "Prod V3 monitoring Namespace ServiceAccount에 연결할 IRSA Role ARN"
+  value       = module.prod_v3_monitoring.role_arns
+}
+
+output "prod_v3_mysql_exporter_bootstrap_command" {
+  description = "Prod V3 MySQL exporter 계정을 최초 1회 구성하는 명령"
+  value       = module.prod_v3_monitoring.mysql_exporter_bootstrap_command
+}
+
+output "prod_v3_grafana_cognito_client_id" {
+  description = "Prod V3 oauth2-proxy에 넣을 Grafana Cognito App Client ID"
+  value       = module.prod_v3_monitoring.grafana_cognito_client_id
+}
+
+output "prod_v3_grafana_cognito_user_pool_id" {
+  description = "Prod V3 oauth2-proxy OIDC issuer에 넣을 Cognito 사용자 풀 ID (Prod V2 Grafana 사용자 풀)"
+  value       = module.prod_v2_monitoring.grafana_user_pool_id
+}
+
+output "prod_v3_redis_readonly_acl_rule" {
+  description = "Prod V3 Redis ACL user 규칙 (GitOps redis-cache-config에 넣는다)"
+  value       = module.prod_v3_monitoring.redis_readonly_acl_rule
+}
+
