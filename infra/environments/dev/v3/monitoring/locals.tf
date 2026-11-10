@@ -38,6 +38,14 @@ locals {
     oauth2-proxy = {
       service_account = "oauth2-proxy"
     }
+    grafana = {
+      service_account = "grafana"
+    }
+  }
+
+  redis_readonly = {
+    username           = "be-readonly"
+    password_parameter = "/lookddak/dev/v3/monitoring/grafana/redis-readonly-password"
   }
 
   oauth2_proxy_parameters = {
