@@ -9,7 +9,8 @@ module "shared_ecs_taskdef_store" {
 module "shared_service_quotas" {
   source = "./shared/service-quotas"
 
-  ec2_ondemand_standard_vcpu = 64
+  # AWS에서 승인·적용된 현재 한도와 일치시켜 후속 Apply가 64로 낮추지 않게 한다.
+  ec2_ondemand_standard_vcpu = 96
 }
 
 module "prod_v1_network" {

@@ -126,6 +126,8 @@ locals {
         "/lookddak/dev/fastapi/runware-llm-api-key",
         "/lookddak/dev/fastapi/webhook-token",
         "/lookddak/dev/fastapi/virtual-fitting-runware-webhook-url",
+        local.idm_vton_modal_parameter_names["token_id"],
+        local.idm_vton_modal_parameter_names["token_secret"],
       ]
     }
   }
