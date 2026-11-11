@@ -12,3 +12,8 @@ output "runtime_parameter_names" {
   description = "기존 Prod Queue·S3를 가리키는 V3 전용 Parameter Store 경로"
   value       = { for key, parameter in aws_ssm_parameter.runtime : key => parameter.name }
 }
+
+output "idm_vton_modal_parameter_names" {
+  description = "실제 Modal SDK Token을 수동 입력할 Prod SecureString 경로"
+  value       = { for key, parameter in aws_ssm_parameter.idm_vton_modal : key => parameter.name }
+}

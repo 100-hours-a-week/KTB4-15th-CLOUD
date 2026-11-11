@@ -231,6 +231,11 @@ output "prod_v3_runtime_parameter_names" {
   value       = module.prod_v3_workload_iam.runtime_parameter_names
 }
 
+output "prod_v3_idm_vton_modal_parameter_names" {
+  description = "실제 Modal SDK Token을 수동 입력할 Prod SecureString 경로"
+  value       = module.prod_v3_workload_iam.idm_vton_modal_parameter_names
+}
+
 output "prod_v3_argocd_edge" {
   description = "Prod V3 CloudFront·Route 53 연결 정보"
   value = {

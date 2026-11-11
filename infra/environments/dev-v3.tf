@@ -208,6 +208,11 @@ output "dev_v3_workload_role_names" {
   value       = module.dev_v3_workload_iam.role_names
 }
 
+output "dev_v3_idm_vton_modal_parameter_names" {
+  description = "실제 Modal SDK Token을 수동 입력할 Dev SecureString 경로"
+  value       = module.dev_v3_workload_iam.idm_vton_modal_parameter_names
+}
+
 output "dev_v3_argocd_notifications_role_arn" {
   description = "GitOps Argo CD Notifications Controller에 연결할 V3 Dev IRSA Role ARN"
   value       = module.dev_v3_iam.argocd_notifications_role_arn

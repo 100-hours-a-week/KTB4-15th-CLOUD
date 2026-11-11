@@ -138,6 +138,8 @@ locals {
         "/lookddak/prod/fastapi/runware-llm-api-key",
         "/lookddak/prod/fastapi/webhook-token",
         "/lookddak/prod/fastapi/virtual-fitting-runware-webhook-url",
+        local.idm_vton_modal_parameter_names["token_id"],
+        local.idm_vton_modal_parameter_names["token_secret"],
         local.runtime_parameter_names["s3/images/bucket"],
         local.runtime_parameter_names["sqs/be-fitting-request/url"],
         local.runtime_parameter_names["sqs/ai-fitting-response/url"],
