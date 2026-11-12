@@ -67,6 +67,12 @@ data "aws_iam_policy_document" "vton_orchestrator_s3" {
     actions   = ["s3:PutObject"]
     resources = ["${local.images_bucket_arn}/virtual-fitting/results/*"]
   }
+
+  statement {
+    sid       = "ListFittingResults"
+    actions   = ["s3:ListBucket"]
+    resources = [local.images_bucket_arn]
+  }
 }
 
 resource "aws_iam_role_policy" "vton_orchestrator_s3" {
