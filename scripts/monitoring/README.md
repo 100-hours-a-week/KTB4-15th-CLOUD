@@ -36,7 +36,13 @@ EC2는 Terraform(`infra/modules/observability`)으로 관리하고, 서버 안�
 |---|---|---|
 | `MONITORING_ENV` | `dev` | `prod` |
 | `GRAFANA_ROOT_URL` | `https://grafana.dev.lookddak.com` | `https://grafana.lookddak.com` |
-| `GRAFANA_PROXY_WHITELIST` (ALB 서브넷) | `10.30.1.0/24, 10.30.2.0/24` | `10.20.1.0/24, 10.20.2.0/24` |
+| `GRAFANA_AUTH_PROXY_ENABLED` | `true` (기본값) | `false` |
+| `GRAFANA_PROXY_WHITELIST` (ALB 서브넷, auth proxy일 때) | `10.30.1.0/24, 10.30.2.0/24` | 없음 |
+| `GRAFANA_OAUTH_ENABLED` | `false` (기본값) | `true` |
+| `GRAFANA_OAUTH_COGNITO_URL` | 없음 | `https://lookddak-prod-grafana.auth.ap-northeast-2.amazoncognito.com` |
+| `GRAFANA_OAUTH_CLIENT_ID` | 없음 | Parameter Store `/lookddak/prod/monitoring/grafana-oauth/client-id` |
+| `GRAFANA_OAUTH_CLIENT_SECRET` | 없음 | Parameter Store `/lookddak/prod/monitoring/grafana-oauth/client-secret` |
+| `GRAFANA_SIGNOUT_REDIRECT_URL` | 없음 | `https://lookddak-prod-grafana.auth.ap-northeast-2.amazoncognito.com/logout?client_id=<client-id>&logout_uri=https%3A%2F%2Fgrafana.lookddak.com%2Flogin` |
 | `DB_LOG_TARGETS` | `mysql:lookddak-dev-v2-mysql:audit/,mysql:lookddak-dev-v2-mysql:error/,mysql:lookddak-dev-v2-mysql:slowquery/,postgresql:lookddak-dev-postgresql:error/postgresql.log` | `mysql:lookddak-prod-v2-mysql:error/,mysql:lookddak-prod-v2-mysql:slowquery/,postgresql:lookddak-prod-v2-postgresql:error/postgresql.log` (쿼리 로그는 DB 설정 후 추가) |
 | `GRAFANA_ADMIN_PASSWORD` | Parameter Store `/lookddak/<env>/monitoring/grafana-admin-password` | 같음 |
 | `LOKI_S3_BUCKET` | `lookddak-<env>-loki-<계정 ID>-ap-northeast-2` (Terraform 출력 `loki_bucket_name`) | 같음 |
@@ -84,6 +90,10 @@ Docker named volume(`prometheus-data`, `loki-data`, `alloy-data`, `grafana-data`
 ## 접속
 
 팀원: Grafana 주소(위 표) → Cognito 로그인 → Grafana 자동 로그인 (Editor).
+
+prod (2026-11-12~): CloudFront VPC Origin → 서버 3000 (ALB 없음). Grafana Generic OAuth가 Cognito 사용자 풀 `lookddak-prod-grafana`(App Client `lookddak-prod-grafana-oauth`)로 직접 로그인한다. 관리자 로그인은 `/login?disableAutoLogin=true`.
+
+dev:
 
 - ALB가 Cognito 인증 후 `X-Amzn-Oidc-Identity`(Cognito 사용자 ID, UUID) 헤더를 붙여 전달하고, Grafana auth proxy가 이 값으로 로그인시킵니다.
 - 헤더는 ALB 서브넷(`GRAFANA_PROXY_WHITELIST`)에서 온 요청만 인정합니다.

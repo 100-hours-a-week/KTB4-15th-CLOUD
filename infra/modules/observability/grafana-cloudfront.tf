@@ -10,6 +10,46 @@
 # ---------------------------------------------------------------
 locals {
   grafana_cloudfront_count = var.grafana_cloudfront_enabled ? 1 : 0
+  grafana_vpc_origin_count = var.grafana_cloudfront_enabled && !var.grafana_alb_enabled ? 1 : 0
+}
+
+data "aws_ec2_managed_prefix_list" "cloudfront" {
+  count = local.grafana_vpc_origin_count
+  name  = "com.amazonaws.global.cloudfront.origin-facing"
+}
+
+resource "aws_vpc_security_group_ingress_rule" "grafana_from_cloudfront" {
+  count = local.grafana_vpc_origin_count
+
+  security_group_id = aws_security_group.this.id
+  description       = "Grafana from CloudFront VPC Origin"
+  ip_protocol       = "tcp"
+  from_port         = 3000
+  to_port           = 3000
+  prefix_list_id    = data.aws_ec2_managed_prefix_list.cloudfront[0].id
+}
+
+resource "aws_cloudfront_vpc_origin" "grafana" {
+  count = local.grafana_vpc_origin_count
+
+  vpc_origin_endpoint_config {
+    name                   = "${local.name}-grafana"
+    arn                    = aws_instance.this.arn
+    http_port              = 3000
+    https_port             = 443
+    origin_protocol_policy = "http-only"
+
+    origin_ssl_protocols {
+      items    = ["TLSv1.2"]
+      quantity = 1
+    }
+  }
+
+  depends_on = [aws_vpc_security_group_ingress_rule.grafana_from_cloudfront]
+
+  tags = merge(local.common_tags, {
+    Name = "${local.name}-grafana"
+  })
 }
 
 data "aws_cloudfront_cache_policy" "caching_disabled" {
@@ -80,20 +120,38 @@ resource "aws_cloudfront_distribution" "grafana" {
   aliases         = [var.grafana_domain_name]
 
   origin {
-    domain_name = var.grafana_origin_domain_name
+    domain_name = var.grafana_alb_enabled ? var.grafana_origin_domain_name : aws_instance.this.private_dns
     origin_id   = "${local.name}-grafana"
 
-    custom_header {
-      name  = var.grafana_origin_verify_header_name
-      value = var.grafana_origin_verify_header_value
+    dynamic "custom_header" {
+      for_each = var.grafana_alb_enabled ? [1] : []
+
+      content {
+        name  = var.grafana_origin_verify_header_name
+        value = var.grafana_origin_verify_header_value
+      }
     }
 
-    custom_origin_config {
-      http_port              = 80
-      https_port             = 443
-      origin_protocol_policy = "https-only"
-      origin_ssl_protocols   = ["TLSv1.2"]
-      origin_read_timeout    = 60
+    dynamic "custom_origin_config" {
+      for_each = var.grafana_alb_enabled ? [1] : []
+
+      content {
+        http_port              = 80
+        https_port             = 443
+        origin_protocol_policy = "https-only"
+        origin_ssl_protocols   = ["TLSv1.2"]
+        origin_read_timeout    = 60
+      }
+    }
+
+    dynamic "vpc_origin_config" {
+      for_each = var.grafana_alb_enabled ? [] : [1]
+
+      content {
+        vpc_origin_id            = aws_cloudfront_vpc_origin.grafana[0].id
+        origin_keepalive_timeout = 60
+        origin_read_timeout      = 60
+      }
     }
   }
 
@@ -122,7 +180,7 @@ resource "aws_cloudfront_distribution" "grafana" {
 
   lifecycle {
     precondition {
-      condition     = var.grafana_origin_domain_name != null && nonsensitive(var.grafana_origin_verify_header_value != null)
+      condition     = !var.grafana_alb_enabled || (var.grafana_origin_domain_name != null && nonsensitive(var.grafana_origin_verify_header_value != null))
       error_message = "grafana_cloudfront_enabled requires grafana_origin_domain_name and grafana_origin_verify_header_value."
     }
   }
