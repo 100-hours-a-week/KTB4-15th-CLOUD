@@ -11,36 +11,10 @@ module "prod_v2_network" {
   prod_app_security_group_id = module.prod_v1_network.app_security_group_id
 }
 
-data "aws_ssm_parameter" "prod_fastapi_webhook_token" {
-  name            = "/lookddak/prod/fastapi/webhook-token"
-  with_decryption = true
-}
-
-module "prod_v2_edge" {
-  source = "./prod/v2/edge"
-
-  providers = {
-    aws           = aws
-    aws.us_east_1 = aws.us_east_1
-  }
-
-  vpc_id                = module.prod_v1_network.vpc_id
-  public_subnet_ids     = module.prod_v2_network.alb_public_subnet_ids
-  alb_security_group_id = module.prod_v2_network.security_group_ids["alb"]
-  route53_zone_id       = module.shared_core.route53_zone_id
-  fastapi_webhook_token = data.aws_ssm_parameter.prod_fastapi_webhook_token.value
-
-  # 운영 도메인은 Prod V3 EKS Edge로 전환한다. V2 Distribution·ALB·ECS는 롤백용으로 유지한다.
-  production_domains_enabled = false
-
-  access_logs_bucket = module.prod_v2_monitoring.alb_logs_bucket_name
-}
-
 # ---------------------------------------------------------------
 # V2 prod monitoring server (Grafana, Prometheus, Loki, Tempo, Alloy) - dev와 같은 모듈
 # - Private App 2a, fixed private IP, Session Manager access only.
-# - Grafana: grafana.lookddak.com → CloudFront → ALB(원본 검증 헤더) → Monitoring EC2:3000
-#   ALB 보안 그룹은 CloudFront 대역만 받으므로 ALB에 직접 붙이지 않는다.
+# - Grafana: grafana.lookddak.com → CloudFront → VPC Origin → Monitoring EC2:3000 (Grafana Generic OAuth)
 # ---------------------------------------------------------------
 module "prod_v2_monitoring" {
   source = "../modules/observability"
@@ -57,22 +31,11 @@ module "prod_v2_monitoring" {
   lambda_subnet_ids = module.prod_v2_network.private_app_subnet_ids
   ecs_cluster_arn   = module.prod_v2_ecs_cluster.cluster_arn
 
-  grafana_domain_name   = "grafana.lookddak.com"
-  route53_zone_id       = module.shared_core.route53_zone_id
-  https_listener_arn    = module.prod_v2_edge.https_listener_arn
-  alb_security_group_id = module.prod_v2_network.security_group_ids["alb"]
-  alb_dns_name          = module.prod_v2_edge.alb_dns_name
-  alb_zone_id           = module.prod_v2_edge.alb_zone_id
+  grafana_domain_name = "grafana.lookddak.com"
+  route53_zone_id     = module.shared_core.route53_zone_id
 
-  # Spring(/api/*, 10)·SSE(6) 규칙은 호스트 조건 없이 원본 검증 헤더만 본다.
-  # Grafana도 /api/*를 쓰므로 그보다 먼저 평가되게 둔다 (로그아웃 1 → Grafana 2).
-  grafana_logout_listener_rule_priority = 1
-  grafana_listener_rule_priority        = 2
-
-  grafana_cloudfront_enabled         = true
-  grafana_alb_enabled                = false
-  grafana_origin_domain_name         = module.prod_v2_edge.origin_domain_name
-  grafana_origin_verify_header_value = module.prod_v2_edge.origin_verify_header_value
+  grafana_cloudfront_enabled = true
+  grafana_alb_enabled        = false
 
   ecs_task_security_group_ids = {
     for service in ["nextjs", "spring", "fastapi"] :
@@ -157,10 +120,6 @@ module "prod_v2_task_definitions" {
 module "prod_v2_ecs_services" {
   source = "./prod/v2/ecs-services"
 
-  # The FastAPI target group must be attached to the ALB listener before ECS
-  # updates the service load balancer configuration.
-  depends_on = [module.prod_v2_edge]
-
   create_services        = var.prod_v2_create_services
   activate_services      = var.prod_v2_activate_services
   service_capacity       = var.prod_v2_service_capacity
@@ -168,7 +127,7 @@ module "prod_v2_ecs_services" {
   cluster_name           = module.prod_v2_ecs_cluster.cluster_name
   private_app_subnet_ids = module.prod_v2_network.private_app_subnet_ids
   security_group_ids     = module.prod_v2_network.security_group_ids
-  target_group_arns      = module.prod_v2_edge.target_group_arns
+  target_group_arns      = {}
   task_definition_arns   = var.prod_v2_task_definition_arns
 }
 
@@ -206,7 +165,7 @@ variable "prod_v2_postgresql_admin_password_wo" {
 variable "prod_v2_create_services" {
   description = "Create the V2 prod ECS services and their Auto Scaling resources"
   type        = bool
-  default     = true
+  default     = false
 }
 
 # 2026-10-22: 2.0.0 배포(템플릿 revision)와 Spring SSE 연결 후 활성화.
@@ -290,16 +249,6 @@ output "prod_v2_service_connect_namespace_arn" {
   value       = module.prod_v2_ecs_services.service_connect_namespace_arn
 }
 
-output "prod_v2_origin_domain_name" {
-  description = "V2 prod CloudFront origin hostname routed to the ALB"
-  value       = module.prod_v2_edge.origin_domain_name
-}
-
-output "prod_v2_cloudfront_distribution_id" {
-  description = "V2 prod CloudFront distribution ID"
-  value       = module.prod_v2_edge.cloudfront_distribution_id
-}
-
 output "prod_v2_sqs_queue_urls" {
   description = "V2 prod fitting main queue URLs"
   value       = module.prod_v2_sqs.queue_urls
@@ -343,23 +292,6 @@ output "prod_v2_modal_body_image_worker_policy_arn" {
 output "prod_v2_crawler_schedule_arn" {
   description = "V2 prod crawler schedule ARN"
   value       = module.prod_v2_crawler.schedule_arn
-}
-
-# 2026-10-22 V1 -> V2 DNS 전환: lookddak.com A 레코드를 V2 edge 모듈로 옮긴다 (값은 CloudFront alias로 변경).
-moved {
-  from = module.prod_v1_edge.aws_route53_record.apex
-  to   = module.prod_v2_edge.aws_route53_record.production_ipv4
-}
-
-# 2026-11-12 V2 -> V3 DNS 전환: 기존 레코드 State를 보존한 채 V3 CloudFront Alias로 갱신한다.
-moved {
-  from = module.prod_v2_edge.aws_route53_record.production_ipv4
-  to   = module.prod_v3_argocd_edge.aws_route53_record.additional_alias["lookddak.com|A"]
-}
-
-moved {
-  from = module.prod_v2_edge.aws_route53_record.production_ipv6
-  to   = module.prod_v3_argocd_edge.aws_route53_record.additional_alias["lookddak.com|AAAA"]
 }
 
 moved {

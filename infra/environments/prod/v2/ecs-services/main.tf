@@ -70,7 +70,7 @@ module "spring" {
   # SSE 전용 포트(8081). Task Definition에 spring-sse 포트가 있어야 붙일 수 있다 (#304).
   additional_load_balancers = [
     {
-      target_group_arn = var.target_group_arns["spring_sse"]
+      target_group_arn = lookup(var.target_group_arns, "spring_sse", null)
       container_name   = "spring"
       container_port   = 8081
     }
