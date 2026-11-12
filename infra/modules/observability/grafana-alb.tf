@@ -6,8 +6,15 @@
 # - Grafana 3000은 ALB 보안 그룹에서만 들어온다. Alloy 3500은 ALB에 연결하지 않는다.
 # ---------------------------------------------------------------
 
+locals {
+  grafana_alb_count          = var.grafana_alb_enabled ? 1 : 0
+  grafana_validation_options = var.grafana_alb_enabled ? flatten(aws_acm_certificate.grafana[*].domain_validation_options) : flatten(aws_acm_certificate.grafana_viewer[*].domain_validation_options)
+}
+
 # --- 인증서 ---
 resource "aws_acm_certificate" "grafana" {
+  count = local.grafana_alb_count
+
   domain_name       = var.grafana_domain_name
   validation_method = "DNS"
 
@@ -22,7 +29,7 @@ resource "aws_acm_certificate" "grafana" {
 
 resource "aws_route53_record" "grafana_certificate_validation" {
   for_each = {
-    for option in aws_acm_certificate.grafana.domain_validation_options :
+    for option in local.grafana_validation_options :
     option.domain_name => {
       name   = option.resource_record_name
       record = option.resource_record_value
@@ -38,17 +45,23 @@ resource "aws_route53_record" "grafana_certificate_validation" {
 }
 
 resource "aws_acm_certificate_validation" "grafana" {
-  certificate_arn         = aws_acm_certificate.grafana.arn
+  count = local.grafana_alb_count
+
+  certificate_arn         = aws_acm_certificate.grafana[0].arn
   validation_record_fqdns = [for record in aws_route53_record.grafana_certificate_validation : record.fqdn]
 }
 
 resource "aws_lb_listener_certificate" "grafana" {
+  count = local.grafana_alb_count
+
   listener_arn    = var.https_listener_arn
-  certificate_arn = aws_acm_certificate_validation.grafana.certificate_arn
+  certificate_arn = aws_acm_certificate_validation.grafana[0].certificate_arn
 }
 
 # --- Target Group ---
 resource "aws_lb_target_group" "grafana" {
+  count = local.grafana_alb_count
+
   name        = "lookddak-${var.environment}-v2-grafana-tg"
   port        = 3000
   protocol    = "HTTP"
@@ -69,13 +82,17 @@ resource "aws_lb_target_group" "grafana" {
 }
 
 resource "aws_lb_target_group_attachment" "grafana" {
-  target_group_arn = aws_lb_target_group.grafana.arn
+  count = local.grafana_alb_count
+
+  target_group_arn = aws_lb_target_group.grafana[0].arn
   target_id        = aws_instance.this.id
   port             = 3000
 }
 
 # --- 보안 그룹: ALB → Grafana 3000 ---
 resource "aws_vpc_security_group_egress_rule" "alb_to_grafana" {
+  count = local.grafana_alb_count
+
   security_group_id            = var.alb_security_group_id
   description                  = "Grafana on the monitoring server"
   ip_protocol                  = "tcp"
@@ -85,6 +102,8 @@ resource "aws_vpc_security_group_egress_rule" "alb_to_grafana" {
 }
 
 resource "aws_vpc_security_group_ingress_rule" "grafana_from_alb" {
+  count = local.grafana_alb_count
+
   security_group_id            = aws_security_group.this.id
   description                  = "Grafana from the ${var.environment} V2 ALB"
   ip_protocol                  = "tcp"

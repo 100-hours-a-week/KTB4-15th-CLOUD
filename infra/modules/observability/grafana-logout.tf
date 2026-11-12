@@ -13,6 +13,8 @@ locals {
 }
 
 data "archive_file" "grafana_logout" {
+  count = local.grafana_alb_count
+
   type        = "zip"
   source_dir  = "${path.module}/lambda/grafana_logout"
   output_path = "${path.module}/.build/grafana_logout.zip"
@@ -20,6 +22,8 @@ data "archive_file" "grafana_logout" {
 }
 
 resource "aws_iam_role" "grafana_logout" {
+  count = local.grafana_alb_count
+
   name        = "${local.grafana_logout_name}-role"
   description = "LookDDak ${var.environment} Grafana logout Lambda execution role"
 
@@ -36,11 +40,15 @@ resource "aws_iam_role" "grafana_logout" {
 }
 
 resource "aws_iam_role_policy_attachment" "grafana_logout_basic" {
-  role       = aws_iam_role.grafana_logout.name
+  count = local.grafana_alb_count
+
+  role       = aws_iam_role.grafana_logout[0].name
   policy_arn = "arn:${data.aws_partition.current.partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
 resource "aws_cloudwatch_log_group" "grafana_logout" {
+  count = local.grafana_alb_count
+
   name              = "/aws/lambda/${local.grafana_logout_name}"
   retention_in_days = 3
 
@@ -48,17 +56,19 @@ resource "aws_cloudwatch_log_group" "grafana_logout" {
 }
 
 resource "aws_lambda_function" "grafana_logout" {
+  count = local.grafana_alb_count
+
   function_name = local.grafana_logout_name
   description   = "Clear ALB auth and Grafana session cookies, then redirect to Cognito logout"
-  role          = aws_iam_role.grafana_logout.arn
+  role          = aws_iam_role.grafana_logout[0].arn
   runtime       = "python3.14"
   handler       = "lambda_function.lambda_handler"
   architectures = ["x86_64"]
   memory_size   = 128
   timeout       = 3
 
-  filename         = data.archive_file.grafana_logout.output_path
-  source_code_hash = data.archive_file.grafana_logout.output_base64sha256
+  filename         = data.archive_file.grafana_logout[0].output_path
+  source_code_hash = data.archive_file.grafana_logout[0].output_base64sha256
 
   environment {
     variables = {
@@ -77,6 +87,8 @@ resource "aws_lambda_function" "grafana_logout" {
 # --- ALB → Lambda ---
 # Set-Cookie를 여러 개 내려야 해서 multi value headers를 켠다.
 resource "aws_lb_target_group" "grafana_logout" {
+  count = local.grafana_alb_count
+
   name                               = local.grafana_logout_name
   target_type                        = "lambda"
   lambda_multi_value_headers_enabled = true
@@ -87,28 +99,34 @@ resource "aws_lb_target_group" "grafana_logout" {
 }
 
 resource "aws_lambda_permission" "grafana_logout_alb" {
+  count = local.grafana_alb_count
+
   statement_id  = "AllowALBInvoke"
   action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.grafana_logout.function_name
+  function_name = aws_lambda_function.grafana_logout[0].function_name
   principal     = "elasticloadbalancing.amazonaws.com"
-  source_arn    = aws_lb_target_group.grafana_logout.arn
+  source_arn    = aws_lb_target_group.grafana_logout[0].arn
 }
 
 resource "aws_lb_target_group_attachment" "grafana_logout" {
-  target_group_arn = aws_lb_target_group.grafana_logout.arn
-  target_id        = aws_lambda_function.grafana_logout.arn
+  count = local.grafana_alb_count
+
+  target_group_arn = aws_lb_target_group.grafana_logout[0].arn
+  target_id        = aws_lambda_function.grafana_logout[0].arn
 
   depends_on = [aws_lambda_permission.grafana_logout_alb]
 }
 
 # Grafana 규칙(40)보다 먼저 평가되도록 39
 resource "aws_lb_listener_rule" "grafana_logout" {
+  count = local.grafana_alb_count
+
   listener_arn = var.https_listener_arn
   priority     = var.grafana_logout_listener_rule_priority
 
   action {
     type             = "forward"
-    target_group_arn = aws_lb_target_group.grafana_logout.arn
+    target_group_arn = aws_lb_target_group.grafana_logout[0].arn
   }
 
   condition {

@@ -40,7 +40,7 @@ output "alb_logs_bucket_name" {
 
 output "grafana_target_group_arn" {
   description = "Grafana target group ARN"
-  value       = aws_lb_target_group.grafana.arn
+  value       = try(aws_lb_target_group.grafana[0].arn, null)
 }
 
 output "grafana_url" {
