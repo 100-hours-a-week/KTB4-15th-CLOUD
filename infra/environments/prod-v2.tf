@@ -70,6 +70,7 @@ module "prod_v2_monitoring" {
   grafana_listener_rule_priority        = 2
 
   grafana_cloudfront_enabled         = true
+  grafana_alb_enabled                = false
   grafana_origin_domain_name         = module.prod_v2_edge.origin_domain_name
   grafana_origin_verify_header_value = module.prod_v2_edge.origin_verify_header_value
 
