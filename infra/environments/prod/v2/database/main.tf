@@ -200,7 +200,7 @@ module "mysql" {
     { name = "long_query_time", value = "2" },
     { name = "require_secure_transport", value = "1" },
     { name = "slow_query_log", value = "1" },
-    { name = "time_zone", value = "UTC" },
+    { name = "time_zone", value = "UTC", apply_method = "pending-reboot" },
     # Block application writes until the cutover
     { name = "read_only", value = local.mysql_read_only ? "1" : "0" },
   ]
