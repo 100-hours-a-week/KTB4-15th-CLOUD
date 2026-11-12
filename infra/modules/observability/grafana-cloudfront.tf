@@ -18,10 +18,23 @@ data "aws_ec2_managed_prefix_list" "cloudfront" {
   name  = "com.amazonaws.global.cloudfront.origin-facing"
 }
 
+resource "aws_security_group" "grafana_cloudfront" {
+  count = local.grafana_vpc_origin_count
+
+  name                   = "${local.name}-grafana-cloudfront"
+  description            = "LookDDak ${var.environment} Grafana - CloudFront VPC Origin only"
+  vpc_id                 = var.vpc_id
+  revoke_rules_on_delete = true
+
+  tags = merge(local.common_tags, {
+    Name = "${local.name}-grafana-cloudfront"
+  })
+}
+
 resource "aws_vpc_security_group_ingress_rule" "grafana_from_cloudfront" {
   count = local.grafana_vpc_origin_count
 
-  security_group_id = aws_security_group.this.id
+  security_group_id = aws_security_group.grafana_cloudfront[0].id
   description       = "Grafana from CloudFront VPC Origin"
   ip_protocol       = "tcp"
   from_port         = 3000
