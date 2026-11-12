@@ -54,21 +54,25 @@ variable "route53_zone_id" {
 variable "https_listener_arn" {
   description = "V2 ALB HTTPS listener ARN"
   type        = string
+  default     = null
 }
 
 variable "alb_security_group_id" {
   description = "V2 ALB security group ID"
   type        = string
+  default     = null
 }
 
 variable "alb_dns_name" {
   description = "V2 ALB DNS name"
   type        = string
+  default     = null
 }
 
 variable "alb_zone_id" {
   description = "V2 ALB canonical hosted zone ID"
   type        = string
+  default     = null
 }
 
 variable "ecs_task_security_group_ids" {
@@ -127,6 +131,17 @@ variable "grafana_logout_listener_rule_priority" {
   description = "Grafana 로그아웃 HTTPS 리스너 규칙 우선순위"
   type        = number
   default     = 39
+}
+
+variable "grafana_alb_enabled" {
+  description = "Grafana를 V2 ALB(Cognito 인증) 뒤에 둔다. false면 CloudFront VPC Origin → Monitoring EC2:3000, 인증은 Grafana Generic OAuth"
+  type        = bool
+  default     = true
+
+  validation {
+    condition     = var.grafana_alb_enabled || var.grafana_cloudfront_enabled
+    error_message = "grafana_alb_enabled = false는 grafana_cloudfront_enabled = true가 필요합니다."
+  }
 }
 
 variable "grafana_cloudfront_enabled" {

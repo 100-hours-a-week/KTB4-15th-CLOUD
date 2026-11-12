@@ -68,6 +68,8 @@ resource "aws_cognito_user_pool_client" "grafana_alb" {
 # --- ALB 규칙: grafana 도메인 → Cognito 인증 → Grafana ---
 # 호스트가 달라 기존 규칙(5, 10, 20, 30)과 겹치지 않는다.
 resource "aws_lb_listener_rule" "grafana" {
+  count = local.grafana_alb_count
+
   listener_arn = var.https_listener_arn
   priority     = var.grafana_listener_rule_priority
 
@@ -86,7 +88,7 @@ resource "aws_lb_listener_rule" "grafana" {
 
   action {
     type             = "forward"
-    target_group_arn = aws_lb_target_group.grafana.arn
+    target_group_arn = aws_lb_target_group.grafana[0].arn
   }
 
   condition {
@@ -117,10 +119,54 @@ resource "aws_lb_listener_rule" "grafana" {
 # ALB가 로그인 후 Cognito 토큰 엔드포인트를 직접 호출한다 (인터넷 443).
 # 막혀 있으면 로그인 직후 500 오류가 난다.
 resource "aws_vpc_security_group_egress_rule" "alb_to_cognito" {
+  count = local.grafana_alb_count
+
   security_group_id = var.alb_security_group_id
   description       = "Cognito token and userinfo endpoints for ALB authentication"
   ip_protocol       = "tcp"
   from_port         = 443
   to_port           = 443
   cidr_ipv4         = "0.0.0.0/0"
+}
+
+resource "aws_cognito_user_pool_client" "grafana_oauth" {
+  count = local.grafana_vpc_origin_count
+
+  name         = "lookddak-${var.environment}-grafana-oauth"
+  user_pool_id = aws_cognito_user_pool.grafana.id
+
+  generate_secret                      = true
+  allowed_oauth_flows_user_pool_client = true
+  allowed_oauth_flows                  = ["code"]
+  allowed_oauth_scopes                 = ["openid", "email", "profile"]
+  supported_identity_providers         = ["COGNITO"]
+  callback_urls                        = ["https://${var.grafana_domain_name}/login/generic_oauth"]
+  logout_urls                          = ["https://${var.grafana_domain_name}/login"]
+
+  explicit_auth_flows = [
+    "ALLOW_REFRESH_TOKEN_AUTH",
+    "ALLOW_USER_SRP_AUTH",
+  ]
+
+  prevent_user_existence_errors = "ENABLED"
+}
+
+resource "aws_ssm_parameter" "grafana_oauth_client_id" {
+  count = local.grafana_vpc_origin_count
+
+  name  = "/lookddak/${var.environment}/monitoring/grafana-oauth/client-id"
+  type  = "String"
+  value = aws_cognito_user_pool_client.grafana_oauth[0].id
+
+  tags = local.common_tags
+}
+
+resource "aws_ssm_parameter" "grafana_oauth_client_secret" {
+  count = local.grafana_vpc_origin_count
+
+  name  = "/lookddak/${var.environment}/monitoring/grafana-oauth/client-secret"
+  type  = "SecureString"
+  value = aws_cognito_user_pool_client.grafana_oauth[0].client_secret
+
+  tags = local.common_tags
 }
