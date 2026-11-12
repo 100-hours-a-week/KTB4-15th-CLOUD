@@ -4,6 +4,12 @@ variable "create_services" {
   default     = false
 }
 
+variable "nextjs_tasks_enabled" {
+  description = "Run V2 Next.js tasks and allow their Auto Scaling policies to act"
+  type        = bool
+  default     = true
+}
+
 variable "spring_tasks_enabled" {
   description = "Run V2 Spring tasks and allow their Auto Scaling policies to act"
   type        = bool
