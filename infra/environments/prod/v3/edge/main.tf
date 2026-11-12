@@ -76,6 +76,7 @@ resource "aws_route53_record" "viewer_validation" {
       record = option.resource_record_value
       type   = option.resource_record_type
     }
+    if !contains(var.prevalidated_domain_names, option.domain_name)
   }
 
   zone_id = var.route53_zone_id
@@ -88,8 +89,20 @@ resource "aws_route53_record" "viewer_validation" {
 resource "aws_acm_certificate_validation" "viewer" {
   provider = aws.us_east_1
 
-  certificate_arn         = aws_acm_certificate.viewer.arn
-  validation_record_fqdns = [for record in aws_route53_record.viewer_validation : record.fqdn]
+  certificate_arn = aws_acm_certificate.viewer.arn
+  validation_record_fqdns = concat(
+    [for record in aws_route53_record.viewer_validation : record.fqdn],
+    [
+      for option in aws_acm_certificate.viewer.domain_validation_options : option.resource_record_name
+      if contains(var.prevalidated_domain_names, option.domain_name)
+    ]
+  )
+}
+
+# 값 자체보다 리소스 의존성이 목적이다. 기존 V2 Distribution 업데이트가 끝난 뒤
+# 동일 Alias를 V3 Distribution에 붙여 CNAMEAlreadyExists를 방지한다.
+resource "terraform_data" "alias_release" {
+  input = var.cutover_after_distribution_id
 }
 
 resource "aws_cloudfront_vpc_origin" "gateway" {
@@ -175,6 +188,8 @@ resource "aws_cloudfront_distribution" "this" {
   tags = merge(local.common_tags, {
     Name = local.name
   })
+
+  depends_on = [terraform_data.alias_release]
 }
 
 resource "aws_route53_record" "alias" {

@@ -162,9 +162,22 @@ module "prod_v3_argocd_edge" {
   route53_zone_id = module.shared_core.route53_zone_id
   domain_name     = "argocd.lookddak.com"
   additional_domain_names = [
+    "lookddak.com",
+    "www.lookddak.com",
     "v3-prod.lookddak.com",
     "grafana.v3-prod.lookddak.com",
   ]
+
+  # 동일 계정에서 같은 도메인의 ACM DNS 검증 CNAME은 재사용된다.
+  # 기존 V2 인증서가 관리하는 레코드를 사용해 중복 Route 53 리소스를 만들지 않는다.
+  prevalidated_domain_names = [
+    "lookddak.com",
+    "www.lookddak.com",
+  ]
+
+  # CloudFront는 같은 Alias를 두 Distribution에 동시에 연결할 수 없다.
+  # V2 Distribution의 Alias 해제가 끝난 뒤 V3 Distribution을 갱신한다.
+  cutover_after_distribution_id = module.prod_v2_edge.cloudfront_distribution_id
 }
 
 output "prod_v3_cluster" {

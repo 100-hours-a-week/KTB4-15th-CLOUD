@@ -29,9 +29,27 @@ variable "additional_domain_names" {
   default     = []
 
   validation {
-    condition     = alltrue([for domain in var.additional_domain_names : contains(["v3-prod.lookddak.com", "grafana.v3-prod.lookddak.com"], domain)])
-    error_message = "Prod V3 추가 도메인은 v3-prod.lookddak.com·grafana.v3-prod.lookddak.com만 허용합니다."
+    condition     = alltrue([for domain in var.additional_domain_names : contains(["lookddak.com", "www.lookddak.com", "v3-prod.lookddak.com", "grafana.v3-prod.lookddak.com"], domain)])
+    error_message = "Prod V3 추가 도메인은 운영·www·V3 검증·Grafana 도메인만 허용합니다."
   }
+}
+
+variable "prevalidated_domain_names" {
+  description = "다른 모듈이 이미 관리하는 ACM DNS 검증 레코드를 재사용할 도메인"
+  type        = set(string)
+  default     = []
+
+  validation {
+    condition     = alltrue([for domain in var.prevalidated_domain_names : contains(var.additional_domain_names, domain)])
+    error_message = "사전 검증 도메인은 additional_domain_names에도 포함되어야 합니다."
+  }
+}
+
+variable "cutover_after_distribution_id" {
+  description = "Alias를 먼저 해제해야 하는 기존 CloudFront Distribution ID"
+  type        = string
+  default     = null
+  nullable    = true
 }
 
 variable "gateway_service" {
