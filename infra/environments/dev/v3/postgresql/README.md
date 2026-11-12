@@ -1,11 +1,10 @@
-# V3 Dev PostgreSQL 격리
+# V3 Dev PostgreSQL
 
-V2와 V3는 같은 Dev PostgreSQL RDS 인스턴스를 사용하지만 Database와 사용자를 분리한다.
+V3는 V2와 같은 Dev PostgreSQL RDS의 `lookddak` Database를 사용한다 (2026-11-12, prod와 같은 구조). V3 Role은 V2 Role을 상속한다.
 
 ```text
 공유 Dev PostgreSQL RDS
-├─ lookddak      / 기존 V2 사용자
-└─ lookddak_v3   / lookddak_v3_app · lookddak_v3_migration
+└─ lookddak   / lookddak_app ← lookddak_v3_app · lookddak_migration ← lookddak_v3_migration
 ```
 
 ## Terraform 적용 범위
