@@ -9,7 +9,7 @@ data "aws_kms_alias" "ssm" {
 }
 
 locals {
-  database_name      = "lookddak_v3"
+  database_name      = "lookddak"
   app_username       = "lookddak_v3_app"
   migration_username = "lookddak_v3_migration"
 
@@ -100,6 +100,8 @@ data "aws_iam_policy_document" "bootstrap_parameters" {
     resources = concat([
       "${local.parameter_arn_prefix}/lookddak/dev/v2/postgresql/admin/username",
       "${local.parameter_arn_prefix}/lookddak/dev/v2/postgresql/admin/password",
+      "${local.parameter_arn_prefix}/lookddak/dev/v2/postgresql/app/username",
+      "${local.parameter_arn_prefix}/lookddak/dev/v2/postgresql/migration/username",
     ], [for name in local.secure_parameter_names : "${local.parameter_arn_prefix}${name}"])
   }
 
@@ -164,6 +166,8 @@ resource "aws_ssm_document" "bootstrap" {
           readonly migration_username="${local.migration_username}"
           readonly admin_username_parameter="/lookddak/dev/v2/postgresql/admin/username"
           readonly admin_password_parameter="/lookddak/dev/v2/postgresql/admin/password"
+          readonly v2_app_username_parameter="/lookddak/dev/v2/postgresql/app/username"
+          readonly v2_migration_username_parameter="/lookddak/dev/v2/postgresql/migration/username"
           readonly app_password_parameter="${local.parameter_names.app_password}"
           readonly app_database_url_parameter="${local.parameter_names.app_database_url}"
           readonly app_checkpoint_dsn_parameter="${local.parameter_names.app_checkpoint_dsn}"
@@ -269,19 +273,30 @@ resource "aws_ssm_document" "bootstrap" {
 
           admin_psql postgres --tuples-only --command='SELECT 1' >/dev/null
 
-          # Role은 먼저 비밀번호 없이 만들고, 아래 전용 세션에서만 비밀번호를 설정한다.
-          # PGOPTIONS로 statement logging을 끄므로 RDS PostgreSQL 로그에 비밀번호가 남지 않는다.
-          admin_psql postgres <<'SQL'
-          DO $$
+          v2_app_username="$(get_parameter "$${v2_app_username_parameter}")"
+          v2_migration_username="$(get_parameter "$${v2_migration_username_parameter}")"
+
+          admin_psql "$${database_name}" <<SQL
+          DO \$\$
           BEGIN
+            IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '$${v2_app_username}') THEN
+              RAISE EXCEPTION 'Existing Dev V2 PostgreSQL app role is missing';
+            END IF;
+            IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '$${v2_migration_username}') THEN
+              RAISE EXCEPTION 'Existing Dev V2 PostgreSQL migration role is missing';
+            END IF;
             IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '${local.app_username}') THEN
-              CREATE ROLE ${local.app_username} LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION;
+              CREATE ROLE ${local.app_username} LOGIN INHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION;
             END IF;
             IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '${local.migration_username}') THEN
-              CREATE ROLE ${local.migration_username} LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION;
+              CREATE ROLE ${local.migration_username} LOGIN INHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION;
             END IF;
           END
-          $$;
+          \$\$;
+          ALTER ROLE ${local.app_username} INHERIT;
+          ALTER ROLE ${local.migration_username} INHERIT;
+          GRANT "$${v2_app_username}" TO ${local.app_username};
+          GRANT "$${v2_migration_username}" TO ${local.migration_username};
           SQL
 
           app_password="$(get_parameter "$${app_password_parameter}" 2>/dev/null || true)"
@@ -313,47 +328,6 @@ resource "aws_ssm_document" "bootstrap" {
             "LookDDak Dev V3 PostgreSQL migration password" \
             migration \
             "$${migration_password}"
-
-          if [[ "$(admin_psql postgres --tuples-only --no-align --command="SELECT 1 FROM pg_database WHERE datname = '$${database_name}'")" != "1" ]]; then
-            PGOPTIONS='-c log_statement=none' PGPASSWORD="$${admin_password}" createdb \
-              --host="$${postgresql_host}" \
-              --port="$${postgresql_port}" \
-              --username="$${admin_username}" \
-              --owner="$${migration_username}" \
-              --encoding=UTF8 \
-              "$${database_name}"
-          fi
-
-          admin_psql postgres <<'SQL'
-          ALTER DATABASE ${local.database_name} OWNER TO ${local.migration_username};
-          REVOKE ALL ON DATABASE ${local.database_name} FROM PUBLIC;
-          GRANT CONNECT, TEMPORARY ON DATABASE ${local.database_name} TO ${local.app_username};
-          GRANT ALL PRIVILEGES ON DATABASE ${local.database_name} TO ${local.migration_username};
-          ALTER DATABASE ${local.database_name} SET timezone TO 'UTC';
-          SQL
-
-          admin_psql "$${database_name}" <<'SQL'
-          CREATE EXTENSION IF NOT EXISTS vector;
-
-          REVOKE CREATE ON SCHEMA public FROM PUBLIC;
-          ALTER SCHEMA public OWNER TO ${local.migration_username};
-          GRANT USAGE ON SCHEMA public TO ${local.app_username};
-          GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO ${local.app_username};
-          GRANT USAGE, SELECT, UPDATE ON ALL SEQUENCES IN SCHEMA public TO ${local.app_username};
-          SQL
-
-          # RDS 관리자도 다른 Role로 SET ROLE 하거나 Default Privileges를 대신 변경할 수 없다.
-          # 객체를 생성할 Migration Role로 접속해 Schema와 자신의 향후 객체 권한을 설정한다.
-          migration_psql "$${database_name}" <<'SQL'
-          CREATE SCHEMA IF NOT EXISTS langgraph;
-
-          ALTER DEFAULT PRIVILEGES IN SCHEMA public
-            GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO ${local.app_username};
-          ALTER DEFAULT PRIVILEGES IN SCHEMA public
-            GRANT USAGE, SELECT, UPDATE ON SEQUENCES TO ${local.app_username};
-
-          GRANT USAGE, CREATE ON SCHEMA langgraph TO ${local.app_username};
-          SQL
 
           app_database_url="postgresql://$${app_username}:$${app_password}@$${postgresql_host}:$${postgresql_port}/$${database_name}?sslmode=require"
           app_checkpoint_dsn="postgresql://$${app_username}:$${app_password}@$${postgresql_host}:$${postgresql_port}/$${database_name}?sslmode=require&options=-csearch_path%3Dlanggraph"
