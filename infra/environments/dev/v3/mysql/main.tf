@@ -9,7 +9,7 @@ data "aws_kms_alias" "ssm" {
 }
 
 locals {
-  database_name = "lookddak_v3"
+  database_name = "lookddak"
   app_username  = "lookddak_v3_app"
 
   parameter_names = {
@@ -185,12 +185,10 @@ resource "aws_ssm_document" "bootstrap" {
             --batch \
             --skip-column-names \
             >/dev/null <<SQL
-          CREATE DATABASE IF NOT EXISTS \`$${database_name}\`
-            CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
           CREATE USER IF NOT EXISTS '$${app_username}'@'%'
             IDENTIFIED BY RANDOM PASSWORD;
-          GRANT ALL PRIVILEGES ON \`$${grant_database_name}\`.*
-            TO '$${app_username}'@'%';
+          GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, REFERENCES, INDEX, ALTER
+            ON \`$${grant_database_name}\`.* TO '$${app_username}'@'%';
           SQL
 
           # 기존 SecureString으로 로그인이 되면 비밀번호를 회전하지 않는다.

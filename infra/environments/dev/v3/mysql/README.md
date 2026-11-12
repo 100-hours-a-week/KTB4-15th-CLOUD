@@ -1,11 +1,10 @@
-# V3 Dev MySQL 격리
+# V3 Dev MySQL
 
-V2와 V3는 같은 Dev MySQL RDS 인스턴스를 사용하지만 Database와 앱 사용자를 분리한다.
+V3는 V2와 같은 Dev MySQL RDS의 `lookddak` Database를 V3 전용 앱 사용자로 사용한다 (2026-11-12, prod와 같은 구조).
 
 ```text
 공유 Dev MySQL RDS
-├─ lookddak      / 기존 V2 사용자
-└─ lookddak_v3   / lookddak_v3_app
+└─ lookddak   / 기존 V2 사용자 · lookddak_v3_app
 ```
 
 ## Terraform 적용 범위
