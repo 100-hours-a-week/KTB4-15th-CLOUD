@@ -17,7 +17,7 @@ module "nextjs" {
   cluster_arn         = var.cluster_arn
   cluster_name        = var.cluster_name
   task_definition_arn = lookup(var.task_definition_arns, "nextjs", null)
-  desired_count       = 1
+  desired_count       = var.nextjs_tasks_enabled ? 1 : 0
 
   subnet_ids         = var.private_app_subnet_ids
   security_group_ids = [var.security_group_ids["nextjs"]]
@@ -28,8 +28,9 @@ module "nextjs" {
   service_connect_namespace_arn = aws_service_discovery_http_namespace.service_connect.arn
   service_connect_mode          = "client"
 
-  autoscaling_min_capacity = 1
-  autoscaling_max_capacity = 5
+  autoscaling_min_capacity = var.nextjs_tasks_enabled ? 1 : 0
+  autoscaling_max_capacity = var.nextjs_tasks_enabled ? 5 : 0
+  autoscaling_suspended    = !var.nextjs_tasks_enabled
   cpu_target_value         = 60
   cpu_scale_out_cooldown   = 180
   cpu_scale_in_cooldown    = 300
