@@ -1,12 +1,6 @@
 # ---------------------------------------------------------------
 # V1 서비스 주소 레코드
-# - lookddak.com(apex)은 V2 전환으로 prod/v2/edge(CloudFront alias)로 옮겼다.
-# - www.lookddak.com은 lookddak.com CNAME이라 그대로 V2 CloudFront로 간다.
+# - lookddak.com(apex)은 V2 전환으로 prod/v2/edge로 옮겼다.
+# - www.lookddak.com도 V3 전환으로 prod/v3/edge의 A Alias로 옮긴다.
+# - V1 인프라는 이 변경으로 삭제하지 않는다.
 # ---------------------------------------------------------------
-resource "aws_route53_record" "www" {
-  zone_id = var.zone_id
-  name    = "www.lookddak.com"
-  type    = "CNAME"
-  ttl     = 300
-  records = ["lookddak.com."]
-}

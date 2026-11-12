@@ -438,10 +438,10 @@ resource "aws_cloudfront_distribution" "this" {
   http_version    = "http2and3"
   price_class     = "PriceClass_200"
   web_acl_id      = aws_wafv2_web_acl.this.arn
-  aliases = [
+  aliases = var.production_domains_enabled ? [
     var.production_domain_name,
     var.production_www_domain_name,
-  ]
+  ] : []
 
   origin {
     domain_name = var.origin_domain_name
@@ -514,9 +514,10 @@ resource "aws_cloudfront_distribution" "this" {
   }
 
   viewer_certificate {
-    acm_certificate_arn      = aws_acm_certificate_validation.viewer.certificate_arn
-    ssl_support_method       = "sni-only"
-    minimum_protocol_version = "TLSv1.2_2021"
+    acm_certificate_arn            = var.production_domains_enabled ? aws_acm_certificate_validation.viewer.certificate_arn : null
+    cloudfront_default_certificate = !var.production_domains_enabled
+    ssl_support_method             = var.production_domains_enabled ? "sni-only" : null
+    minimum_protocol_version       = var.production_domains_enabled ? "TLSv1.2_2021" : "TLSv1"
   }
 
   depends_on = [

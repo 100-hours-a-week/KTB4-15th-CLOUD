@@ -30,6 +30,9 @@ module "prod_v2_edge" {
   route53_zone_id       = module.shared_core.route53_zone_id
   fastapi_webhook_token = data.aws_ssm_parameter.prod_fastapi_webhook_token.value
 
+  # 운영 도메인은 Prod V3 EKS Edge로 전환한다. V2 Distribution·ALB·ECS는 롤백용으로 유지한다.
+  production_domains_enabled = false
+
   access_logs_bucket = module.prod_v2_monitoring.alb_logs_bucket_name
 }
 
@@ -344,4 +347,20 @@ output "prod_v2_crawler_schedule_arn" {
 moved {
   from = module.prod_v1_edge.aws_route53_record.apex
   to   = module.prod_v2_edge.aws_route53_record.production_ipv4
+}
+
+# 2026-11-12 V2 -> V3 DNS 전환: 기존 레코드 State를 보존한 채 V3 CloudFront Alias로 갱신한다.
+moved {
+  from = module.prod_v2_edge.aws_route53_record.production_ipv4
+  to   = module.prod_v3_argocd_edge.aws_route53_record.additional_alias["lookddak.com|A"]
+}
+
+moved {
+  from = module.prod_v2_edge.aws_route53_record.production_ipv6
+  to   = module.prod_v3_argocd_edge.aws_route53_record.additional_alias["lookddak.com|AAAA"]
+}
+
+moved {
+  from = module.prod_v1_edge.aws_route53_record.www
+  to   = module.prod_v3_argocd_edge.aws_route53_record.additional_alias["www.lookddak.com|A"]
 }

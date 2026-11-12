@@ -1,6 +1,6 @@
 # Prod V3 Edge
 
-`argocd.lookddak.com`과 `v3-prod.lookddak.com`을 같은 Prod EKS Gateway에 연결한다.
+`argocd.lookddak.com`, `lookddak.com`, `www.lookddak.com`, `v3-prod.lookddak.com`을 같은 Prod EKS Gateway에 연결한다.
 
 ```text
 Route 53
@@ -29,6 +29,13 @@ Route 53
 3. AWS Load Balancer Controller가 NLB에 SG를 연결한 것을 확인한다.
 4. GitOps에 `v3-prod.lookddak.com` Gateway Listener·인증서·HTTPRoute를 반영한다.
 5. CloudFront·DNS 전파 후 Argo CD UI·Webhook과 Prod V3 애플리케이션을 확인한다.
+
+## 운영 도메인 전환
+
+- V2 CloudFront Distribution·ALB·ECS는 삭제하지 않고 Alias만 해제한다.
+- V2 Distribution 갱신 완료 후 V3 Distribution에 운영 Alias를 붙이도록 Terraform 의존성을 둔다.
+- `lookddak.com` A·AAAA와 기존 `www.lookddak.com` CNAME State는 V3 A·AAAA Alias로 이동한다.
+- 장애 시 코드를 Revert하고 Apply해 운영 Alias와 DNS를 V2로 되돌린다.
 
 SG 연결 전에도 리소스 생성은 가능하지만 CloudFront에서 Origin으로 실제 요청이 전달된다고 판단하면 안 된다.
 

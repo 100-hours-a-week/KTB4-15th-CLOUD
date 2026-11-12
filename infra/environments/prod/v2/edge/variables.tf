@@ -52,6 +52,12 @@ variable "production_www_domain_name" {
   default     = "www.lookddak.com"
 }
 
+variable "production_domains_enabled" {
+  description = "V2 CloudFront가 lookddak.com·www.lookddak.com Alias를 계속 소유할지 여부"
+  type        = bool
+  default     = true
+}
+
 variable "access_logs_bucket" {
   description = "ALB 액세스 로그 S3 버킷 (null이면 끈다)"
   type        = string
