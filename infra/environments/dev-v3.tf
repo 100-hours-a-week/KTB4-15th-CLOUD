@@ -135,22 +135,12 @@ module "dev_v3_monitoring" {
   grafana_domain_name  = "grafana.v3-dev.lookddak.com"
 }
 
-# CloudFront → VPC Origin → 내부 NLB(Istio Gateway). NLB는 GITOPS(AWS LB Controller)가 만든다
-module "dev_v3_edge" {
-  source = "./dev/v3/edge"
+removed {
+  from = module.dev_v3_edge.aws_security_group.gateway_nlb
 
-  providers = {
-    aws           = aws
-    aws.us_east_1 = aws.us_east_1
+  lifecycle {
+    destroy = false
   }
-
-  cluster_name    = module.dev_v3_eks.cluster_name
-  vpc_id          = module.dev_v1_network.vpc_id
-  route53_zone_id = module.shared_core.route53_zone_id
-
-  # v3-dev.lookddak.com으로 V3 애플리케이션 경로를 먼저 검증한다.
-  # dev.lookddak.com은 V2 → V3 전환 때, grafana.dev는 V2 Grafana CloudFront 정리 후 추가한다.
-  domain_names = ["argocd.dev.lookddak.com", "v3-dev.lookddak.com", "grafana.v3-dev.lookddak.com"]
 }
 
 output "dev_v3_sqs_queue_urls" {
