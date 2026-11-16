@@ -86,9 +86,9 @@ module "postgresql" {
   backup_retention_period   = 7
   backup_window             = "18:00-18:30"
   maintenance_window        = "sun:19:00-sun:19:30"
-  deletion_protection       = true
+  deletion_protection       = false
   skip_final_snapshot       = false
-  final_snapshot_identifier = "lookddak-dev-postgresql-final"
+  final_snapshot_identifier = "lookddak-dev-postgresql-final-20261116"
 
   # postgresql 로그는 CloudWatch로 내보내지 않는다 (모든 쿼리를 기록해서 비용이 크다).
   # db-log-tailer가 RDS API로 로그 파일을 읽어 Alloy → Loki로 보낸다 (modules/observability/db-query-log.tf).
@@ -218,12 +218,13 @@ module "mysql" {
   max_allocated_storage = 50
 
   # Keep automated backups so binlog stays on after promotion (rollback replication source).
-  backup_retention_period  = 7
-  backup_window            = "18:00-18:30"
-  maintenance_window       = "sun:19:00-sun:19:30"
-  deletion_protection      = false
-  skip_final_snapshot      = true
-  delete_automated_backups = true
+  backup_retention_period   = 7
+  backup_window             = "18:00-18:30"
+  maintenance_window        = "sun:19:00-sun:19:30"
+  deletion_protection       = false
+  skip_final_snapshot       = false
+  final_snapshot_identifier = "lookddak-dev-v2-mysql-final-20261116"
+  delete_automated_backups  = true
 
   # error·slowquery 로그는 db-log-tailer가 RDS API로 읽어 Alloy → Loki로 보낸다 (CloudWatch로 내보내지 않음).
   # 모듈이 apply_immediately를 쓰지 않아 다음 유지보수 시간에 반영된다. 바로 끄려면 CLI --apply-immediately.
