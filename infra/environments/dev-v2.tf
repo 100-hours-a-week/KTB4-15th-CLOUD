@@ -204,14 +204,14 @@ variable "dev_v2_create_services" {
 variable "dev_v2_nextjs_tasks_enabled" {
   description = "Run V2 dev Next.js tasks (false clamps the service to 0 through Auto Scaling min/max)"
   type        = bool
-  default     = true
+  default     = false
 }
 
 # 2026-10-19: MySQL 컷오버 완료(쓰기 대상 = V2 Dev MySQL) 후 다시 켰다 (spring:6).
 variable "dev_v2_spring_tasks_enabled" {
   description = "Run V2 dev Spring tasks (false clamps the service to 0 through Auto Scaling min/max)"
   type        = bool
-  default     = true
+  default     = false
 }
 
 # 임시: dev.lookddak.com/api/v2/webhooks/runware?token=<webhook-token> -> FastAPI (경로 그대로 전달).
@@ -225,7 +225,7 @@ variable "dev_v2_fastapi_alb_enabled" {
 variable "dev_v2_fastapi_tasks_enabled" {
   description = "Run V2 dev FastAPI tasks after the PostgreSQL switchover is complete"
   type        = bool
-  default     = true
+  default     = false
 }
 
 variable "dev_v2_task_definition_arns" {
