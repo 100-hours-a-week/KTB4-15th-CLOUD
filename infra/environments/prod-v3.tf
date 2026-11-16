@@ -149,34 +149,12 @@ module "prod_v3_monitoring" {
   grafana_domain_name  = "grafana.v3-prod.lookddak.com"
 }
 
-module "prod_v3_argocd_edge" {
-  source = "./prod/v3/edge"
+removed {
+  from = module.prod_v3_argocd_edge.aws_security_group.gateway_nlb
 
-  providers = {
-    aws           = aws
-    aws.us_east_1 = aws.us_east_1
+  lifecycle {
+    destroy = false
   }
-
-  cluster_name    = module.prod_v3_eks.cluster_name
-  vpc_id          = data.aws_vpc.prod_v3.id
-  route53_zone_id = module.shared_core.route53_zone_id
-  domain_name     = "argocd.lookddak.com"
-  additional_domain_names = [
-    "lookddak.com",
-    "www.lookddak.com",
-    "v3-prod.lookddak.com",
-    "grafana.v3-prod.lookddak.com",
-  ]
-}
-
-moved {
-  from = module.prod_v2_edge.aws_route53_record.viewer_certificate_validation["lookddak.com"]
-  to   = module.prod_v3_argocd_edge.aws_route53_record.viewer_validation["lookddak.com"]
-}
-
-moved {
-  from = module.prod_v2_edge.aws_route53_record.viewer_certificate_validation["www.lookddak.com"]
-  to   = module.prod_v3_argocd_edge.aws_route53_record.viewer_validation["www.lookddak.com"]
 }
 
 output "prod_v3_cluster" {
@@ -246,19 +224,6 @@ output "prod_v3_runtime_parameter_names" {
 output "prod_v3_idm_vton_modal_parameter_names" {
   description = "실제 Modal SDK Token을 수동 입력할 Prod SecureString 경로"
   value       = module.prod_v3_workload_iam.idm_vton_modal_parameter_names
-}
-
-output "prod_v3_argocd_edge" {
-  description = "Prod V3 CloudFront·Route 53 연결 정보"
-  value = {
-    url                        = module.prod_v3_argocd_edge.argocd_url
-    validation_url             = module.prod_v3_argocd_edge.validation_urls["v3-prod.lookddak.com"]
-    cloudfront_distribution_id = module.prod_v3_argocd_edge.cloudfront_distribution_id
-    cloudfront_domain_name     = module.prod_v3_argocd_edge.cloudfront_domain_name
-    gateway_nlb_dns_name       = module.prod_v3_argocd_edge.gateway_nlb_dns_name
-    gateway_nlb_security_group = module.prod_v3_argocd_edge.gateway_nlb_security_group_id
-    web_acl_arn                = module.prod_v3_argocd_edge.web_acl_arn
-  }
 }
 
 output "prod_v3_monitoring_bucket_names" {
