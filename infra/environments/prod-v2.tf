@@ -293,8 +293,3 @@ output "prod_v2_crawler_schedule_arn" {
   description = "V2 prod crawler schedule ARN"
   value       = module.prod_v2_crawler.schedule_arn
 }
-
-moved {
-  from = module.prod_v1_edge.aws_route53_record.www
-  to   = module.prod_v3_argocd_edge.aws_route53_record.additional_alias["www.lookddak.com|A"]
-}
