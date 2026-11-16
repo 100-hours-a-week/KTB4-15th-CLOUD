@@ -29,6 +29,7 @@ provider "aws" {
 }
 
 # CloudFront viewer certificates must be created in us-east-1.
+# tflint-ignore: terraform_unused_declarations
 provider "aws" {
   alias  = "us_east_1"
   region = "us-east-1"
