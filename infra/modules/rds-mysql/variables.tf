@@ -184,6 +184,12 @@ variable "skip_final_snapshot" {
   type        = bool
 }
 
+variable "final_snapshot_identifier" {
+  description = "삭제 시 남길 최종 스냅샷 이름 (skip_final_snapshot = false일 때 필수)"
+  type        = string
+  default     = null
+}
+
 variable "delete_automated_backups" {
   description = "삭제 시 자동 백업도 함께 삭제할지 여부"
   type        = bool
