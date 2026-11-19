@@ -168,7 +168,7 @@ resource "aws_instance" "this" {
   subnet_id                   = aws_subnet.public.id
   vpc_security_group_ids      = [aws_security_group.instance.id]
   iam_instance_profile        = aws_iam_instance_profile.instance.name
-  associate_public_ip_address = false
+  associate_public_ip_address = true
   key_name                    = null
 
   metadata_options {
@@ -249,7 +249,9 @@ resource "aws_instance" "this" {
   })
 
   lifecycle {
-    ignore_changes = [ami]
+    # AMI 갱신과 별도 aws_volume_attachment로 관리하는 Data EBS는
+    # 인스턴스 본체 교체 사유로 취급하지 않는다.
+    ignore_changes = [ami, ebs_block_device]
   }
 
   depends_on = [aws_iam_role_policy_attachment.ssm_core]
