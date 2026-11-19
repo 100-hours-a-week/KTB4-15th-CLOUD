@@ -14,7 +14,7 @@ set +a
 
 install -d -m 0700 "$BACKUP_DIR"
 docker compose --env-file .env exec -T mysql \
-  mysqldump -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" --single-transaction "$MYSQL_DATABASE" \
+  mysqldump -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" --single-transaction --no-tablespaces "$MYSQL_DATABASE" \
   > "${BACKUP_DIR}/mysql.sql"
 docker compose --env-file .env exec -T postgres \
   pg_dump -U "$POSTGRES_USER" -Fc "$POSTGRES_DB" \
