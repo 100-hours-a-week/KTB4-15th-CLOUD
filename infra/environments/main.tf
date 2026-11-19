@@ -8,6 +8,17 @@ module "dev_single_runtime" {
   instance_role_name = module.dev_single_ec2.instance_role_name
 }
 
+module "shared_dns" {
+  source = "./shared/dns"
+
+  providers = {
+    aws           = aws
+    aws.us_east_1 = aws.us_east_1
+  }
+
+  dev_single_public_ip = module.dev_single_ec2.elastic_ip
+}
+
 output "dev_single_ec2" {
   description = "Single Dev EC2 connection and network information"
   value = {
@@ -28,5 +39,14 @@ output "dev_single_runtime" {
     fitting_queue_urls    = module.dev_single_runtime.fitting_queue_urls
     log_group_name        = module.dev_single_runtime.log_group_name
     runtime_parameter_arn = module.dev_single_runtime.runtime_parameter_arn
+  }
+}
+
+output "shared_dns" {
+  description = "lookddak.com Hosted Zone information"
+  value = {
+    zone_id      = module.shared_dns.zone_id
+    name_servers = module.shared_dns.name_servers
+    dev_domain   = module.shared_dns.dev_domain
   }
 }
