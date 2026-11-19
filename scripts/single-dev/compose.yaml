@@ -96,6 +96,7 @@ services:
       - .env
     environment:
       SPRING_PROFILES_ACTIVE: prod
+      INTERNAL_API_KEY: ${SPRING_INTERNAL_API_KEY:?SPRING_INTERNAL_API_KEY is required}
       DB_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
       DB_USERNAME: ${MYSQL_USER}
       DB_PASSWORD: ${MYSQL_PASSWORD}
@@ -148,6 +149,7 @@ services:
     env_file:
       - .env
     environment:
+      INTERNAL_API_KEY: ${AI_INTERNAL_API_KEY:?AI_INTERNAL_API_KEY is required}
       BODY_IMAGE_VALIDATION_MODE: remote
       BODY_IMAGE_REMOTE_URL: ${BODY_IMAGE_VALIDATION_URL}
       BODY_IMAGE_REMOTE_PROXY_KEY: ${BODY_IMAGE_VALIDATION_PROXY_KEY}

@@ -58,8 +58,8 @@ mapping = {
     "JWT_SECRET": "spring/jwt-secret",
     "SPRING_INTERNAL_API_KEY": "spring/internal-api-key",
     "SENTRY_DSN": "spring/sentry-dsn",
-    # V1과 동일하게 BE↔AI 내부 호출은 하나의 키를 공유한다.
-    "INTERNAL_API_KEY": "internal/ai-api-key",
+    # Dev V2와 동일: BE 수신 키는 SPRING_INTERNAL_API_KEY, BE→AI·AI 수신 키는 AI_INTERNAL_API_KEY.
+    # 컨테이너별 INTERNAL_API_KEY는 compose.yaml에서 지정한다.
     "AI_INTERNAL_API_KEY": "internal/ai-api-key",
     "PRICE_REFRESH_BACKEND_AUTH_HEADERS_JSON": "internal/price-refresh-backend-auth-headers",
     "RUNWARE_VTON_API_KEY": "fastapi/runware-vton-api-key",
