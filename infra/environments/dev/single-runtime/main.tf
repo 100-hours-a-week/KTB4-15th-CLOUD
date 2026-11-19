@@ -349,7 +349,9 @@ data "aws_iam_policy_document" "instance_runtime" {
       "ssm:GetParameters",
       "ssm:GetParametersByPath",
     ]
+    # GetParametersByPath는 경로 자체 ARN으로 권한을 평가한다.
     resources = [
+      "arn:${local.partition}:ssm:${local.region}:${local.account_id}:parameter/lookddak/dev/single",
       "arn:${local.partition}:ssm:${local.region}:${local.account_id}:parameter/lookddak/dev/single/*",
     ]
   }
