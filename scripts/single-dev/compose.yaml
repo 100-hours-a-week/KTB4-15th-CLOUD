@@ -1,0 +1,289 @@
+name: lookddak-dev
+
+x-logging: &aws-logging
+  driver: awslogs
+  options:
+    awslogs-region: ${AWS_REGION:-ap-northeast-2}
+    awslogs-group: ${CLOUDWATCH_LOG_GROUP:-/lookddak/dev/single}
+    awslogs-create-group: "false"
+    tag: "{{.Name}}/{{.ID}}"
+    mode: non-blocking
+    max-buffer-size: 4m
+
+networks:
+  app:
+    name: lookddak-dev-app
+  data:
+    name: lookddak-dev-data
+    internal: true
+
+services:
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: lookddak-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN:?DOMAIN is required}
+      NGINX_ENVSUBST_FILTER: DOMAIN
+      TZ: Asia/Seoul
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/templates:/etc/nginx/templates:ro
+      - /srv/lookddak/certbot/conf:/etc/letsencrypt:ro
+      - /srv/lookddak/certbot/www:/var/www/certbot:ro
+    networks:
+      - app
+    depends_on:
+      frontend:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+      ai:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/healthz"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    logging: *aws-logging
+    stop_grace_period: 15s
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 192M
+
+  frontend:
+    image: ${NEXTJS_IMAGE:?NEXTJS_IMAGE is required}
+    container_name: lookddak-frontend
+    restart: unless-stopped
+    environment:
+      API_BASE_URL: http://backend:8080/api/v1/
+      NEXT_PUBLIC_API_BASE_URL: https://${DOMAIN:?DOMAIN is required}
+      NODE_ENV: production
+      NODE_OPTIONS: --max-old-space-size=384
+      TZ: Asia/Seoul
+    expose:
+      - "3000"
+    networks:
+      - app
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('net').createConnection(3000, '127.0.0.1').on('connect', function(){this.end(); process.exit(0)}).on('error', () => process.exit(1))"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    logging: *aws-logging
+    stop_grace_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 512M
+
+  backend:
+    image: ${SPRING_IMAGE:?SPRING_IMAGE is required}
+    container_name: lookddak-backend
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      DB_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+      DB_USERNAME: ${MYSQL_USER}
+      DB_PASSWORD: ${MYSQL_PASSWORD}
+      AI_SERVER_URL: http://ai:8000
+      AWS_S3_BUCKET: ${S3_BUCKET}
+      CORS_ALLOWED_ORIGINS: https://${DOMAIN}
+      SENTRY_ENVIRONMENT: dev
+      SSE_SERVER_PORT: "8081"
+      FITTING_OUTBOX_ENABLED: "true"
+      FITTING_RESULT_CONSUMER_ENABLED: "true"
+      CHAT_REDIS_ENABLED: "false"
+      MANAGEMENT_HEALTH_REDIS_ENABLED: "false"
+      JAVA_TOOL_OPTIONS: >-
+        -XX:+ExitOnOutOfMemoryError
+        -XX:MaxRAMPercentage=75.0
+        -XX:InitialRAMPercentage=25.0
+        -XX:MaxMetaspaceSize=256m
+        -XX:+UseContainerSupport
+        -Dnetworkaddress.cache.ttl=10
+      TZ: Asia/Seoul
+    expose:
+      - "8080"
+      - "8081"
+    networks:
+      - app
+      - data
+    depends_on:
+      mysql:
+        condition: service_healthy
+      ai:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/8080"]
+      interval: 20s
+      timeout: 5s
+      retries: 10
+      start_period: 120s
+    logging: *aws-logging
+    stop_grace_period: 330s
+    deploy:
+      resources:
+        limits:
+          cpus: "1.00"
+          memory: 1536M
+
+  ai:
+    image: ${FASTAPI_IMAGE:?FASTAPI_IMAGE is required}
+    container_name: lookddak-ai
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      BODY_IMAGE_VALIDATION_MODE: remote
+      BODY_IMAGE_REMOTE_URL: ${BODY_IMAGE_VALIDATION_URL}
+      BODY_IMAGE_REMOTE_PROXY_KEY: ${BODY_IMAGE_VALIDATION_PROXY_KEY}
+      BODY_IMAGE_REMOTE_PROXY_SECRET: ${BODY_IMAGE_VALIDATION_PROXY_SECRET}
+      BODY_IMAGE_REMOTE_API_KEY: ${BODY_IMAGE_VALIDATION_API_KEY}
+      VIRTUAL_FITTING_REQUEST_WORKER_ENABLED: "true"
+      VIRTUAL_FITTING_POSTPROCESS_WORKER_ENABLED: "true"
+      VIRTUAL_FITTING_RESULT_PUBLISHER_ENABLED: "true"
+      VIRTUAL_FITTING_WATCHDOG_ENABLED: "true"
+      WEB_CONCURRENCY: "1"
+      MALLOC_ARENA_MAX: "2"
+      UVICORN_TIMEOUT_GRACEFUL_SHUTDOWN: "300"
+      TZ: Asia/Seoul
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+    expose:
+      - "8000"
+    networks:
+      - app
+      - data
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)"]
+      interval: 20s
+      timeout: 5s
+      retries: 10
+      start_period: 180s
+    logging: *aws-logging
+    stop_grace_period: 330s
+    deploy:
+      resources:
+        limits:
+          cpus: "1.00"
+          memory: 1792M
+
+  mysql:
+    image: mysql:8.0
+    container_name: lookddak-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE:?MYSQL_DATABASE is required}
+      MYSQL_USER: ${MYSQL_USER:?MYSQL_USER is required}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?MYSQL_PASSWORD is required}
+      MYSQL_RANDOM_ROOT_PASSWORD: "yes"
+      TZ: Asia/Seoul
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_0900_ai_ci
+      - --default-time-zone=+09:00
+    volumes:
+      - /srv/lookddak/data/mysql:/var/lib/mysql
+    expose:
+      - "3306"
+    networks:
+      - data
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u$$MYSQL_USER -p$$MYSQL_PASSWORD --silent"]
+      interval: 15s
+      timeout: 5s
+      retries: 12
+      start_period: 90s
+    logging: *aws-logging
+    stop_grace_period: 60s
+    deploy:
+      resources:
+        limits:
+          cpus: "0.75"
+          memory: 1024M
+
+  postgres:
+    image: pgvector/pgvector:0.8.6-pg16-bookworm
+    container_name: lookddak-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB is required}
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      PGDATA: /var/lib/postgresql/data/pgdata
+      TZ: Asia/Seoul
+    command: >-
+      postgres
+      -c shared_buffers=256MB
+      -c effective_cache_size=768MB
+      -c maintenance_work_mem=64MB
+      -c work_mem=8MB
+      -c timezone=Asia/Seoul
+    volumes:
+      - /srv/lookddak/data/postgres:/var/lib/postgresql/data
+    expose:
+      - "5432"
+    networks:
+      - data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 15s
+      timeout: 5s
+      retries: 12
+      start_period: 60s
+    logging: *aws-logging
+    stop_grace_period: 60s
+    deploy:
+      resources:
+        limits:
+          cpus: "0.75"
+          memory: 1024M
+
+  crawler:
+    image: ${CRAWLER_IMAGE:?CRAWLER_IMAGE is required}
+    profiles: ["batch"]
+    env_file:
+      - .env
+    environment:
+      PRICE_REFRESH_BACKEND_BASE_URL: http://backend:8080
+      TZ: Asia/Seoul
+    command: ["python", "-m", "price_refresh", "--apply"]
+    networks:
+      - app
+      - data
+    depends_on:
+      postgres:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+    logging: *aws-logging
+    deploy:
+      resources:
+        limits:
+          cpus: "1.00"
+          memory: 1536M
+
+  certbot:
+    image: certbot/certbot:v5.8.0
+    profiles: ["maintenance"]
+    ports:
+      - "80:80"
+    volumes:
+      - /srv/lookddak/certbot/conf:/etc/letsencrypt
+      - /srv/lookddak/certbot/www:/var/www/certbot
