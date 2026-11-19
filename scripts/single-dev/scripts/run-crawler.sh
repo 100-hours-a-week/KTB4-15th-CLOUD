@@ -12,4 +12,4 @@ esac
 cd "$APP_DIR"
 "${APP_DIR}/scripts/load-parameters.sh"
 docker compose --env-file .env --profile batch run --rm \
-  crawler python -m price_refresh "--${MODE}"
+  crawler "--${MODE}"

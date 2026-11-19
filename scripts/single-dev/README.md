@@ -44,6 +44,22 @@ sudo /srv/lookddak/scripts/issue-certificate.sh
 sudo /srv/lookddak/scripts/deploy.sh
 ```
 
+## DB 스키마 초기화 (최초 1회)
+
+BE(MySQL)는 기동 시 스키마를 만들지만, AI·Crawler(PostgreSQL)는 각 레포의 SQL을 수동으로 적용해야 한다. 스키마가 없으면 AI가 `no schema has been selected`로 기동에 실패한다.
+
+모든 SQL은 `IF NOT EXISTS`로 작성되어 다시 실행해도 안전하다. 아래 순서로 `psql -v ON_ERROR_STOP=1`로 적용한다.
+
+1. `KTB4-15th-AI/scripts/db/`: `schema.sql` → `usage_amount_split_totals.sql` → `virtual_fitting_pruna_limits.sql` → `virtual_fitting_async_jobs.sql` → `virtual_fitting_fallback.sql` → `virtual_fitting_watchdog.sql` → `virtual_fitting_auth_hold.sql` → `virtual_fitting_runware_image_ref.sql` → `virtual_fitting_ai_result_storage.sql` → `virtual_fitting_pruna_retry.sql`
+2. `KTB4-15th-Crawler/price-refresh-crawler/sql/create_price_change_outbox.sql`
+
+```bash
+cd /srv/lookddak
+set -a; . ./.env; set +a
+docker compose --env-file .env exec -T postgres \
+  psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB" < schema.sql
+```
+
 ## 확인
 
 ```bash
@@ -61,7 +77,7 @@ sudo /srv/lookddak/scripts/run-crawler.sh apply
 sudo /srv/lookddak/scripts/run-crawler.sh deliver
 ```
 
-`apply`는 가격을 수집해 PostgreSQL outbox에 기록하고, `deliver`는 대기 중인 결과를 BE에 전달한다.
+Crawler 이미지 ENTRYPOINT가 `python -m price_refresh`라 스크립트는 모드 인자만 넘긴다. `apply`는 가격을 수집해 PostgreSQL outbox에 기록하고, `deliver`는 대기 중인 결과를 BE에 전달한다.
 
 ## 백업
 

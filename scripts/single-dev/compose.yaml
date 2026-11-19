@@ -265,7 +265,8 @@ services:
     environment:
       PRICE_REFRESH_BACKEND_BASE_URL: http://backend:8080
       TZ: Asia/Seoul
-    command: ["python", "-m", "price_refresh", "--apply"]
+    # 이미지 ENTRYPOINT가 python -m price_refresh이므로 모드 인자만 넘긴다.
+    command: ["--apply"]
     networks:
       - app
       - data
