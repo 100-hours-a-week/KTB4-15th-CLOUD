@@ -7,7 +7,7 @@
 - 전용 VPC `10.30.0.0/16`
 - Public Subnet `10.30.1.0/24` (`ap-northeast-2a`)
 - Internet Gateway, Public Route Table, Elastic IP
-- ARM64 `t4g.xlarge` EC2
+- ARM64 `t4g.large` EC2
 - 암호화된 30 GiB Root EBS
 - 암호화된 100 GiB Data EBS (`/srv/lookddak`, 삭제 방지)
 - SSM Instance Profile

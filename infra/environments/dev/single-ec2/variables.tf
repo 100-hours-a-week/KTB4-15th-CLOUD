@@ -19,7 +19,7 @@ variable "availability_zone" {
 variable "instance_type" {
   description = "ARM64 instance type for the Docker Compose host"
   type        = string
-  default     = "t4g.xlarge"
+  default     = "t4g.large"
 
   validation {
     condition     = startswith(var.instance_type, "t4g.") || startswith(var.instance_type, "m7g.") || startswith(var.instance_type, "c7g.")
