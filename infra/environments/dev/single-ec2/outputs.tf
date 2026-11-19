@@ -28,6 +28,11 @@ output "data_volume_id" {
   value       = aws_ebs_volume.data.id
 }
 
+output "instance_role_name" {
+  description = "IAM role used by the Single Dev EC2 instance"
+  value       = aws_iam_role.instance.name
+}
+
 output "application_path" {
   description = "Persistent application mount path"
   value       = local.application_path
