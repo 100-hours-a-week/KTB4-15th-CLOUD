@@ -172,9 +172,10 @@ resource "aws_instance" "this" {
   key_name                    = null
 
   metadata_options {
-    http_endpoint               = "enabled"
-    http_tokens                 = "required"
-    http_put_response_hop_limit = 1
+    http_endpoint = "enabled"
+    http_tokens   = "required"
+    # Docker bridge 네트워크의 컨테이너가 Instance Role 자격증명을 받으려면 2가 필요하다.
+    http_put_response_hop_limit = 2
   }
 
   root_block_device {
