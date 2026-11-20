@@ -33,12 +33,13 @@ output "dev_single_ec2" {
 output "dev_single_runtime" {
   description = "Single Dev runtime AWS resource information"
   value = {
-    ecr_repository_urls   = module.dev_single_runtime.ecr_repository_urls
-    images_bucket_name    = module.dev_single_runtime.images_bucket_name
-    backup_bucket_name    = module.dev_single_runtime.backup_bucket_name
-    fitting_queue_urls    = module.dev_single_runtime.fitting_queue_urls
-    log_group_name        = module.dev_single_runtime.log_group_name
-    runtime_parameter_arn = module.dev_single_runtime.runtime_parameter_arn
+    ecr_repository_urls               = module.dev_single_runtime.ecr_repository_urls
+    images_bucket_name                = module.dev_single_runtime.images_bucket_name
+    backup_bucket_name                = module.dev_single_runtime.backup_bucket_name
+    fitting_queue_urls                = module.dev_single_runtime.fitting_queue_urls
+    log_group_name                    = module.dev_single_runtime.log_group_name
+    runtime_parameter_arn             = module.dev_single_runtime.runtime_parameter_arn
+    modal_body_image_worker_user_name = module.dev_single_runtime.modal_body_image_worker_user_name
   }
 }
 
