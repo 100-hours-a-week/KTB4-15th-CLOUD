@@ -79,6 +79,24 @@ sudo /srv/lookddak/scripts/run-crawler.sh deliver
 
 Crawler 이미지 ENTRYPOINT가 `python -m price_refresh`라 스크립트는 모드 인자만 넘긴다. `apply`는 가격을 수집해 PostgreSQL outbox에 기록하고, `deliver`는 대기 중인 결과를 BE에 전달한다.
 
+## 앱 레포 CD
+
+FE·BE·AI·Crawler 레포의 develop push가 다음 순서로 이 서버의 컨테이너를 교체한다. 무중단 배포는 하지 않는다.
+
+1. GitHub Actions(arm64)가 이미지를 빌드해 `lookddak-dev-<서비스>:<7자리 SHA>`로 ECR에 push한다.
+2. 레포별 OIDC Role(`gha-lookddak-dev-<서비스>-deploy-role`)로 서비스 전용 SSM Document `lookddak-dev-single-update-<서비스>`를 실행한다.
+3. Document가 `scripts/update-image.sh <서비스> <image@digest>`를 실행한다.
+   - `deploy.env`의 해당 이미지 줄만 바꾸고 그 컨테이너만 다시 띄운다(crawler는 이미지만 교체).
+   - healthy가 되지 않으면 이전 digest로 되돌리고 실패로 끝난다.
+
+배포 Role은 자기 ECR 저장소 push와 자기 서비스 Document 실행만 할 수 있다. Document는 자기 저장소의 `@sha256:` digest 형식만 받는다.
+
+수동 롤백은 각 레포의 dev CD를 이전 이미지 태그로 `workflow_dispatch` 실행하거나, 서버에서 직접 실행한다.
+
+```bash
+sudo /srv/lookddak/scripts/update-image.sh spring <account>.dkr.ecr.ap-northeast-2.amazonaws.com/lookddak-dev-spring@sha256:<digest>
+```
+
 ## 백업
 
 ```bash
