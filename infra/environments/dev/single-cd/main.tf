@@ -15,12 +15,15 @@ locals {
   registry   = "${local.account_id}.dkr.ecr.${local.region}.amazonaws.com"
 
   # ECR 서비스 이름 => GitHub 레포
-  services = {
-    nextjs  = "KTB4-15th-FE"
-    spring  = "KTB4-15th-BE"
-    fastapi = "KTB4-15th-AI"
-    crawler = "KTB4-15th-Crawler"
+  # 레포 ID는 OIDC immutable subject(sub)에 들어간다. 레포 이름이 바뀌어도 ID는 그대로다.
+  repositories = {
+    nextjs  = { name = "KTB4-15th-FE", id = "1344806631" }
+    spring  = { name = "KTB4-15th-BE", id = "1344807089" }
+    fastapi = { name = "KTB4-15th-AI", id = "1344805395" }
+    crawler = { name = "KTB4-15th-Crawler", id = "1372591446" }
   }
+
+  services = { for key, repo in local.repositories : key => repo.name }
 
   common_tags = {
     Component   = "single-cd"
@@ -91,7 +94,8 @@ data "aws_iam_policy_document" "assume" {
     condition {
       test     = "StringEquals"
       variable = "token.actions.githubusercontent.com:sub"
-      values   = ["repo:${var.github_owner}/${each.value}:ref:refs/heads/develop"]
+      # 앱 레포는 use_immutable_subject라 sub에 org·repo ID가 함께 들어간다.
+      values = ["repo:${var.github_owner}@${var.github_owner_id}/${each.value}@${local.repositories[each.key].id}:ref:refs/heads/develop"]
     }
   }
 }
