@@ -384,3 +384,33 @@ resource "aws_iam_role_policy" "instance_runtime" {
   role   = var.instance_role_name
   policy = data.aws_iam_policy_document.instance_runtime.json
 }
+
+# ---------------------------------------------------------------
+# Modal body image worker
+# - Modal에서 실행되는 전신 이미지 검증 Worker가 처리 결과를 이미지 버킷에 올린다.
+# - 기존 lookddak-prod-modal-body-image-worker는 dev·prod 전체 삭제(#533)로 사라졌다.
+# - 액세스 키는 Terraform state에 Secret이 남지 않도록 Terraform 밖에서 발급해
+#   Modal Secret lookddak-body-image-worker에 넣는다.
+# ---------------------------------------------------------------
+resource "aws_iam_user" "modal_body_image_worker" {
+  name = "lookddak-modal-body-image-worker"
+
+  tags = merge(local.common_tags, {
+    Name    = "lookddak-modal-body-image-worker"
+    Service = "modal-body-image-worker"
+  })
+}
+
+data "aws_iam_policy_document" "modal_body_image_worker" {
+  statement {
+    sid       = "UploadProcessedBodyImages"
+    actions   = ["s3:PutObject"]
+    resources = ["${data.aws_s3_bucket.images.arn}/body-images/*"]
+  }
+}
+
+resource "aws_iam_user_policy" "modal_body_image_worker" {
+  name   = "lookddak-modal-body-image-put"
+  user   = aws_iam_user.modal_body_image_worker.name
+  policy = data.aws_iam_policy_document.modal_body_image_worker.json
+}

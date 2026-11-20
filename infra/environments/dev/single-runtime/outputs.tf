@@ -32,3 +32,8 @@ output "runtime_parameter_arn" {
   description = "SSM ARN prefix readable by the Single Dev EC2 role"
   value       = "arn:${data.aws_partition.current.partition}:ssm:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:parameter/lookddak/dev/single/*"
 }
+
+output "modal_body_image_worker_user_name" {
+  description = "Upload-only IAM user for the Modal body image worker"
+  value       = aws_iam_user.modal_body_image_worker.name
+}
