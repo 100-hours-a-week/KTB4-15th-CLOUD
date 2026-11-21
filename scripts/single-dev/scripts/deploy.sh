@@ -18,7 +18,7 @@ aws ecr get-login-password --region "$AWS_REGION" | \
 docker compose --env-file .env config --quiet
 docker compose --env-file .env pull
 
-docker compose --env-file .env up -d mysql postgres
+docker compose --env-file .env up -d mysql postgres redis
 docker compose --env-file .env up -d ai backend frontend
 
 if [[ ! -s "/srv/lookddak/certbot/conf/live/${DOMAIN}/fullchain.pem" ]]; then
