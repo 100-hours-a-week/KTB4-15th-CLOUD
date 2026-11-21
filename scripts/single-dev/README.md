@@ -6,12 +6,13 @@
 
 | 구분 | 서비스 | 실행 방식 |
 |---|---|---|
-| 상시 | `nginx`, `frontend`, `backend`, `ai`, `mysql`, `postgres` | `docker compose up -d` |
+| 상시 | `nginx`, `frontend`, `backend`, `ai`, `mysql`, `postgres`, `redis` | `docker compose up -d` |
 | 수동 | `crawler` | `batch` profile |
 | 관리 | `certbot` | `maintenance` profile |
 
 - 기존 Dev V2 Fitting Queue 3개를 그대로 사용한다. 이 구성은 Queue나 DLQ를 생성·변경·삭제하지 않는다.
 - MySQL과 PostgreSQL 데이터는 별도 EBS가 마운트된 `/srv/lookddak/data`에 저장한다.
+- Redis는 BE 채팅 SSE 이벤트 공유용이다. 키는 모두 TTL이 있는 임시 데이터라 디스크에 저장하지 않으며(`maxmemory 128mb`, `volatile-lru`), Redis 장애 시 BE는 local/DB fallback으로 동작한다.
 - 비밀 값은 `/lookddak/dev/single/*` Parameter Store에서 읽어 `/srv/lookddak/.env`에 권한 `600`으로 생성한다.
 - 애플리케이션 이미지는 ECR digest로 고정한다.
 
@@ -68,7 +69,7 @@ sudo docker compose --env-file .env ps
 sudo bash -c 'set -a; source .env; curl -fsS "https://${DOMAIN}/healthz"'
 ```
 
-상시 6개 컨테이너가 모두 `healthy`여야 한다.
+상시 7개 컨테이너가 모두 `healthy`여야 한다.
 
 ## Crawler 수동 실행
 

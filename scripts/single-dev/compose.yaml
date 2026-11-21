@@ -107,8 +107,13 @@ services:
       SSE_SERVER_PORT: "8081"
       FITTING_OUTBOX_ENABLED: "true"
       FITTING_RESULT_CONSUMER_ENABLED: "true"
-      CHAT_REDIS_ENABLED: "false"
+      # 채팅 SSE 이벤트를 Redis Pub/Sub·Snapshot으로 공유한다. prod profile이라 단일 Redis(host/port)로 접속한다.
+      CHAT_REDIS_ENABLED: "true"
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      # Redis 장애 시 BE가 local/DB fallback으로 동작하므로 health에서 Redis를 제외한다(기존 dev chat-api와 동일).
       MANAGEMENT_HEALTH_REDIS_ENABLED: "false"
+      SPRING_AUTOCONFIGURE_EXCLUDE: org.springframework.boot.data.redis.autoconfigure.observation.LettuceObservationAutoConfiguration
       JAVA_TOOL_OPTIONS: >-
         -XX:+ExitOnOutOfMemoryError
         -XX:MaxRAMPercentage=75.0
@@ -125,6 +130,8 @@ services:
       - data
     depends_on:
       mysql:
+        condition: service_healthy
+      redis:
         condition: service_healthy
       ai:
         condition: service_healthy
@@ -256,6 +263,39 @@ services:
         limits:
           cpus: "0.75"
           memory: 1024M
+
+  # BE 채팅 SSE 이벤트 공유용. 키는 모두 TTL이 있는 임시 데이터라 디스크에 저장하지 않는다.
+  redis:
+    image: redis:7.2-alpine
+    container_name: lookddak-redis
+    restart: unless-stopped
+    command:
+      - redis-server
+      - --save
+      - ""
+      - --appendonly
+      - "no"
+      - --maxmemory
+      - 128mb
+      - --maxmemory-policy
+      - volatile-lru
+    expose:
+      - "6379"
+    networks:
+      - data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    logging: *aws-logging
+    stop_grace_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 192M
 
   crawler:
     image: ${CRAWLER_IMAGE:?CRAWLER_IMAGE is required}
